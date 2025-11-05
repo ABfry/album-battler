@@ -58,6 +58,21 @@ services:
       db:
         condition: service_healthy
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: album-battler-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - 8081:80
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=rootpass
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   frontend_node_modules:
   frontend_next:
