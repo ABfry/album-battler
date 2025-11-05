@@ -1,0 +1,89 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - develop
+
+jobs:
+  claude-code-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-diff-summarize
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          direct_prompt: |
+            このプルリクエストの変更をレビューしてください。まず、変更内容と影響範囲を第三者にも伝わるように整理したうえで、続けてコードレビューを行ってください。ハッカソン中のため、潜在的なバグや仕様との不一致、動作不良につながるリスクを最優先で洗い出してください。保守性・パフォーマンスの課題は重大な問題（致命的なバグや障害に直結するレベル）のみ指摘対象とし、それ以外は触れないでください。改善提案や確認が必要な点があれば整理してください。
+
+            以下の形式でフィードバックをまとめてください:
+
+            ## 📝 変更概要
+            - 何がどう変わり、どの課題を解決しようとしているのかを一言で
+
+            ## 🎯 影響範囲
+            - 影響を受ける機能や利用者、注意すべき副作用
+
+            ## 🧭 全体所感
+            - レビューの総評（リスクの有無や全体の印象）
+
+            ## 🛠 要修正（必ず対応してほしい指摘）
+            - ファイル名:行番号 を明記し、問題点と修正方針を具体的に説明
+            - 該当箇所がない場合は「なし」
+
+            ## ⚠️ 確認したい点・改善提案
+            - 気になる点や任意修正のアイデアがあれば列挙
+            - 該当箇所がない場合は「なし」
+
+            ## ✅ 評価できる点
+            - 良かった変更・改善点を簡潔に紹介
+
+            ## 🧪 推奨テスト
+            - 実施・追加すべきテスト内容
+            - 該当がない場合は「既存テストで十分」
+
+            専門用語には短い補足を添え、非技術者でも理解しやすい表現を心がけてください。
+
+          use_sticky_comment: true
+
+      - name: Wait for Claude comment
+        if: success()
+        run: sleep 10
+
+      - name: Get latest PR comment
+        if: success()
+        id: pr-comment
+        run: |
+          # Get the latest comment from Claude
+          comment=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments[-1].body' | head -c 1000)
+          # Escape newlines and quotes for Discord
+          comment_escaped=$(echo "$comment" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          echo "comment=$comment_escaped" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Discord Notification
+        if: success()
+        run: |
+          chmod +x .github/scripts/discord-notify.sh
+          .github/scripts/discord-notify.sh \
+            "${{ secrets.DISCORD_GITCI_WEBHOOK_URL }}" \
+            "☆AI差分要約☆" \
+            "PR変更内容まとめ:\n[PR #${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }})\n\n${{ steps.pr-comment.outputs.comment }}" \
+            "5793266" \
+            "PR URL" \
+            "${{ github.event.pull_request.html_url }}"
