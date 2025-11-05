@@ -4,7 +4,9 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  },
   "editor.tabSize": 2,
-  "eslint.workingDirectories": ["./src"],
-  "cSpell.words": ["Tankalizer", "Yomu"]
+  "eslint.workingDirectories": ["./src"]
 }
