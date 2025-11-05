@@ -19,16 +19,16 @@ const (
 
 type Room struct {
 	ID         uuid.UUID
-	RoomID     int // 1~9999
+	RoomNumber int // 1~9999
 	HostUserID uuid.UUID
 	CreatedAt  time.Time
 	ExpiredAt  time.Time
 	Status     RoomStatus
 }
 
-func NewRoom(roomID int, hostUserID uuid.UUID, expiredAt time.Time) (*Room, error) {
-	if roomID <= 0 {
-		return nil, errors.New("roomID is invalid")
+func NewRoom(roomNumber int, hostUserID uuid.UUID, expiredAt time.Time) (*Room, error) {
+	if roomNumber <= 0 {
+		return nil, errors.New("roomNumber is invalid")
 	}
 	if hostUserID == uuid.Nil {
 		return nil, errors.New("hostUserID is required")
@@ -41,7 +41,7 @@ func NewRoom(roomID int, hostUserID uuid.UUID, expiredAt time.Time) (*Room, erro
 
 	return &Room{
 		ID:         uuid.New(),
-		RoomID:     roomID,
+		RoomNumber: roomNumber,
 		HostUserID: hostUserID,
 		CreatedAt:  time.Now(),
 		ExpiredAt:  expiredAt,
