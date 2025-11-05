@@ -1,0 +1,27 @@
+name: Check Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check_branch:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if PR is from develop
+        if: github.event.pull_request.head.ref != 'develop'
+        run: |
+          chmod +x .github/scripts/discord-notify.sh
+          .github/scripts/discord-notify.sh \
+            "${{ secrets.DISCORD_GITCI_WEBHOOK_URL }}" \
+            "PRチェックエラー" \
+            "PRはdevelopブランチから作成してください" \
+            "15158332" \
+            "PR元ブランチ" \
+            "${{ github.event.pull_request.head.ref }}"
+          exit 1
