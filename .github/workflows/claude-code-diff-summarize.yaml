@@ -1,0 +1,87 @@
+name: Claude Code Diff Summarize
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - develop
+
+jobs:
+  claude-diff-summarize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Diff Summarize
+        id: claude-diff-summarize
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          direct_prompt: |
+            このプルリクエストの変更内容を第三者にわかりやすく簡潔に解説してください。
+            レビューや評価は行わず、純粋に「何が変更されたか」を説明してください。
+
+            以下の形式で整理してください:
+
+            ## 📝 変更概要
+            - この変更で実現される機能や修正内容を簡潔に説明
+
+            ## 📋 変更ファイル一覧
+            - 変更されたファイルとその変更内容（追加/削除/修正）
+
+            ## 🔧 主要な変更点
+            - 新しく追加された機能
+            - 削除された機能
+            - 修正・改善された部分
+            - リファクタリングされた部分
+
+            ## 🎯 影響範囲
+            - この変更により影響を受ける機能やコンポーネント
+            - 依存関係の変更がある場合はその詳細
+
+            ## 💡 技術的詳細
+            - 実装方法の変更点
+            - 新しく導入されたライブラリやツール
+            - データベーススキーマの変更（該当する場合）
+
+            技術者でない人にも理解しやすいよう、専門用語には適切な説明を添えてください。
+
+          use_sticky_comment: true
+
+      - name: Wait for Claude comment
+        if: success()
+        run: sleep 10
+
+      - name: Get latest PR comment
+        if: success()
+        id: pr-comment
+        run: |
+          # Get the latest comment from Claude
+          comment=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments[-1].body' | head -c 1000)
+          # Escape newlines and quotes for Discord
+          comment_escaped=$(echo "$comment" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          echo "comment=$comment_escaped" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Discord Notification
+        if: success()
+        run: |
+          chmod +x .github/scripts/discord-notify.sh
+          .github/scripts/discord-notify.sh \
+            "${{ secrets.DISCORD_GITCI_WEBHOOK_URL }}" \
+            "☆AI差分要約☆" \
+            "PR変更内容まとめ:\n[PR #${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }})\n\n${{ steps.pr-comment.outputs.comment }}" \
+            "5793266" \
+            "PR URL" \
+            "${{ github.event.pull_request.html_url }}"
