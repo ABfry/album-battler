@@ -24,6 +24,8 @@ services:
     volumes:
       - ./backend:/app
       - backend_cache:/go/pkg/mod
+    env_file:
+      - ./backend/.env
     environment:
       - GO_ENV=development
 
