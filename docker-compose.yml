@@ -1,4 +1,25 @@
 services:
+  db:
+    image: mysql:8.0
+    container_name: album-battler-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: album_battler
+      MYSQL_USER: album_user
+      MYSQL_PASSWORD: album_pass
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations/init_db.sql:/docker-entrypoint-initdb.d/01-init_db.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   frontend:
     build:
       context: ./frontend
@@ -28,8 +49,17 @@ services:
       - ./backend/.env
     environment:
       - GO_ENV=development
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=album_battler
+      - DB_USER=album_user
+      - DB_PASSWORD=album_pass
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   frontend_node_modules:
   frontend_next:
   backend_cache:
+  mysql_data:
