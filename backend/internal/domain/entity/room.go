@@ -17,6 +17,23 @@ const (
 	Closed
 )
 
+func GetValidTransitions(status RoomStatus) []RoomStatus {
+	switch status {
+	case WaitJoin:
+		return []RoomStatus{FullyJoined, InBattle, Closed}
+	case FullyJoined:
+		return []RoomStatus{WaitJoin, InBattle, Closed}
+	case InBattle:
+		return []RoomStatus{Result, Closed}
+	case Result:
+		return []RoomStatus{Closed}
+	case Closed:
+		return []RoomStatus{}
+	default:
+		return []RoomStatus{}
+	}
+}
+
 type Room struct {
 	ID         uuid.UUID
 	RoomNumber int // 1~9999
@@ -49,6 +66,14 @@ func NewRoom(roomNumber int, hostUserID uuid.UUID, expiredAt time.Time) (*Room, 
 	}, nil
 }
 
-func (r *Room) ChangeStatus(status RoomStatus) {
-	r.Status = status
+func (r *Room) ChangeStatus(status RoomStatus) error {
+	allowedStatuses := GetValidTransitions(r.Status)
+	for _, allowedStatus := range allowedStatuses {
+		if status == allowedStatus {
+			r.Status = status
+			return nil
+		}
+	}
+
+	return errors.New("invalid status transition")
 }

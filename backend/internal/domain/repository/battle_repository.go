@@ -8,7 +8,6 @@ import (
 )
 
 type BattleRepository interface {
-	Create(ctx context.Context, battle *entity.Battle) error
 	FindByID(ctx context.Context, id string) (*entity.Battle, error)
 	FindByRoomID(ctx context.Context, roomID int) (*entity.Battle, error)
 	FindByUserID(ctx context.Context, user uuid.UUID) (*entity.Battle, error)

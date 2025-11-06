@@ -7,8 +7,7 @@ import (
 )
 
 type RoomRepository interface {
-	Create(ctx context.Context, room *entity.Room) error
 	FindByID(ctx context.Context, id string) (*entity.Room, error)
-	FindByRoomID(ctx context.Context, roomID int) (*entity.Room, error)
+	FindByRoomNumber(ctx context.Context, roomNumber int) (*entity.Room, error)
 	Save(ctx context.Context, room *entity.Room) error
 }
