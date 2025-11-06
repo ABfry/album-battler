@@ -1,8 +1,7 @@
 services:
   db:
     image: mysql:8.0
-    container_name: album-battler-mysql
-    restart: unless-stopped
+    # restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: album_battler
@@ -54,6 +53,20 @@ services:
       - DB_NAME=album_battler
       - DB_USER=album_user
       - DB_PASSWORD=album_pass
+    depends_on:
+      db:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    # restart: unless-stopped
+    ports:
+      - 8081:80
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=rootpass
     depends_on:
       db:
         condition: service_healthy
