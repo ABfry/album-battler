@@ -3,8 +3,8 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    branches:
-      - develop
+    branches-ignore:
+      - main
 
 jobs:
   claude-code-review:
