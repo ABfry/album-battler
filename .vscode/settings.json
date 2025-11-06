@@ -8,5 +8,8 @@
     "editor.defaultFormatter": "golang.go"
   },
   "editor.tabSize": 2,
-  "eslint.workingDirectories": ["./src"]
+  "eslint.workingDirectories": ["./src"],
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    { "file": "../.cursorrules" }
+  ]
 }
