@@ -1,8 +1,7 @@
 services:
   db:
     image: mysql:8.0
-    container_name: album-battler-mysql
-    restart: unless-stopped
+    # restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: album_battler
@@ -60,8 +59,7 @@ services:
 
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: album-battler-phpmyadmin
-    restart: unless-stopped
+    # restart: unless-stopped
     ports:
       - 8081:80
     environment:
