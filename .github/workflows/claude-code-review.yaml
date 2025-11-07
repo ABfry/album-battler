@@ -3,8 +3,6 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    branches-ignore:
-      - main
 
 jobs:
   claude-code-review:
@@ -23,12 +21,12 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-diff-summarize
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-          prompt: |
+          direct_prompt: |
             このプルリクエストの変更をレビューしてください。まず、変更内容と影響範囲を第三者にも伝わるように整理したうえで、続けてコードレビューを行ってください。ハッカソン中のため、潜在的なバグや仕様との不一致、動作不良につながるリスクを最優先で洗い出してください。保守性・パフォーマンスの課題は重大な問題（致命的なバグや障害に直結するレベル）のみ指摘対象とし、それ以外は触れないでください。改善提案や確認が必要な点があれば整理してください。
 
             以下の形式でフィードバックをまとめてください:
