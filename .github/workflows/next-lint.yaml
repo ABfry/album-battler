@@ -1,0 +1,37 @@
+name: Next.js Lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - "**"
+    paths:
+      - "frontend/**"
+      - ".github/workflows/next-lint.yaml"
+
+jobs:
+  lint:
+    name: Next.js Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: npx eslint . --max-warnings 0
+
+      - name: Run TypeScript Check
+        working-directory: ./frontend
+        run: npx tsc --noEmit
