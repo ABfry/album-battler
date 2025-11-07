@@ -1,0 +1,16 @@
+# AWSリージョン
+aws_region = "ap-northeast-1"
+
+# プロジェクト設定
+project_name = "album-battler"
+environment  = "production"
+
+# S3設定
+s3_bucket_name        = "album-battler-images"
+s3_enable_versioning  = true
+s3_allowed_origins    = ["*"]
+
+# VPC設定
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["ap-northeast-1a", "ap-northeast-1c"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
