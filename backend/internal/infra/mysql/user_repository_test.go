@@ -30,7 +30,11 @@ func newTestDB(t *testing.T) *sql.DB {
 // TestStep1_SaveUser はユーザーの保存をテストします。
 func TestStep1_SaveUser(t *testing.T) {
 	db := newTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close database: %v", err)
+		}
+	}()
 	repo := NewUserRepository(db)
 
 	userID := uuid.New()
@@ -57,7 +61,11 @@ func TestStep1_SaveUser(t *testing.T) {
 // TestStep2_FindUser はユーザーの取得をテストします。
 func TestStep2_FindUser(t *testing.T) {
 	db := newTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close database: %v", err)
+		}
+	}()
 	repo := NewUserRepository(db)
 
 	// テスト用のユーザーを作成
@@ -96,7 +104,11 @@ func TestStep2_FindUser(t *testing.T) {
 // TestStep3_UpdateUser はユーザーの更新をテストします。
 func TestStep3_UpdateUser(t *testing.T) {
 	db := newTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close database: %v", err)
+		}
+	}()
 	repo := NewUserRepository(db)
 
 	// テスト用のユーザーを作成
