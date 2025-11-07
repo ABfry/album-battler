@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	_ "github.com/ABfry/album-battler/backend/internal/infra/mysql"
 )
 
 // -- 依存関係の定義 --
