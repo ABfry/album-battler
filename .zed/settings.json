@@ -6,8 +6,11 @@
   "ensure_final_newline_on_save": true,
   "formatter": {
     "external": {
-      "command": "prettier",
-      "arguments": ["--stdin-filepath", "{buffer_path}"]
+      "command": "sh",
+      "arguments": [
+        "-c",
+        "cd frontend && npm exec -- prettier --stdin-filepath {buffer_path}"
+      ]
     }
   },
   "languages": {
