@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -18,8 +19,8 @@ type APIServer struct {
 
 func NewAPIServer(deps *app.Dependencies) *APIServer {
 	srv := &APIServer{
-		deps:     deps,
-		mux:      http.NewServeMux(),
+		deps: deps,
+		mux:  http.NewServeMux(),
 	}
 	srv.registerRoutes()
 	return srv
@@ -43,6 +44,7 @@ func (s *APIServer) ListenAndServe(ctx context.Context, addr string) error {
 		defer cancel()
 		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 			// todo : シャットダウン時エラー
+			fmt.Println("シャットダウン時エラー", err)
 		}
 	}()
 
