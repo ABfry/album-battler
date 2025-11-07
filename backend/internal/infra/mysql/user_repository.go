@@ -20,12 +20,6 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 	return &mysqlUserRepository{db: db}
 }
 
-// func (r *mysqlUserRepository) Create(user *entity.User) error {
-// 	query := `INSERT INTO users (id, name, icon_url, hashed_password, created_at) VALUES (?, ?, ?, ?, ?)`
-// 	_, err := r.db.Exec(query, user.ID.String(), user.Name, user.IconUrl, user.HashedPassword, user.CreatedAt)
-// 	return err
-// }
-
 func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
 	var idStr string
