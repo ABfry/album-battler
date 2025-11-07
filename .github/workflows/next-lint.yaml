@@ -1,11 +1,17 @@
-name: Lint Check
+name: Next.js Lint
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches:
+      - "**"
+    paths:
+      - "frontend/**"
+      - ".github/workflows/next-lint.yaml"
 
 jobs:
   lint:
+    name: Next.js Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
