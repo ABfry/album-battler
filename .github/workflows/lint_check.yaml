@@ -23,7 +23,9 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npx eslint ./frontend/src --max-warnings 0
+        working-directory: ./frontend
+        run: npx eslint . --max-warnings 0
 
       - name: Run TypeScript Check
-        run: npx tsc --noEmit ./frontend/src
+        working-directory: ./frontend
+        run: npx tsc --noEmit
