@@ -1,0 +1,217 @@
+package app
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// -- 依存関係の定義 --
+
+type Dependencies struct {
+	db *sql.DB
+	// UserRepository repository.UserRepository
+}
+
+// NewDependencies は依存関係を初期化する
+func NewDependencies() (*Dependencies, error) {
+	db, err := initDatabase()
+	if err != nil {
+		return nil, fmt.Errorf("initialize database: %w", err)
+	}
+
+	deps := &Dependencies{
+		db: db,
+	}
+
+	// リポジトリの初期化
+	if err := initRepositories(deps); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("initialize repositories: %w", err)
+	}
+
+	return deps, nil
+}
+
+// データベース接続の初期化する
+func initDatabase() (*sql.DB, error) {
+	cfg, err := loadDatabaseConfig()
+	if err != nil {
+		return nil, fmt.Errorf("load database config: %w", err)
+	}
+
+	if cfg.driver != "mysql" {
+		return nil, fmt.Errorf("unsupported DB_DRIVER %q (only mysql is supported)", cfg.driver)
+	}
+
+	db, err := sql.Open(cfg.driver, cfg.dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+
+	// コネクションプール設定
+	if cfg.connMaxLifetime > 0 {
+		db.SetConnMaxLifetime(cfg.connMaxLifetime)
+	}
+	if cfg.connMaxIdleTime > 0 {
+		db.SetConnMaxIdleTime(cfg.connMaxIdleTime)
+	}
+	if cfg.maxOpenConns > 0 {
+		db.SetMaxOpenConns(cfg.maxOpenConns)
+	}
+	if cfg.maxIdleConns > 0 {
+		db.SetMaxIdleConns(cfg.maxIdleConns)
+	}
+
+	// 接続確認
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	return db, nil
+}
+
+func initRepositories(deps *Dependencies) error {
+	// TODO
+	// deps.UserRepository = mysql.NewUserRepository(deps.db)
+	// deps.AlbumRepository = mysql.NewAlbumRepository(deps.db)
+	// deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+
+	return nil
+}
+
+func (d *Dependencies) Close() error {
+	if d.db != nil {
+		return d.db.Close()
+	}
+	return nil
+}
+
+func (d *Dependencies) DB() *sql.DB {
+	return d.db
+}
+
+type databaseConfig struct {
+	driver          string
+	dsn             string
+	maxOpenConns    int
+	maxIdleConns    int
+	connMaxLifetime time.Duration
+	connMaxIdleTime time.Duration
+}
+
+func loadDatabaseConfig() (databaseConfig, error) {
+	cfg := databaseConfig{
+		driver: envOrDefault("DB_DRIVER", "mysql"),
+	}
+
+	dsn := os.Getenv("DSN")
+	if strings.TrimSpace(dsn) == "" {
+		var err error
+		switch cfg.driver {
+		case "mysql":
+			dsn, err = buildMySQLDSN()
+			if err != nil {
+				return cfg, err
+			}
+		default:
+			return cfg, fmt.Errorf("DSN environment variable is required for driver %q", cfg.driver)
+		}
+	}
+	cfg.dsn = strings.TrimSpace(dsn)
+
+	var err error
+	if cfg.maxOpenConns, err = parseIntEnv("DB_MAX_OPEN_CONNS", 32); err != nil {
+		return cfg, fmt.Errorf("parse DB_MAX_OPEN_CONNS: %w", err)
+	}
+
+	if cfg.maxIdleConns, err = parseIntEnv("DB_MAX_IDLE_CONNS", 16); err != nil {
+		return cfg, fmt.Errorf("parse DB_MAX_IDLE_CONNS: %w", err)
+	}
+
+	if cfg.connMaxLifetime, err = parseDurationSecondsEnv("DB_CONN_MAX_LIFETIME", 90*time.Minute); err != nil {
+		return cfg, fmt.Errorf("parse DB_CONN_MAX_LIFETIME: %w", err)
+	}
+
+	if cfg.connMaxIdleTime, err = parseDurationSecondsEnv("DB_CONN_MAX_IDLE_TIME", 15*time.Minute); err != nil {
+		return cfg, fmt.Errorf("parse DB_CONN_MAX_IDLE_TIME: %w", err)
+	}
+
+	return cfg, nil
+}
+
+func buildMySQLDSN() (string, error) {
+	user := strings.TrimSpace(os.Getenv("DB_USER"))
+	if user == "" {
+		return "", errors.New("DB_USER environment variable is required when DSN is not set")
+	}
+
+	host := envOrDefault("DB_HOST", "127.0.0.1")
+	port := envOrDefault("DB_PORT", "3306")
+	name := strings.TrimSpace(os.Getenv("DB_NAME"))
+	if name == "" {
+		return "", errors.New("DB_NAME environment variable is required when DSN is not set")
+	}
+
+	password := os.Getenv("DB_PASSWORD")
+	params := strings.TrimSpace(os.Getenv("DB_PARAMS"))
+	if params == "" {
+		params = "charset=utf8mb4&parseTime=true&loc=Local"
+	} else {
+		params = strings.TrimPrefix(params, "?")
+	}
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, name)
+	if params != "" {
+		dsn = dsn + "?" + params
+	}
+
+	return dsn, nil
+}
+
+func envOrDefault(key, defaultVal string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return defaultVal
+}
+
+func parseIntEnv(key string, defaultVal int) (int, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultVal, nil
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid integer value %q", value)
+	}
+	return parsed, nil
+}
+
+func parseDurationSecondsEnv(key string, defaultVal time.Duration) (time.Duration, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultVal, nil
+	}
+
+	seconds, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid duration (seconds) value %q", value)
+	}
+
+	if seconds <= 0 {
+		return 0, nil
+	}
+
+	return time.Duration(seconds) * time.Second, nil
+}
