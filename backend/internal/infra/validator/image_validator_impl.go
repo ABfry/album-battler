@@ -15,6 +15,8 @@ type imageValidator struct {
 }
 
 var (
+	jpegStartBytes = []byte{0xFF, 0xD8, 0xFF}                                                       // 'FF' 'D8' 'FF'
+	pngStartBytes  = []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}                         // '89' '50' '4E' '47' '0D' '0A' '1A' '0A'
 	webpStartBytes = []byte{0x52, 0x49, 0x46, 0x46}                                                 // 'R' 'I' 'F' 'F'
 	webpFormatChar = []byte{0x57, 0x45, 0x42, 0x50}                                                 // 'W' 'E' 'B' 'P'
 	heifHeaderChar = []byte{0x6d, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63, 0x68, 0x65, 0x76, 0x63} // "mif1heichevc"
@@ -61,12 +63,12 @@ func (v *imageValidator) ValidateFormat(data []byte) error {
 
 // JPEGフォーマットかどうかを判定する
 func isJpeg(imageBytes []byte) bool {
-	return bytes.HasPrefix(imageBytes, []byte{0xFF, 0xD8, 0xFF})
+	return bytes.HasPrefix(imageBytes, jpegStartBytes)
 }
 
 // PNGフォーマットかどうかを判定する
 func isPng(imageBytes []byte) bool {
-	return bytes.HasPrefix(imageBytes, []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A})
+	return bytes.HasPrefix(imageBytes, pngStartBytes)
 }
 
 // HEIFフォーマットかどうかを判定する
