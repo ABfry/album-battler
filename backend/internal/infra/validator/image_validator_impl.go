@@ -99,6 +99,9 @@ func isWebp(imageBytes []byte) bool {
 
 // バイト配列の範囲比較
 func simpleByteRangeEqual(bytes1, bytes2 []byte, checkLength int) bool {
+	if len(bytes1) < checkLength || len(bytes2) < checkLength {
+		return false
+	}
 	for index := 0; index < checkLength; index++ {
 		if bytes1[index] != bytes2[index] {
 			return false
