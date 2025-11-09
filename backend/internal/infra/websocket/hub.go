@@ -35,12 +35,6 @@ type Hub struct {
 	// 部屋のメンバー管理 (部屋ID → ユーザーIDのセット)
 	rooms map[uuid.UUID]map[uuid.UUID]bool
 
-	// ユーザーが参加している部屋ID
-	userCurrentRoom map[uuid.UUID]uuid.UUID
-
-	// 部屋のメンバー管理 (部屋ID → ユーザーIDのセット)
-	roomMembers map[uuid.UUID]map[uuid.UUID]bool
-
 	// クライアントからのブロードキャストメッセージ
 	broadcast chan *BroadcastMessage
 
@@ -113,7 +107,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if _, ok := h.clients[client.UserID]; ok {
 				delete(h.clients, client.UserID)
-				close(client.Send)
+				client.Close()
 				// ユーザーが参加している全ての部屋から退出
 				h.removeUserFromAllRooms(client.UserID)
 			}
@@ -206,14 +200,23 @@ func (h *Hub) broadcastSystemMessage(message interface{}) {
 	}
 
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	// 削除対象を記録
+	var toUnregister []*Client
 	for _, client := range h.clients {
 		select {
 		case client.Send <- data:
 		default:
-			close(client.Send)
-			delete(h.clients, client.UserID)
+			toUnregister = append(toUnregister, client)
+		}
+	}
+	h.mu.RUnlock()
+
+	// unregisterチャネル経由で削除
+	for _, client := range toUnregister {
+		select {
+		case h.unregister <- client:
+		default:
+			log.Printf("Failed to unregister client %s", client.UserID)
 		}
 	}
 }
@@ -299,45 +302,6 @@ func (h *Hub) broadcastToRoom(roomID uuid.UUID, message interface{}) {
 	}
 }
 
-// 全ユーザーにメッセージをブロードキャスト
-func (h *Hub) BroadcastToAll(message interface{}) error {
-	h.systemBroadcast <- message
-	return nil
-}
-
-// ユーザーを部屋に参加させる（公開メソッド）
-func (h *Hub) JoinRoom(userID, roomID uuid.UUID) {
-	h.joinRoom <- struct {
-		UserID uuid.UUID
-		RoomID uuid.UUID
-	}{UserID: userID, RoomID: roomID}
-}
-
-// ユーザーを部屋から退出させる（公開メソッド）
-func (h *Hub) LeaveRoom(userID, roomID uuid.UUID) {
-	h.leaveRoom <- struct {
-		UserID uuid.UUID
-		RoomID uuid.UUID
-	}{UserID: userID, RoomID: roomID}
-}
-
-// 部屋のメンバー一覧を取得
-func (h *Hub) GetRoomMembers(roomID uuid.UUID) []uuid.UUID {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	members, ok := h.rooms[roomID]
-	if !ok {
-		return []uuid.UUID{}
-	}
-
-	result := make([]uuid.UUID, 0, len(members))
-	for userID := range members {
-		result = append(result, userID)
-	}
-	return result
-}
-
 // 新しいクライアントを作成してHubに登録
 func (h *Hub) NewClient(userID uuid.UUID, conn interface{}) *Client {
 	client := &Client{
@@ -376,20 +340,59 @@ func (h *Hub) removeClients(userIDs []uuid.UUID) {
 
 	for _, userID := range userIDs {
 		if client, ok := h.clients[userID]; ok {
-			// クライアントを安全にクローズ
 			client.Close()
-
-			// マップから削除
 			delete(h.clients, userID)
 
-			// ルームからも削除
-			if roomID, exists := h.userCurrentRoom[userID]; exists {
-				delete(h.roomMembers[roomID], userID)
-				delete(h.userCurrentRoom, userID)
+			// roomsから削除
+			for roomID, members := range h.rooms {
+				if members[userID] {
+					delete(members, userID)
+					if len(members) == 0 {
+						delete(h.rooms, roomID)
+					}
+				}
 			}
 
-			// ログ記録
 			log.Printf("Client %s disconnected and cleaned up", userID)
 		}
 	}
+}
+
+// 全ユーザーにメッセージをブロードキャスト
+func (h *Hub) BroadcastToAll(message interface{}) error {
+	h.systemBroadcast <- message
+	return nil
+}
+
+// ユーザーを部屋に参加させる（公開メソッド）
+func (h *Hub) JoinRoom(userID, roomID uuid.UUID) {
+	h.joinRoom <- struct {
+		UserID uuid.UUID
+		RoomID uuid.UUID
+	}{UserID: userID, RoomID: roomID}
+}
+
+// ユーザーを部屋から退出させる（公開メソッド）
+func (h *Hub) LeaveRoom(userID, roomID uuid.UUID) {
+	h.leaveRoom <- struct {
+		UserID uuid.UUID
+		RoomID uuid.UUID
+	}{UserID: userID, RoomID: roomID}
+}
+
+// 部屋のメンバー一覧を取得
+func (h *Hub) GetRoomMembers(roomID uuid.UUID) []uuid.UUID {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	members, ok := h.rooms[roomID]
+	if !ok {
+		return []uuid.UUID{}
+	}
+
+	result := make([]uuid.UUID, 0, len(members))
+	for userID := range members {
+		result = append(result, userID)
+	}
+	return result
 }
