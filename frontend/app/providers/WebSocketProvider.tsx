@@ -41,7 +41,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   useEffect(() => {
     // WebSocket接続を作成
-    const websocket = new WebSocket("ws://localhost:8765");
+    const websocket = new WebSocket("ws://localhost:8080/ws");
     wsRef.current = websocket;
 
     websocket.onopen = () => {

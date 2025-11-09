@@ -41,7 +41,7 @@ export default function RoomPage() {
           <p className="text-zinc-600 dark:text-zinc-400">
             Connection to:{" "}
             <code className="rounded bg-zinc-100 px-2 py-1 dark:bg-zinc-800">
-              ws://localhost:8765
+              ws://localhost:8080/ws
             </code>
           </p>
         </div>
