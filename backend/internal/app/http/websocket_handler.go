@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
-	"github.com/ABfry/album-battler/backend/internal/usecase"
 	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 )
@@ -21,17 +20,14 @@ var upgrader = ws.Upgrader{
 }
 
 type WebSocketHandler struct {
-	hub                     *websocket.Hub
-	broadcastMessageUseCase *usecase.BroadcastMessageUseCase
+	hub *websocket.Hub
 }
 
 func NewWebSocketHandler(
 	hub *websocket.Hub,
-	broadcastMessageUseCase *usecase.BroadcastMessageUseCase,
 ) *WebSocketHandler {
 	return &WebSocketHandler{
-		hub:                     hub,
-		broadcastMessageUseCase: broadcastMessageUseCase,
+		hub: hub,
 	}
 }
 
