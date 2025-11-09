@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"log"
 	"sync"
 
 	"github.com/google/uuid"
@@ -33,6 +34,12 @@ type Hub struct {
 
 	// 部屋のメンバー管理 (部屋ID → ユーザーIDのセット)
 	rooms map[uuid.UUID]map[uuid.UUID]bool
+
+	// ユーザーが参加している部屋ID
+	userCurrentRoom map[uuid.UUID]uuid.UUID
+
+	// 部屋のメンバー管理 (部屋ID → ユーザーIDのセット)
+	roomMembers map[uuid.UUID]map[uuid.UUID]bool
 
 	// クライアントからのブロードキャストメッセージ
 	broadcast chan *BroadcastMessage
@@ -168,16 +175,26 @@ func (h *Hub) removeUserFromAllRooms(userID uuid.UUID) {
 // メッセージを全クライアントに送信
 func (h *Hub) broadcastToAll(msg *BroadcastMessage) {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	// クライアントリストをコピー（スナップショット）
+	clients := make([]*Client, 0, len(h.clients))
 	for _, client := range h.clients {
-		select {
-		case client.Send <- msg.Message:
-		default:
-			// 送信バッファが詰まっている場合はクライアントをクローズ
-			close(client.Send)
-			delete(h.clients, client.UserID)
+		if !client.IsClosed() {
+			clients = append(clients, client)
 		}
+	}
+	h.mu.RUnlock()
+
+	// ロック外で送信処理
+	var toDelete []uuid.UUID
+	for _, client := range clients {
+		if !h.trySendToClient(client, msg.Message) {
+			toDelete = append(toDelete, client.UserID)
+		}
+	}
+
+	// 削除が必要な場合
+	if len(toDelete) > 0 {
+		h.removeClients(toDelete)
 	}
 }
 
@@ -333,4 +350,46 @@ func (h *Hub) NewClient(userID uuid.UUID, conn interface{}) *Client {
 	h.register <- client
 
 	return client
+}
+
+// 送信メソッド
+func (h *Hub) trySendToClient(client *Client, msg []byte) bool {
+	// 既にcloseされているかチェック
+	if client.IsClosed() {
+		return false
+	}
+
+	select {
+	case client.Send <- msg:
+		return true
+	default:
+		// バッファフルの場合
+		client.Close() // sync.Onceで保護
+		return false
+	}
+}
+
+// クライアント削除
+func (h *Hub) removeClients(userIDs []uuid.UUID) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for _, userID := range userIDs {
+		if client, ok := h.clients[userID]; ok {
+			// クライアントを安全にクローズ
+			client.Close()
+
+			// マップから削除
+			delete(h.clients, userID)
+
+			// ルームからも削除
+			if roomID, exists := h.userCurrentRoom[userID]; exists {
+				delete(h.roomMembers[roomID], userID)
+				delete(h.userCurrentRoom, userID)
+			}
+
+			// ログ記録
+			log.Printf("Client %s disconnected and cleaned up", userID)
+		}
+	}
 }
