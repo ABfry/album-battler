@@ -21,12 +21,14 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 }
 
 func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
-	var user entity.User
 	var idStr string
+	var name string
+	var iconUrl string
+	var hashedPassword string
 	var createdAt time.Time
 
 	query := `SELECT id, name, icon_url, hashed_password, created_at FROM users WHERE id = ?`
-	err := r.db.QueryRowContext(ctx, query, id.String()).Scan(&idStr, &user.Name, &user.IconUrl, &user.HashedPassword, &createdAt)
+	err := r.db.QueryRowContext(ctx, query, id.String()).Scan(&idStr, &name, &iconUrl, &hashedPassword, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // ユーザーが見つからない場合はnilを返す
@@ -40,10 +42,13 @@ func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*enti
 		return nil, err
 	}
 
-	user.ID = parsedID
-	user.CreatedAt = createdAt
-
-	return &user, nil
+	return &entity.User{
+		ID:             parsedID,
+		Name:           name,
+		IconUrl:        iconUrl,
+		HashedPassword: hashedPassword,
+		CreatedAt:      createdAt,
+	}, nil
 }
 
 func (r *mysqlUserRepository) Save(ctx context.Context, user *entity.User) error {
