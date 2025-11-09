@@ -12,6 +12,7 @@ import (
 
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
+	"github.com/ABfry/album-battler/backend/internal/usecase"
 )
 
 // -- 依存関係の定義 --
@@ -23,6 +24,9 @@ type Dependencies struct {
 	// WebSocket関連
 	WebSocketHub   *websocket.Hub
 	EventPublisher service.EventPublisher
+
+	// usecase
+	PeriodicBroadcastUseCase *usecase.PeriodicBroadcastUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -60,6 +64,7 @@ func initWebSocket(deps *Dependencies) error {
 	deps.EventPublisher = websocket.NewWebSocketEventPublisher(deps.WebSocketHub)
 
 	// UseCaseの初期化
+	deps.PeriodicBroadcastUseCase = usecase.NewPeriodicBroadcastUseCase(deps.EventPublisher, 10*time.Second) // 10秒ごとにメッセージをブロードキャスト
 
 	return nil
 }
