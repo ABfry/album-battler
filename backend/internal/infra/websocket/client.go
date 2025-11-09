@@ -156,7 +156,9 @@ func (c *Client) Close() {
 		c.closed.Store(true)
 		close(c.Send)
 		if c.Conn != nil {
-			c.Conn.Close()
+			if err := c.Conn.Close(); err != nil {
+				log.Printf("failed to close connection: %v", err)
+			}
 		}
 	})
 }
