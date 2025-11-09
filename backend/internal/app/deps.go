@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ABfry/album-battler/backend/internal/domain/service"
+	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 )
 
 // -- 依存関係の定義 --
@@ -16,6 +19,10 @@ import (
 type Dependencies struct {
 	db *sql.DB
 	// UserRepository repository.UserRepository
+
+	// WebSocket関連
+	WebSocketHub   *websocket.Hub
+	EventPublisher service.EventPublisher
 }
 
 // NewDependencies は依存関係を初期化する
@@ -35,7 +42,29 @@ func NewDependencies() (*Dependencies, error) {
 		return nil, fmt.Errorf("initialize repositories: %w", err)
 	}
 
+	// WebSocket関連の初期化
+	if err := initWebSocket(deps); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("initialize websocket: %w", err)
+	}
+
 	return deps, nil
+}
+
+// WebSocket関連の初期化
+func initWebSocket(deps *Dependencies) error {
+	// Hub作成（接続管理）
+	deps.WebSocketHub = websocket.NewHub()
+
+	// HubをgoroutineでRun
+	go deps.WebSocketHub.Run()
+
+	// EventPublisher作成（依存性逆転）
+	deps.EventPublisher = websocket.NewWebSocketEventPublisher(deps.WebSocketHub)
+
+	// UseCaseの初期化
+
+	return nil
 }
 
 // データベース接続の初期化する
