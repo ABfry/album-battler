@@ -278,26 +278,20 @@ func (h *Hub) broadcastToRoom(roomID uuid.UUID, message interface{}) {
 	}
 
 	h.mu.RLock()
-	members, ok := h.rooms[roomID]
-	h.mu.RUnlock()
-
-	if !ok {
-		return // 部屋が存在しない
-	}
-
-	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	for userID := range members {
-		client, ok := h.clients[userID]
-		if !ok {
-			continue // クライアントが存在しない
-		}
+	members, ok := h.rooms[roomID]
+	if !ok {
+		return
+	}
 
-		select {
-		case client.Send <- data:
-		default:
-			// 送信バッファが詰まっている場合は無視
+	for userID := range members {
+		if client, ok := h.clients[userID]; ok {
+			select {
+			case client.Send <- data:
+			default:
+				// バッファフル時は無視
+			}
 		}
 	}
 }
