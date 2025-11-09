@@ -56,9 +56,6 @@ func initWebSocket(deps *Dependencies) error {
 	// Hub作成（接続管理）
 	deps.WebSocketHub = websocket.NewHub()
 
-	// HubをgoroutineでRun
-	go deps.WebSocketHub.Run()
-
 	// EventPublisher作成（依存性逆転）
 	deps.EventPublisher = websocket.NewWebSocketEventPublisher(deps.WebSocketHub)
 

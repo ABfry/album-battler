@@ -26,6 +26,7 @@ func main() {
 	}()
 
 	api := httpapi.NewAPIServer(deps)
+	go deps.WebSocketHub.Run(ctx) // Hubをgoroutineで実行
 
 	port := os.Getenv("PORT")
 	if port == "" {
