@@ -53,7 +53,7 @@ func TestUserRepository(t *testing.T) {
 		if err := repo.Save(ctx, findUser); err != nil {
 			t.Fatalf("Failed to save user for find test: %v", err)
 		}
-		defer cleanupTest(db, "users", findUserID, t)
+		t.Cleanup(func() { cleanupTestUser(db, "users", findUserID, t) })
 
 		// テーブル駆動テストの定義
 		testCases := []struct {
@@ -113,8 +113,7 @@ func TestUserRepository(t *testing.T) {
 			},
 		}
 
-		// Saveのテストでは、各ケースでクリーンアップが必要
-		defer cleanupTest(db, "users", saveUserID, t)
+		t.Cleanup(func() { cleanupTestUser(db, "users", saveUserID, t) })
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -122,6 +121,9 @@ func TestUserRepository(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed to save user: %v", err)
 				}
+
+				t.Logf("Table 'users' after saving user '%s':", tc.user.Name)
+				showTable(t, db, "users")
 
 				// 保存/更新したデータを取得して検証
 				foundUser, err := repo.FindByID(ctx, tc.user.ID)
@@ -162,14 +164,18 @@ func TestUserRepository(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				for _, u := range tc.users {
-					// 各ユーザーのクリーンアップをスケジューリング
-					defer cleanupTest(db, "users", u.ID, t)
+				for _, user := range tc.users {
+					// ループ変数をキャプチャするため、ローカル変数にコピーする
+					u := user
+					t.Cleanup(func() { cleanupTestUser(db, "users", u.ID, t) })
 					err := repo.Save(ctx, u)
 					if err != nil {
 						t.Fatalf("Failed to save user %s: %v", u.Name, err)
 					}
 				}
+
+				t.Logf("Table 'users' after saving multiple users:")
+				showTable(t, db, "users")
 
 				// 全員が正しく保存されたか検証
 				for _, u := range tc.users {

@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -11,6 +12,22 @@ import (
 const (
 	dsn = "album_user:album_pass@tcp(127.0.0.1:3306)/album_battler?parseTime=true&loc=Local"
 )
+
+// allowedTestTables は、テストヘルパー関数で操作を許可するテーブル名のリストです。
+var allowedTestTables = map[string]struct{}{
+	"users":  {},
+	"rooms":  {},
+	"battles":{},
+	"images": {},
+}
+
+// validateTableName は、指定されたテーブル名が許可リストに含まれているか検証します。
+func validateTableName(t *testing.T, table string) {
+	t.Helper()
+	if _, ok := allowedTestTables[table]; !ok {
+		t.Fatalf("Invalid table name used in test helper: %s", table)
+	}
+}
 
 func newTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("mysql", dsn)
@@ -24,7 +41,11 @@ func newTestDB(t *testing.T) *sql.DB {
 }
 
 func showTable(t *testing.T, db *sql.DB, table string) {
-	rows, err := db.Query("SELECT * FROM " + table)
+	validateTableName(t, table) // テーブル名を検証
+
+	// fmt.Sprintfを使用して安全にクエリを構築します（検証後なので安全）
+	query := fmt.Sprintf("SELECT * FROM %s", table)
+	rows, err := db.Query(query)
 	if err != nil {
 		t.Fatalf("テーブルの表示に失敗しました: %v", err)
 	}
@@ -69,8 +90,12 @@ func assertEqual(t *testing.T, want, got interface{}) {
 	}
 }
 
-func cleanupTest(db *sql.DB, table string, id uuid.UUID, t *testing.T) {
-	_, err := db.Exec("DELETE FROM "+table+" WHERE id = ?", id.String())
+func cleanupTestUser(db *sql.DB, table string, id uuid.UUID, t *testing.T) {
+	validateTableName(t, table) // テーブル名を検証
+
+	// fmt.Sprintfを使用して安全にクエリを構築します（検証後なので安全）
+	query := fmt.Sprintf("DELETE FROM %s WHERE id = ?", table)
+	_, err := db.Exec(query, id.String())
 	if err != nil {
 		t.Fatalf("テストデータのクリーンアップに失敗しました: %v", err)
 	}
