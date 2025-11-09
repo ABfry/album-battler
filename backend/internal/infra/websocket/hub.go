@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"sync"
@@ -95,9 +96,12 @@ func NewHub() *Hub {
 }
 
 // Hubを起動
-func (h *Hub) Run() {
+func (h *Hub) Run(ctx context.Context) {
 	for {
 		select {
+		case <-ctx.Done(): // コンテキストがキャンセルされたら停止
+			log.Println("Hub stopped")
+			return
 		case client := <-h.register:
 			h.mu.Lock()
 			h.clients[client.UserID] = client
