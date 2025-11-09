@@ -2,6 +2,8 @@ package websocket
 
 import (
 	"log"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +40,10 @@ type Client struct {
 
 	// クライアントのルームID
 	RoomID uuid.UUID
+
+	// close管理
+	closeDone sync.Once
+	closed    atomic.Bool // クライアントが閉じられたかどうか
 }
 
 // 受信メッセージを読み取るループ
@@ -139,4 +145,18 @@ func (c *Client) WritePump() {
 			}
 		}
 	}
+}
+
+func (c *Client) IsClosed() bool {
+	return c.closed.Load()
+}
+
+func (c *Client) Close() {
+	c.closeDone.Do(func() {
+		c.closed.Store(true)
+		close(c.Send)
+		if c.Conn != nil {
+			c.Conn.Close()
+		}
+	})
 }
