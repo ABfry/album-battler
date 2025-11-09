@@ -8,8 +8,8 @@ import (
 )
 
 type BattleUserRepository interface {
-	FindByID(ctx context.Context, id string) (*entity.BattleUser, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*entity.BattleUser, error)
 	FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.BattleUser, error)
 	FindByBattleID(ctx context.Context, battleID uuid.UUID) (*entity.BattleUser, error)
-	Save(ctx context.Context, image *entity.BattleUser) error
+	Save(ctx context.Context, battleUser *entity.BattleUser) error
 }
