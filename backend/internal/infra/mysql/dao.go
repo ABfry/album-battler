@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -23,25 +25,32 @@ var tableColumns = map[TableName][]string{
 	ImagesTable:      {"id", "user_id", "battle_id", "image_url", "uploaded_at", "ai_score", "user_score"},
 }
 
-func getFindByIdQuery(table TableName) string {
+func findByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Row, error) {
 	columns, ok := tableColumns[table]
 	if !ok {
-		panic(fmt.Sprintf("unknown table: %s", table))
+		return nil, fmt.Errorf("unknown table: %s", table)
 	}
 
 	query := fmt.Sprintf(
-		"SELECT %s FROM %s WHERE id = ?",
+		"SELECT %s FROM %s WHERE %s = ?",
 		strings.Join(columns, ", "),
 		table,
+		key,
 	)
 
-	return query
+	row := db.QueryRowContext(ctx, query, value)
+	return row, nil
 }
 
-func getSaveQuery(table TableName) string {
+func save(ctx context.Context, db *sql.DB, table TableName, values ...interface{}) error {
 	columns, ok := tableColumns[table]
 	if !ok {
-		panic(fmt.Sprintf("unknown table: %s", table))
+		return fmt.Errorf("unknown table: %s", table)
+	}
+
+	if len(values) != len(columns) {
+		return fmt.Errorf("value count mismatch for table %s: want %d, got %d",
+			table, len(columns), len(values))
 	}
 
 	placeholders := make([]string, len(columns))
@@ -62,5 +71,9 @@ func getSaveQuery(table TableName) string {
 		strings.Join(updateAssignments, ", "),
 	)
 
-	return query
+	_, err := db.ExecContext(ctx, query, values...)
+	if err != nil {
+		return fmt.Errorf("failed to save %s: %w", table, err)
+	}
+	return nil
 }
