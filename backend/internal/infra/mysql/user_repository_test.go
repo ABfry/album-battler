@@ -13,7 +13,11 @@ import (
 func TestUserRepository(t *testing.T) {
 	// --- テストのセットアップ ---
 	db := newTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("Failed to close db: %v", err)
+		}
+	}()
 	repo := NewUserRepository(db)
 	ctx := context.Background()
 

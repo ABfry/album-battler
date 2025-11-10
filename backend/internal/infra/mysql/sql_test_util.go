@@ -49,7 +49,11 @@ func showTable(t *testing.T, db *sql.DB, table TableName) {
 	if err != nil {
 		t.Fatalf("テーブルの表示に失敗しました: %v", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			t.Logf("Failed to close rows: %v", err)
+		}
+	}()
 
 	cols, err := rows.Columns()
 	if err != nil {
