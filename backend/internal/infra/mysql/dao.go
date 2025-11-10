@@ -25,7 +25,7 @@ var tableColumns = map[TableName][]string{
 	ImagesTable:      {"id", "user_id", "battle_id", "image_url", "uploaded_at", "ai_score", "user_score"},
 }
 
-func findByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Row, error) {
+func findRowByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Row, error) {
 	query, err := getFindQuery(table, key)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func findByKey(ctx context.Context, db *sql.DB, table TableName, key string, val
 	return row, nil
 }
 
-func findAllByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Rows, error) {
+func findRowsByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Rows, error) {
 	query, err := getFindQuery(table, key)
 	if err != nil {
 		return nil, err

@@ -54,16 +54,16 @@ func (r *mysqlImageRepository) FindByID(ctx context.Context, id uuid.UUID) (*ent
 	return r.findBy(ctx, "id", id.String())
 }
 
-// FindByUserIDs はユーザーが投稿した画像をすべて返す。
+// FindImagesByUserID はユーザーが投稿した画像をすべて返す。
 // why: バトル画面でユーザー単位の履歴を一覧表示するユースケースがあるため。
-func (r *mysqlImageRepository) FindByUserIDs(ctx context.Context, userID uuid.UUID) ([]*entity.Image, error) {
-	return r.findAllBy(ctx, "user_id", userID.String())
+func (r *mysqlImageRepository) FindImagesByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Image, error) {
+	return r.findImagesBy(ctx, "user_id", userID.String())
 }
 
-// FindByBattleIDs は指定バトルに紐づく画像一覧を返す。
+// FindImagesByBattleID は指定バトルに紐づく画像一覧を返す。
 // why: バトル集計時に一括で読み込む必要があるため。
-func (r *mysqlImageRepository) FindByBattleIDs(ctx context.Context, battleID uuid.UUID) ([]*entity.Image, error) {
-	return r.findAllBy(ctx, "battle_id", battleID.String())
+func (r *mysqlImageRepository) FindImagesByBattleID(ctx context.Context, battleID uuid.UUID) ([]*entity.Image, error) {
+	return r.findImagesBy(ctx, "battle_id", battleID.String())
 }
 
 // --- private ---
@@ -71,7 +71,7 @@ func (r *mysqlImageRepository) FindByBattleIDs(ctx context.Context, battleID uui
 // findBy は単一レコード取得専用のヘルパー。
 // why: WHERE 句のカラムだけを差し替えたいパターンが多いため。
 func (r *mysqlImageRepository) findBy(ctx context.Context, key string, v any) (*entity.Image, error) {
-	row, err := findByKey(ctx, r.db, ImagesTable, key, v)
+	row, err := findRowByKey(ctx, r.db, ImagesTable, key, v)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +79,10 @@ func (r *mysqlImageRepository) findBy(ctx context.Context, key string, v any) (*
 	return r.createImage(row)
 }
 
-// findAllBy は複数レコード取得を共通化するヘルパー。
+// findImagesBy は複数レコード取得を共通化するヘルパー。
 // createImage を使い回し、カラムスキャンの重複を避ける。
-func (r *mysqlImageRepository) findAllBy(ctx context.Context, key string, v any) ([]*entity.Image, error) {
-	rows, err := findAllByKey(ctx, r.db, ImagesTable, key, v)
+func (r *mysqlImageRepository) findImagesBy(ctx context.Context, key string, v any) ([]*entity.Image, error) {
+	rows, err := findRowsByKey(ctx, r.db, ImagesTable, key, v)
 	if err != nil {
 		return nil, err
 	}

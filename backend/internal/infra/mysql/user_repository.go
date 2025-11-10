@@ -22,7 +22,7 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 
 func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	// 共通関数を利用して1件取得
-	row, err := findByKey(ctx, r.db, UsersTable, "id", id.String())
+	row, err := findRowByKey(ctx, r.db, UsersTable, "id", id.String())
 	if err != nil {
 		return nil, err
 	}

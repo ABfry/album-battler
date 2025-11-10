@@ -71,7 +71,7 @@ func TestImageRepository_FindByUserID(t *testing.T) {
 		},
 	})
 
-	result, err := repo.FindByUserIDs(context.Background(), userID)
+	result, err := repo.FindImagesByUserID(context.Background(), userID)
 	if err != nil {
 		t.Fatalf("FindByUserID error: %v", err)
 	}
