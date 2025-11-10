@@ -66,6 +66,7 @@ func NewRoom(roomNumber int, expiredAt time.Time, maxUsers int) (*Room, error) {
 		ExpiredAt:  expiredAt,
 		Status:     WaitJoin,
 		UserIDs:    []uuid.UUID{},
+		MaxUsers:   maxUsers,
 	}, nil
 }
 
