@@ -2,153 +2,194 @@ package mysql
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
-
-	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/google/uuid"
 )
 
-const (
-	dsn = "album_user:album_pass@tcp(127.0.0.1:3306)/album_battler?parseTime=true"
-)
-
-func newTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		t.Fatalf("データベースへの接続に失敗しました: %v", err)
-	}
-	if err := db.Ping(); err != nil {
-		t.Fatalf("データベースへのPingに失敗しました: %v", err)
-	}
-	return db
-}
-
-// TestStep1_SaveUser はユーザーの保存をテストします。
-func TestStep1_SaveUser(t *testing.T) {
+// TestUserRepository は、UserRepositoryのテストをテーブル駆動で実行します。
+func TestUserRepository(t *testing.T) {
+	// --- テストのセットアップ ---
 	db := newTestDB(t)
 	defer func() {
 		if err := db.Close(); err != nil {
-			t.Errorf("Failed to close database: %v", err)
+			t.Logf("Failed to close db: %v", err)
 		}
 	}()
 	repo := NewUserRepository(db)
+	ctx := context.Background()
 
-	userID := uuid.New()
-	user := &entity.User{
-		ID:             userID,
-		Name:           "test-step1-save",
-		IconUrl:        "http://example.com/step1.png",
-		HashedPassword: "hashed_password_step1",
-		CreatedAt:      time.Now(),
+	// --- テストケースの定義 ---
+	// FindByID のテストケース
+	findUserID := uuid.New()
+	findUserTime := time.Now().Truncate(time.Second)
+	findUser := &entity.User{
+		ID:             findUserID,
+		Name:           "test-user-find",
+		IconUrl:        "http://example.com/find.png",
+		HashedPassword: "hashed_password_find",
+		CreatedAt:      findUserTime,
 	}
 
-	err := repo.Save(context.Background(), user)
-	if err != nil {
-		t.Fatalf("Failed to save user: %v", err)
+	// Save(Update) のテストケース
+	saveUserID := uuid.New()
+	saveUserTime := time.Now().Truncate(time.Second)
+	initialUser := &entity.User{
+		ID:             saveUserID,
+		Name:           "initial-user",
+		IconUrl:        "http://example.com/initial.png",
+		HashedPassword: "hashed_initial",
+		CreatedAt:      saveUserTime,
 	}
-
-	// データをクリーンアップします。
-	_, err = db.Exec("DELETE FROM users WHERE id = ?", userID.String())
-	if err != nil {
-		t.Fatalf("Failed to clean up test data: %v", err)
-	}
-}
-
-// TestStep2_FindUser はユーザーの取得をテストします。
-func TestStep2_FindUser(t *testing.T) {
-	db := newTestDB(t)
-	defer func() {
-		if err := db.Close(); err != nil {
-			t.Errorf("Failed to close database: %v", err)
-		}
-	}()
-	repo := NewUserRepository(db)
-
-	// テスト用のユーザーを作成
-	userID := uuid.New()
-	user := &entity.User{
-		ID:             userID,
-		Name:           "test-step2-find",
-		IconUrl:        "http://example.com/step2.png",
-		HashedPassword: "hashed_password_step2",
-		CreatedAt:      time.Now(),
-	}
-	err := repo.Save(context.Background(), user)
-	if err != nil {
-		t.Fatalf("Failed to save user for find test: %v", err)
-	}
-	// テスト終了後にデータを削除
-	defer func() {
-		_, err := db.Exec("DELETE FROM users WHERE id = ?", userID.String())
-		if err != nil {
-			t.Fatalf("Failed to clean up test data: %v", err)
-		}
-	}()
-
-	foundUser, err := repo.FindByID(context.Background(), userID)
-	if err != nil {
-		t.Fatalf("Failed to find user: %v", err)
-	}
-	if foundUser == nil {
-		t.Fatal("User not found")
-	}
-	if foundUser.Name != "test-step2-find" {
-		t.Errorf("Expected user name 'test-step2-find', but got %s", foundUser.Name)
-	}
-}
-
-// TestStep3_UpdateUser はユーザーの更新をテストします。
-func TestStep3_UpdateUser(t *testing.T) {
-	db := newTestDB(t)
-	defer func() {
-		if err := db.Close(); err != nil {
-			t.Errorf("Failed to close database: %v", err)
-		}
-	}()
-	repo := NewUserRepository(db)
-
-	// テスト用のユーザーを作成
-	userID := uuid.New()
-	user := &entity.User{
-		ID:             userID,
-		Name:           "test-step3-update",
-		IconUrl:        "http://example.com/step3.png",
-		HashedPassword: "hashed_password_step3",
-		CreatedAt:      time.Now(),
-	}
-	err := repo.Save(context.Background(), user)
-	if err != nil {
-		t.Fatalf("Failed to save user for update test: %v", err)
-	}
-	// テスト終了後にデータを削除
-	defer func() {
-		_, err := db.Exec("DELETE FROM users WHERE id = ?", userID.String())
-		if err != nil {
-			t.Fatalf("Failed to clean up test data: %v", err)
-		}
-	}()
-
 	updatedUser := &entity.User{
-		ID:             userID,
-		Name:           "updated-name-step3",
-		IconUrl:        "http://example.com/step3.png",
-		HashedPassword: "hashed_password_step3",
-		CreatedAt:      user.CreatedAt,
-	}
-	err = repo.Save(context.Background(), updatedUser)
-	if err != nil {
-		t.Fatalf("Failed to update user: %v", err)
+		ID:             saveUserID,
+		Name:           "updated-user",
+		IconUrl:        "http://example.com/updated.png",
+		HashedPassword: "hashed_updated",
+		CreatedAt:      saveUserTime, // Save処理ではCreatedAtは更新されない
 	}
 
-	foundUser, err := repo.FindByID(context.Background(), userID)
-	if err != nil {
-		t.Fatalf("Failed to find updated user: %v", err)
-	}
-	if foundUser.Name != "updated-name-step3" {
-		t.Errorf("Expected updated user name 'updated-name-step3', but got %s", foundUser.Name)
-	}
+	// --- テストの実行 ---
+	t.Run("FindByID", func(t *testing.T) {
+		// FindByIDのテスト用のデータを準備
+		if err := repo.Save(ctx, findUser); err != nil {
+			t.Fatalf("Failed to save user for find test: %v", err)
+		}
+		t.Cleanup(func() { cleanupTestUser(db, "users", findUserID, t) })
+
+		// テーブル駆動テストの定義
+		testCases := []struct {
+			name        string
+			inputID     uuid.UUID
+			wantUser    *entity.User
+			expectError bool
+		}{
+			{
+				name:        "存在するユーザーをIDで取得できる",
+				inputID:     findUserID,
+				wantUser:    findUser,
+				expectError: false,
+			},
+			{
+				name:        "存在しないユーザーをIDで取得するとnilが返る",
+				inputID:     uuid.New(),
+				wantUser:    nil,
+				expectError: false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				gotUser, err := repo.FindByID(ctx, tc.inputID)
+
+				if tc.expectError {
+					if err == nil {
+						t.Errorf("Expected an error, but got none")
+					}
+				} else {
+					if err != nil {
+						t.Errorf("Unexpected error: %v", err)
+					}
+					assertEqual(t, tc.wantUser, gotUser)
+				}
+			})
+		}
+	})
+
+	t.Run("Save", func(t *testing.T) {
+		// テーブル駆動テストの定義
+		testCases := []struct {
+			name     string
+			user     *entity.User
+			wantUser *entity.User
+		}{
+			{
+				name:     "新しいユーザーを保存できる",
+				user:     initialUser,
+				wantUser: initialUser,
+			},
+			{
+				name:     "既存のユーザー情報を更新できる",
+				user:     updatedUser,
+				wantUser: updatedUser,
+			},
+		}
+
+		t.Cleanup(func() { cleanupTestUser(db, "users", saveUserID, t) })
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				err := repo.Save(ctx, tc.user)
+				if err != nil {
+					t.Fatalf("Failed to save user: %v", err)
+				}
+
+				t.Logf("Table 'users' after saving user '%s':", tc.user.Name)
+				showTable(t, db, "users")
+
+				// 保存/更新したデータを取得して検証
+				foundUser, err := repo.FindByID(ctx, tc.user.ID)
+				if err != nil {
+					t.Fatalf("Failed to find user after save: %v", err)
+				}
+				assertEqual(t, tc.wantUser, foundUser)
+			})
+		}
+	})
+
+	t.Run("SaveMultipleUsers", func(t *testing.T) {
+		// テーブル駆動テストの定義
+		testCases := []struct {
+			name  string
+			users []*entity.User
+		}{
+			{
+				name: "複数のユーザーを一度に保存できる",
+				users: []*entity.User{
+					{
+						ID:             uuid.New(),
+						Name:           "multi-user-1",
+						IconUrl:        "http://example.com/multi1.png",
+						HashedPassword: "hashed_multi_1",
+						CreatedAt:      time.Now().Truncate(time.Second),
+					},
+					{
+						ID:             uuid.New(),
+						Name:           "multi-user-2",
+						IconUrl:        "http://example.com/multi2.png",
+						HashedPassword: "hashed_multi_2",
+						CreatedAt:      time.Now().Truncate(time.Second),
+					},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				for _, user := range tc.users {
+					// ループ変数をキャプチャするため、ローカル変数にコピーする
+					u := user
+					t.Cleanup(func() { cleanupTestUser(db, "users", u.ID, t) })
+					err := repo.Save(ctx, u)
+					if err != nil {
+						t.Fatalf("Failed to save user %s: %v", u.Name, err)
+					}
+				}
+
+				t.Logf("Table 'users' after saving multiple users:")
+				showTable(t, db, "users")
+
+				// 全員が正しく保存されたか検証
+				for _, u := range tc.users {
+					foundUser, err := repo.FindByID(ctx, u.ID)
+					if err != nil {
+						t.Fatalf("Failed to find user %s: %v", u.Name, err)
+					}
+					assertEqual(t, u, foundUser)
+				}
+			})
+		}
+	})
 }
