@@ -27,7 +27,7 @@ func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*enti
 	var hashedPassword string
 	var createdAt time.Time
 
-	query := `SELECT id, name, icon_url, hashed_password, created_at FROM users WHERE id = ?`
+	query := getFindByIdQuery(UsersTable)
 	err := r.db.QueryRowContext(ctx, query, id.String()).Scan(&idStr, &name, &iconUrl, &hashedPassword, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -52,8 +52,7 @@ func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*enti
 }
 
 func (r *mysqlUserRepository) Save(ctx context.Context, user *entity.User) error {
-	query := `INSERT INTO users (id, name, icon_url, hashed_password, created_at) VALUES (?, ?, ?, ?, ?)
-	          ON DUPLICATE KEY UPDATE name = VALUES(name), icon_url = VALUES(icon_url), hashed_password = VALUES(hashed_password)`
+	query := getSaveQuery(UsersTable)
 
 	_, err := r.db.ExecContext(ctx, query, user.ID.String(), user.Name, user.IconUrl, user.HashedPassword, user.CreatedAt)
 	if err != nil {
