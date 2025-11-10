@@ -2,10 +2,12 @@
 CREATE DATABASE IF NOT EXISTS album_battler CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE album_battler;
 
+-- 開発用
 DROP TABLE IF EXISTS images;
 DROP TABLE IF EXISTS battles;
 DROP TABLE IF EXISTS rooms;
 DROP TABLE IF EXISTS users;
+---
 
 CREATE TABLE users (
     id CHAR(36) PRIMARY KEY,
