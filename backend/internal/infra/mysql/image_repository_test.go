@@ -208,9 +208,7 @@ func (r *stubRows) Next(dest []driver.Value) error {
 	if r.index >= len(r.rows) {
 		return io.EOF
 	}
-	for i, val := range r.rows[r.index] {
-		dest[i] = val
-	}
+	copy(dest, r.rows[r.index])
 	r.index++
 	return nil
 }
