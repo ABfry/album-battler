@@ -1,8 +1,13 @@
+// image_repository.go は MySQL 上の images テーブルを操作するリポジトリ実装を提供する。
+// 責務: images テーブルの CRUD（現在は保存と各種検索のみ）を集約し、ドメイン層に対して
+// 一貫したエンティティ変換を行う。依存: database/sql による接続オブジェクトと DAO ヘルパー。
+// 使用例: usecase 層から ImageRepository を注入して呼び出す。
 package mysql
 
 import (
 	"context"
 	"database/sql"
+	"log"
 	"time"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
@@ -16,10 +21,20 @@ type mysqlImageRepository struct {
 	db *sql.DB
 }
 
+// rowScanner は *sql.Row と *sql.Rows の双方で共有できる Scan インターフェース。
+// createImage を 1 箇所に集約するために定義しておく。
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+// NewImageRepository は MySQL 接続を受け取り ImageRepository 実装を返す。
+// why: 他レイヤーから具体型を直接扱わせないことでテスト容易性を確保する。
 func NewImageRepository(db *sql.DB) repository.ImageRepository {
 	return &mysqlImageRepository{db: db}
 }
 
+// Save は images テーブルへ upsert を行う。
+// why: save ヘルパーを使うことでカラム順序の重複定義を防ぎ、将来の変更コストを下げる。
 func (r *mysqlImageRepository) Save(ctx context.Context, image *entity.Image) error {
 	return save(
 		ctx, r.db, ImagesTable,
@@ -33,26 +48,67 @@ func (r *mysqlImageRepository) Save(ctx context.Context, image *entity.Image) er
 	)
 }
 
+// FindByID は主キー検索で 1 件だけ取り出す。
+// why: エンティティ単位の検証で厳密に 1 件を想定するケースが多いため。
 func (r *mysqlImageRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Image, error) {
 	return r.findBy(ctx, "id", id.String())
 }
 
-func (r *mysqlImageRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*entity.Image, error) {
-	return r.findBy(ctx, "user_id", userID.String())
+// FindByUserID はユーザーが投稿した画像をすべて返す。
+// why: バトル画面でユーザー単位の履歴を一覧表示するユースケースがあるため。
+func (r *mysqlImageRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Image, error) {
+	return r.findAllBy(ctx, "user_id", userID.String())
 }
 
-func (r *mysqlImageRepository) FindByBattleID(ctx context.Context, battleID uuid.UUID) (*entity.Image, error) {
-	return r.findBy(ctx, "battle_id", battleID.String())
+// FindByBattleID は指定バトルに紐づく画像一覧を返す。
+// why: バトル集計時に一括で読み込む必要があるため。
+func (r *mysqlImageRepository) FindByBattleID(ctx context.Context, battleID uuid.UUID) ([]*entity.Image, error) {
+	return r.findAllBy(ctx, "battle_id", battleID.String())
 }
 
 // --- private ---
 
+// findBy は単一レコード取得専用のヘルパー。
+// why: WHERE 句のカラムだけを差し替えたいパターンが多いため。
 func (r *mysqlImageRepository) findBy(ctx context.Context, key string, v any) (*entity.Image, error) {
 	row, err := findByKey(ctx, r.db, ImagesTable, key, v)
 	if err != nil {
 		return nil, err
 	}
 
+	return r.createImage(row)
+}
+
+// findAllBy は複数レコード取得を共通化するヘルパー。
+// createImage を使い回し、カラムスキャンの重複を避ける。
+func (r *mysqlImageRepository) findAllBy(ctx context.Context, key string, v any) ([]*entity.Image, error) {
+	rows, err := findAllByKey(ctx, r.db, ImagesTable, key, v)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Failed to close rows: %v", err)
+		}
+	}()
+
+	var images []*entity.Image
+	for rows.Next() {
+		img, err := r.createImage(rows)
+		if err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return images, nil
+}
+
+// createImage は rows/row から entity.Image を生成する唯一の場所。
+// why: カラム順を 1 箇所に閉じ込めてスキーマ変更時の齟齬を防ぐ。
+func (r *mysqlImageRepository) createImage(scanner rowScanner) (*entity.Image, error) {
 	var (
 		idStr, userIDStr, battleIDStr string
 		imageURL                      string
@@ -61,10 +117,7 @@ func (r *mysqlImageRepository) findBy(ctx context.Context, key string, v any) (*
 		userScore                     sql.NullInt64
 	)
 
-	if err := row.Scan(&idStr, &userIDStr, &battleIDStr, &imageURL, &uploadedAt, &aiScore, &userScore); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
+	if err := scanner.Scan(&idStr, &userIDStr, &battleIDStr, &imageURL, &uploadedAt, &aiScore, &userScore); err != nil {
 		return nil, err
 	}
 

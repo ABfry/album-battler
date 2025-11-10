@@ -26,9 +26,32 @@ var tableColumns = map[TableName][]string{
 }
 
 func findByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Row, error) {
+	query, err := getFindQuery(table, key)
+	if err != nil {
+		return nil, err
+	}
+
+	row := db.QueryRowContext(ctx, query, value)
+	return row, nil
+}
+
+func findAllByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Rows, error) {
+	query, err := getFindQuery(table, key)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.QueryContext(ctx, query, value)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func getFindQuery(table TableName, key string) (string, error) {
 	columns, ok := tableColumns[table]
 	if !ok {
-		return nil, fmt.Errorf("unknown table: %s", table)
+		return "", fmt.Errorf("unknown table: %s", table)
 	}
 
 	query := fmt.Sprintf(
@@ -37,9 +60,7 @@ func findByKey(ctx context.Context, db *sql.DB, table TableName, key string, val
 		table,
 		key,
 	)
-
-	row := db.QueryRowContext(ctx, query, value)
-	return row, nil
+	return query, nil
 }
 
 func save(ctx context.Context, db *sql.DB, table TableName, values ...interface{}) error {
