@@ -9,6 +9,7 @@ import (
 
 	"github.com/ABfry/album-battler/backend/internal/app"
 	httpapi "github.com/ABfry/album-battler/backend/internal/app/http"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
