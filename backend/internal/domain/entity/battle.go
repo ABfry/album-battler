@@ -10,8 +10,6 @@ import (
 type Battle struct {
 	ID        uuid.UUID
 	RoomID    uuid.UUID
-	User1     uuid.UUID
-	User2     uuid.UUID
 	StartedAt time.Time
 	UserIDs   []uuid.UUID
 }

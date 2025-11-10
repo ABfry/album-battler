@@ -15,10 +15,10 @@ const (
 
 // allowedTestTables は、テストヘルパー関数で操作を許可するテーブル名のリストです。
 var allowedTestTables = map[string]struct{}{
-	"users":  {},
-	"rooms":  {},
-	"battles":{},
-	"images": {},
+	"users":   {},
+	"rooms":   {},
+	"battles": {},
+	"images":  {},
 }
 
 // validateTableName は、指定されたテーブル名が許可リストに含まれているか検証します。
@@ -40,8 +40,8 @@ func newTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func showTable(t *testing.T, db *sql.DB, table string) {
-	validateTableName(t, table) // テーブル名を検証
+func showTable(t *testing.T, db *sql.DB, table TableName) {
+	validateTableName(t, string(table)) // テーブル名を検証
 
 	// fmt.Sprintfを使用して安全にクエリを構築します（検証後なので安全）
 	query := fmt.Sprintf("SELECT * FROM %s", table)
