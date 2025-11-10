@@ -9,6 +9,7 @@ import (
 
 	"github.com/ABfry/album-battler/backend/internal/app"
 	httpapi "github.com/ABfry/album-battler/backend/internal/app/http"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -26,6 +27,7 @@ func main() {
 	}()
 
 	api := httpapi.NewAPIServer(deps)
+	go deps.WebSocketHub.Run(ctx) // Hubをgoroutineで実行
 
 	port := os.Getenv("PORT")
 	if port == "" {
