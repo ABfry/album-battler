@@ -54,15 +54,15 @@ func (r *mysqlImageRepository) FindByID(ctx context.Context, id uuid.UUID) (*ent
 	return r.findBy(ctx, "id", id.String())
 }
 
-// FindByUserID はユーザーが投稿した画像をすべて返す。
+// FindByUserIDs はユーザーが投稿した画像をすべて返す。
 // why: バトル画面でユーザー単位の履歴を一覧表示するユースケースがあるため。
-func (r *mysqlImageRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Image, error) {
+func (r *mysqlImageRepository) FindByUserIDs(ctx context.Context, userID uuid.UUID) ([]*entity.Image, error) {
 	return r.findAllBy(ctx, "user_id", userID.String())
 }
 
-// FindByBattleID は指定バトルに紐づく画像一覧を返す。
+// FindByBattleIDs は指定バトルに紐づく画像一覧を返す。
 // why: バトル集計時に一括で読み込む必要があるため。
-func (r *mysqlImageRepository) FindByBattleID(ctx context.Context, battleID uuid.UUID) ([]*entity.Image, error) {
+func (r *mysqlImageRepository) FindByBattleIDs(ctx context.Context, battleID uuid.UUID) ([]*entity.Image, error) {
 	return r.findAllBy(ctx, "battle_id", battleID.String())
 }
 
