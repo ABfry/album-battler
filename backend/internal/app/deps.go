@@ -10,19 +10,33 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
+	"github.com/ABfry/album-battler/backend/internal/infra/event"
+	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
+	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
 
 // -- 依存関係の定義 --
 
 type Dependencies struct {
 	db *sql.DB
-	// UserRepository repository.UserRepository
+
+	// Repository
+	RoomRepository repository.RoomRepository
 
 	// WebSocket関連
 	WebSocketHub   *websocket.Hub
 	EventPublisher service.EventPublisher
+	RoomManager    service.RoomManager
+
+	// Event関連
+	EventDispatcher service.EventDispatcher
+
+	// Usecase
+	JoinRoomUseCase  *room.JoinRoomUseCase
+	LeaveRoomUseCase *room.LeaveRoomUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -48,6 +62,18 @@ func NewDependencies() (*Dependencies, error) {
 		return nil, fmt.Errorf("initialize websocket: %w", err)
 	}
 
+	// Event関連の初期化
+	if err := initEvents(deps); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("initialize events: %w", err)
+	}
+
+	// Usecase関連の初期化
+	if err := initUseCases(deps); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("initialize usecases: %w", err)
+	}
+
 	return deps, nil
 }
 
@@ -59,7 +85,48 @@ func initWebSocket(deps *Dependencies) error {
 	// EventPublisher作成（依存性逆転）
 	deps.EventPublisher = websocket.NewWebSocketEventPublisher(deps.WebSocketHub)
 
-	// UseCaseの初期化
+	// RoomManager作成（WebSocket部屋管理）
+	deps.RoomManager = websocket.NewWebSocketRoomManager(deps.WebSocketHub)
+
+	return nil
+}
+
+// Event関連の初期化
+func initEvents(deps *Dependencies) error {
+	// EventDispatcher作成
+	dispatcher := event.NewEventDispatcher()
+	deps.EventDispatcher = dispatcher
+
+	// イベントハンドラーを登録
+	dispatcherImpl := dispatcher.(*event.EventDispatcherImpl)
+
+	userJoinedHandler := handlers.NewUserJoinedRoomHandler(
+		deps.RoomManager,
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register("user_joined_room", userJoinedHandler)
+
+	userLeftHandler := handlers.NewUserLeftRoomHandler(
+		deps.RoomManager,
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register("user_left_room", userLeftHandler)
+
+	return nil
+}
+
+// UseCase関連の初期化
+func initUseCases(deps *Dependencies) error {
+	// Room Usecases
+	deps.JoinRoomUseCase = room.NewJoinRoomUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+
+	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
 
 	return nil
 }
