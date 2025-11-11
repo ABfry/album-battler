@@ -84,10 +84,6 @@ func (r *mysqlRoomRepository) Save(ctx context.Context, room *entity.Room) error
 		return err
 	}
 
-	if room.HostUserID == nil {
-		return fmt.Errorf("host user id is nil")
-	}
-
 	return save(
 		ctx,
 		r.db,
