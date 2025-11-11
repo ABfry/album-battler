@@ -12,9 +12,6 @@ import (
 
 type RoomHandler struct {
 	createRoomUC   *room.CreateRoomUseCase
-	joinRoomUC     *room.JoinRoomUseCase
-	startGameUC    *room.StartGameUseCase
-	getRoomUC      *room.GetRoomUseCase
 	roomManager    service.RoomManager
 	eventPublisher service.EventPublisher
 }
