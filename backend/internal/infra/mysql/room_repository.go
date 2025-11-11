@@ -90,9 +90,9 @@ func (r *mysqlRoomRepository) Save(ctx context.Context, room *entity.Room) error
 		RoomsTable,
 		room.ID.String(),
 		room.RoomNumber,
-		room.HostUserID.String(),
+		toNullUUIDString(room.HostUserID),
 		room.CreatedAt,
-		room.ExpiredAt,
+		toNullTime(room.ExpiredAt),
 		statusStr,
 	)
 }
@@ -105,7 +105,7 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 	var (
 		idStr        string
 		roomNumber   int
-		hostUserID   string
+		hostUserID   sql.NullString
 		createdAt    time.Time
 		expiredAt    sql.NullTime
 		statusString string
@@ -122,10 +122,6 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse room id: %w", err)
 	}
-	hostID, err := uuid.Parse(hostUserID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse host user id: %w", err)
-	}
 	status, err := toEntityRoomStatus(statusString)
 	if err != nil {
 		return nil, err
@@ -138,7 +134,13 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 		ExpiredAt:  expiredAt.Time,
 		Status:     status,
 	}
-	room.HostUserID = &hostID
+	if hostUserID.Valid {
+		hostID, err := uuid.Parse(hostUserID.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse host user id: %w", err)
+		}
+		room.HostUserID = &hostID
+	}
 	return room, nil
 }
 
@@ -156,6 +158,23 @@ func toDBRoomStatus(status entity.RoomStatus) (string, error) {
 		return dbValue, nil
 	}
 	return "", fmt.Errorf("unknown room status enum: %d", status)
+}
+
+func toNullUUIDString(id *uuid.UUID) sql.NullString {
+	if id == nil {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{
+		String: id.String(),
+		Valid:  true,
+	}
+}
+
+func toNullTime(t time.Time) sql.NullTime {
+	if t.IsZero() {
+		return sql.NullTime{Valid: false}
+	}
+	return sql.NullTime{Time: t, Valid: true}
 }
 
 var (
