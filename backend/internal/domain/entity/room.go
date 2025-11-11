@@ -179,3 +179,24 @@ func (r *Room) Dissolve() error {
 	r.Status = Closed
 	return nil
 }
+
+func (r *Room) StartGame() error {
+	// ホストが存在することを確認
+	if r.HostUserID == nil {
+		return errors.New("no host in room")
+	}
+
+	// 状態遷移の検証
+	if err := r.ChangeStatus(InBattle); err != nil {
+		return err
+	}
+
+	// ドメインイベント記録
+	r.RecordEvent(event.GameStartedEvent{
+		RoomID:     r.ID,
+		RoomNumber: r.RoomNumber,
+		OccurredOn: time.Now(),
+	})
+
+	return nil
+}
