@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/google/uuid"
 )
 
@@ -35,6 +36,8 @@ func GetValidTransitions(status RoomStatus) []RoomStatus {
 }
 
 type Room struct {
+	event.AggregateRoot // ドメインイベント記録機能を埋め込み
+
 	ID         uuid.UUID
 	RoomNumber int // 1~9999
 	HostUserID *uuid.UUID
@@ -63,6 +66,7 @@ func NewRoom(roomNumber int, expiredAt time.Time, maxUsers int) (*Room, error) {
 		ExpiredAt:  expiredAt,
 		Status:     WaitJoin,
 		UserIDs:    []uuid.UUID{},
+		MaxUsers:   maxUsers,
 	}, nil
 }
 
@@ -88,11 +92,6 @@ func (r *Room) AddUser(userID uuid.UUID) error {
 		return errors.New("room is full")
 	}
 
-	// 1人目ならホストにする
-	if len(r.UserIDs) == 0 {
-		r.HostUserID = &userID
-	}
-
 	// 重複チェック
 	for _, u := range r.UserIDs {
 		if u == userID {
@@ -100,18 +99,70 @@ func (r *Room) AddUser(userID uuid.UUID) error {
 		}
 	}
 
+	// 1人目ならホストにする
+	isHost := len(r.UserIDs) == 0
+	if isHost {
+		r.HostUserID = &userID
+	}
+
 	r.UserIDs = append(r.UserIDs, userID)
+
+	// ドメインイベント記録
+	r.RecordEvent(event.UserJoinedRoomEvent{
+		RoomID:     r.ID,
+		RoomNumber: r.RoomNumber,
+		UserID:     userID,
+		IsHost:     isHost,
+		OccurredOn: time.Now(),
+	})
+
 	return nil
 }
 
 func (r *Room) RemoveUser(userID uuid.UUID) error {
+	// ユーザーが存在するか確認
+	found := false
 	for i, u := range r.UserIDs {
 		if u == userID {
 			r.UserIDs = append(r.UserIDs[:i], r.UserIDs[i+1:]...)
-			return nil
+			found = true
+			break
 		}
 	}
-	return errors.New("user not found")
+
+	if !found {
+		return errors.New("user not found")
+	}
+
+	// 退出者がホストだったか
+	wasHost := r.HostUserID != nil && *r.HostUserID == userID
+
+	// 新しいホストの選定
+	var newHostID *uuid.UUID
+	if wasHost && len(r.UserIDs) > 0 {
+		// 残っているユーザーの中から最初のユーザーを新ホストにする
+		newHostID = &r.UserIDs[0]
+		r.HostUserID = newHostID
+	} else if wasHost {
+		// 誰もいなくなった場合
+		r.HostUserID = nil
+	}
+
+	// 部屋が解散したか (全員退出)
+	roomDissolved := len(r.UserIDs) == 0
+
+	// ドメインイベント記録
+	r.RecordEvent(event.UserLeftRoomEvent{
+		RoomID:        r.ID,
+		RoomNumber:    r.RoomNumber,
+		UserID:        userID,
+		WasHost:       wasHost,
+		NewHostID:     newHostID,
+		RoomDissolved: roomDissolved,
+		OccurredOn:    time.Now(),
+	})
+
+	return nil
 }
 
 func (r *Room) IsExpired() bool {
