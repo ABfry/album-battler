@@ -2,11 +2,15 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"google.golang.org/genai"
 )
+
+var _ Client = (*GeminiClient)(nil)
 
 // Gemini向けのClientインターフェース実装
 type GeminiClient struct {
@@ -149,6 +153,136 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		FinishReason: finishReason,
 		Usage:        usage,
 	}, nil
+}
+
+// GenerateThemeは写真撮影バトル用のテーマを生成する
+func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
+	req := &GenerateRequest{
+		Messages: []Message{
+			{
+				Role:    "user",
+				Content: GenerateThemePrompt,
+			},
+		},
+		Temperature: 1.0, // 創造性を高めるため高めの温度設定
+		MaxTokens:   100, // テーマ名のみなので少なめ
+	}
+
+	resp, err := c.Generate(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate theme: %w", err)
+	}
+
+	// 生成されたテーマから余分な空白や改行を除去
+	theme := resp.Content
+	if theme == "" {
+		return "", errors.New("generated theme is empty")
+	}
+
+	return theme, nil
+}
+
+// JudgeImageは提出された画像を評価し、スコアと理由を返す
+func (c *GeminiClient) JudgeImage(ctx context.Context, req *ImageJudgeRequest) (*ImageJudgeResponse, error) {
+	if req == nil || len(req.ImageURLs) == 0 {
+		return nil, errors.New("no images provided")
+	}
+
+	results := make([]JudgeResult, 0, len(req.ImageURLs))
+
+	// 各画像を個別に評価
+	for _, imageURL := range req.ImageURLs {
+		result, err := c.judgeOneImage(ctx, imageURL)
+		if err != nil {
+			// エラーが発生した画像はスコア0で記録
+			results = append(results, JudgeResult{
+				Score:  0,
+				Reason: fmt.Sprintf("評価エラー: %v", err),
+			})
+			continue
+		}
+		results = append(results, result)
+	}
+
+	return &ImageJudgeResponse{
+		Results: results,
+	}, nil
+}
+
+// judgeOneImageは1枚の画像を評価する内部ヘルパー関数
+func (c *GeminiClient) judgeOneImage(ctx context.Context, imageURL string) (JudgeResult, error) {
+	// チャット生成設定
+	config := &genai.GenerateContentConfig{
+		Temperature:     genai.Ptr(float32(0.7)),
+		MaxOutputTokens: 500,
+		SystemInstruction: &genai.Content{
+			Parts: []*genai.Part{
+				{Text: JudgeImagePrompt},
+			},
+		},
+	}
+
+	// チャットセッション作成
+	chat, err := c.client.Chats.Create(ctx, c.defaultModel, config, nil)
+	if err != nil {
+		return JudgeResult{}, fmt.Errorf("failed to create chat: %w", err)
+	}
+
+	// 画像URLとテキストプロンプトを組み合わせて送信
+	resp, err := chat.SendMessage(ctx,
+		genai.Part{Text: "この写真を評価してください。"},
+		genai.Part{FileData: &genai.FileData{
+			MIMEType: "image/jpeg", // 一般的な画像形式として設定
+			FileURI:  imageURL,
+		}},
+	)
+	if err != nil {
+		return JudgeResult{}, fmt.Errorf("failed to send message: %w", err)
+	}
+
+	// レスポンステキストを取得
+	responseText := resp.Text()
+	if responseText == "" {
+		return JudgeResult{}, errors.New("empty response from AI")
+	}
+
+	// JSON解析を試みる
+	var jsonResult struct {
+		Score  int    `json:"score"`
+		Reason string `json:"reason"`
+	}
+
+	// JSONとしてパース（簡易実装、エラーハンドリングは要改善）
+	if err := parseJSONResponse(responseText, &jsonResult); err != nil {
+		return JudgeResult{}, fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	return JudgeResult{
+		Score:  jsonResult.Score,
+		Reason: jsonResult.Reason,
+	}, nil
+}
+
+// parseJSONResponseはAIのレスポンスからJSON部分を抽出してパースする
+func parseJSONResponse(text string, v any) error {
+	// AIが余分なテキストを含めることがあるため、JSON部分のみを抽出
+	text = strings.TrimSpace(text)
+
+	// コードブロック（```json ... ```）で囲まれている場合は除去
+	if after, found := strings.CutPrefix(text, "```json"); found {
+		text = strings.TrimSuffix(after, "```")
+		text = strings.TrimSpace(text)
+	} else if after, found := strings.CutPrefix(text, "```"); found {
+		text = strings.TrimSuffix(after, "```")
+		text = strings.TrimSpace(text)
+	}
+
+	// JSON部分をパース
+	if err := json.Unmarshal([]byte(text), v); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+
+	return nil
 }
 
 // CloseはGeminiクライアントのクローズ処理（明示的なクローズは不要）

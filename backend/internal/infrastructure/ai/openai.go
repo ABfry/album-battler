@@ -9,6 +9,8 @@ import (
 	"github.com/openai/openai-go/shared"
 )
 
+var _ Client = (*OpenAIClient)(nil)
+
 // OpenAIClientはOpenAI用のClientインターフェース実装
 type OpenAIClient struct {
 	client       openai.Client
@@ -103,6 +105,14 @@ func (c *OpenAIClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 			TotalTokens:      int(completion.Usage.TotalTokens),
 		},
 	}, nil
+}
+
+func (c *OpenAIClient) GenerateTheme(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+func (c *OpenAIClient) JudgeImage(ctx context.Context, req *ImageJudgeRequest) (*ImageJudgeResponse, error) {
+	return nil, nil
 }
 
 // CloseはOpenAIクライアントをクローズ（明示的な解放は不要）
