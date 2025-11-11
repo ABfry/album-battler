@@ -84,13 +84,20 @@ func (r *mysqlRoomRepository) Save(ctx context.Context, room *entity.Room) error
 		return err
 	}
 
+	var hostUserID interface{}
+	if room.HostUserID != nil {
+		hostUserID = room.HostUserID.String()
+	} else {
+		hostUserID = nil // 明示的にnilを設定
+	}
+
 	return save(
 		ctx,
 		r.db,
 		RoomsTable,
 		room.ID.String(),
 		room.RoomNumber,
-		room.HostUserID.String(),
+		hostUserID,
 		room.CreatedAt,
 		room.ExpiredAt,
 		statusStr,
