@@ -44,16 +44,25 @@ type MessagePayload struct {
 
 // WebSocket接続を処理
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// URLパラメータからUserIDを取得
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		http.Error(w, "user_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "invalid user_id format", http.StatusBadRequest)
+		return
+	}
+
 	// WebSocket接続にアップグレード
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
 		return
 	}
-
-	// 開発用: ランダムなユーザーIDを割り当て
-	// 本番環境では認証トークンからユーザーIDを取得すべき
-	userID := uuid.New()
 
 	// クライアントを作成してHubに登録
 	client := h.hub.NewClient(userID, conn)
