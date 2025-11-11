@@ -14,6 +14,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/infra/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
+	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
@@ -24,7 +25,10 @@ type Dependencies struct {
 	db *sql.DB
 
 	// Repository
-	RoomRepository repository.RoomRepository
+	RoomRepository   repository.RoomRepository
+	BattleRepository repository.BattleRepository
+	ImageRepository  repository.ImageRepository
+	UserRepository   repository.UserRepository
 
 	// WebSocket関連
 	WebSocketHub   *websocket.Hub
@@ -196,10 +200,10 @@ func initDatabase() (*sql.DB, error) {
 }
 
 func initRepositories(deps *Dependencies) error {
-	// TODO
-	// deps.UserRepository = mysql.NewUserRepository(deps.db)
-	// deps.AlbumRepository = mysql.NewAlbumRepository(deps.db)
-	// deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+	deps.RoomRepository = mysql.NewRoomRepository(deps.db)
+	deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+	deps.ImageRepository = mysql.NewImageRepository(deps.db)
+	deps.UserRepository = mysql.NewUserRepository(deps.db)
 
 	return nil
 }
