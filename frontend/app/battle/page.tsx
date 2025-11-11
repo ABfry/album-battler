@@ -1,16 +1,13 @@
 "use client";
 
-import { useWebSocket } from "../providers/WebSocketProvider";
+import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import Link from "next/link";
 
 export default function BattlePage() {
-  const { getWebSocket, status, messages } = useWebSocket();
+  const { status, messages, sendMessage } = useWebSocket();
 
   const handleSendMessage = () => {
-    const ws = getWebSocket();
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send("Hello from Battle page!");
-    }
+    sendMessage("Hello from Battle page!");
   };
 
   const getStatusColor = () => {
