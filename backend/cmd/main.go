@@ -1,7 +1,40 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/ABfry/album-battler/backend/internal/app"
+	httpapi "github.com/ABfry/album-battler/backend/internal/app/http"
+	_ "github.com/go-sql-driver/mysql"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	deps, err := app.NewDependencies()
+	if err != nil {
+		log.Fatalf("init dependencies: %v", err)
+	}
+	defer func() {
+		if cerr := deps.Close(); cerr != nil {
+			log.Printf("close dependencies: %v", cerr)
+		}
+	}()
+
+	api := httpapi.NewAPIServer(deps)
+	go deps.WebSocketHub.Run(ctx) // Hubをgoroutineで実行
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	if err := api.ListenAndServe(ctx, ":"+port); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
 }
