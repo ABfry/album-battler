@@ -90,16 +90,19 @@ func save(ctx context.Context, db *sql.DB, table TableName, values ...interface{
 			table, len(columns), len(values))
 	}
 
+	// insertのためのプレースホルダーを構築
 	placeholders := make([]string, len(columns))
 	for i := range columns {
 		placeholders[i] = "?"
 	}
 
+	// update クエリ構築
 	updateAssignments := make([]string, len(columns))
 	for i, column := range columns {
 		updateAssignments[i] = fmt.Sprintf("%s = VALUES(%s)", column, column)
 	}
 
+	// upsert クエリを構築
 	query := fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s",
 		table,
@@ -108,6 +111,7 @@ func save(ctx context.Context, db *sql.DB, table TableName, values ...interface{
 		strings.Join(updateAssignments, ", "),
 	)
 
+	// 実行
 	_, err := db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return fmt.Errorf("failed to save %s: %w", table, err)
