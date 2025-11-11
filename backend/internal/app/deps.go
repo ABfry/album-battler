@@ -36,6 +36,10 @@ type Dependencies struct {
 
 	// Usecase
 	CreateRoomUseCase *room.CreateRoomUseCase
+	JoinRoomUseCase   *room.JoinRoomUseCase
+	LeaveRoomUseCase  *room.LeaveRoomUseCase
+	StartGameUseCase  *room.StartGameUseCase
+	GetRoomUseCase    *room.GetRoomUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -125,6 +129,25 @@ func initUseCases(deps *Dependencies) error {
 	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
+	)
+
+	deps.JoinRoomUseCase = room.NewJoinRoomUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+
+	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+
+	deps.StartGameUseCase = room.NewStartGameUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+
+	deps.GetRoomUseCase = room.NewGetRoomUseCase(
+		deps.RoomRepository,
 	)
 
 	return nil
