@@ -9,19 +9,19 @@ import (
 	"github.com/openai/openai-go/shared"
 )
 
-// OpenAIClient implements the Client interface for OpenAI
+// OpenAIClientはOpenAI用のClientインターフェース実装
 type OpenAIClient struct {
 	client       openai.Client
 	defaultModel string
 }
 
-// OpenAIConfig holds configuration for OpenAI client
+// OpenAIConfigはOpenAIクライアントの設定を保持
 type OpenAIConfig struct {
 	APIKey       string
-	DefaultModel string // e.g., "gpt-4", "gpt-3.5-turbo", "gpt-4o"
+	DefaultModel string // 例: "gpt-4", "gpt-3.5-turbo", "gpt-4o"
 }
 
-// NewOpenAIClient creates a new OpenAI client
+// NewOpenAIClientは新しいOpenAIクライアントを作成
 func NewOpenAIClient(config OpenAIConfig) (*OpenAIClient, error) {
 	if config.APIKey == "" {
 		return nil, errors.New("OpenAI API key is required")
@@ -41,13 +41,13 @@ func NewOpenAIClient(config OpenAIConfig) (*OpenAIClient, error) {
 	}, nil
 }
 
-// Generate generates text using OpenAI's API
+// GenerateはOpenAIのAPIでテキスト生成を行う
 func (c *OpenAIClient) Generate(ctx context.Context, req *GenerateRequest) (*GenerateResponse, error) {
 	if req == nil {
 		return nil, errors.New("request cannot be nil")
 	}
 
-	// Convert messages
+	// メッセージをOpenAI形式に変換
 	messages := make([]openai.ChatCompletionMessageParamUnion, 0, len(req.Messages))
 	for _, msg := range req.Messages {
 		switch msg.Role {
@@ -62,13 +62,13 @@ func (c *OpenAIClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		}
 	}
 
-	// Determine model
+	// モデルを決定
 	model := req.Model
 	if model == "" {
 		model = c.defaultModel
 	}
 
-	// Build request parameters
+	// リクエストパラメータを構築
 	params := openai.ChatCompletionNewParams{
 		Messages: messages,
 		Model:    shared.ChatModel(model),
@@ -82,7 +82,7 @@ func (c *OpenAIClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		params.Temperature = openai.Float(float64(req.Temperature))
 	}
 
-	// Make API call
+	// APIコール実施
 	completion, err := c.client.Chat.Completions.New(ctx, params)
 	if err != nil {
 		return nil, err
@@ -105,8 +105,8 @@ func (c *OpenAIClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 	}, nil
 }
 
-// Close closes the OpenAI client
+// CloseはOpenAIクライアントをクローズ（明示的な解放は不要）
 func (c *OpenAIClient) Close() error {
-	// OpenAI client doesn't require explicit closing
+	// OpenAIクライアントは明示的なクローズ処理が不要
 	return nil
 }

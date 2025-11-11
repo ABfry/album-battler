@@ -8,22 +8,22 @@ import (
 	"google.golang.org/genai"
 )
 
-// GeminiClient implements the Client interface for Google Gemini
+// Gemini向けのClientインターフェース実装
 type GeminiClient struct {
 	client       *genai.Client
 	defaultModel string
 }
 
-// GeminiConfig holds configuration for Gemini client
+// GeminiConfigはGeminiクライアントの設定を保持
 type GeminiConfig struct {
 	APIKey       string
-	DefaultModel string // e.g., "gemini-2.0-flash", "gemini-1.5-pro"
+	DefaultModel string // 例: "gemini-2.0-flash", "gemini-1.5-pro"
 }
 
-// NewGeminiClient creates a new Gemini client
+// NewGeminiClientは新しいGeminiクライアントを作成
 func NewGeminiClient(ctx context.Context, config GeminiConfig) (*GeminiClient, error) {
 	if config.APIKey == "" {
-		return nil, errors.New("Gemini API key is required")
+		return nil, fmt.Errorf("gemini API key is required")
 	}
 
 	if config.DefaultModel == "" {
@@ -44,7 +44,7 @@ func NewGeminiClient(ctx context.Context, config GeminiConfig) (*GeminiClient, e
 	}, nil
 }
 
-// Generate generates text using Gemini's API
+// GenerateはGeminiのAPIでテキスト生成を行う
 func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*GenerateResponse, error) {
 	if req == nil {
 		return nil, errors.New("request cannot be nil")
@@ -54,13 +54,13 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		return nil, errors.New("no messages provided")
 	}
 
-	// Determine model
+	// モデルを決定
 	modelName := req.Model
 	if modelName == "" {
 		modelName = c.defaultModel
 	}
 
-	// Build generation config
+	// 生成設定を構築
 	config := &genai.GenerateContentConfig{}
 
 	if req.MaxTokens > 0 {
@@ -71,12 +71,12 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		config.Temperature = genai.Ptr(req.Temperature)
 	}
 
-	// Convert messages to Gemini format
+	// メッセージをGemini形式に変換
 	var history []*genai.Content
 	var systemInstruction string
 	messages := req.Messages
 
-	// Extract system message if present
+	// 先頭がsystemだった場合システムメッセージとして抽出
 	if len(messages) > 0 && messages[0].Role == "system" {
 		systemInstruction = messages[0].Content
 		messages = messages[1:]
@@ -88,7 +88,7 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		}
 	}
 
-	// Build conversation history (exclude the last user message)
+	// 会話履歴を構築（最後のユーザーメッセージは除外）
 	for i := 0; i < len(messages)-1; i++ {
 		msg := messages[i]
 		var role string
@@ -109,34 +109,34 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 		})
 	}
 
-	// Validate last message is from user
+	// 最後のメッセージがユーザーか検証
 	lastMsg := messages[len(messages)-1]
 	if lastMsg.Role != "user" {
 		return nil, errors.New("last message must be from user")
 	}
 
-	// Create chat session with history
+	// 履歴付きでチャットセッション作成
 	chat, err := c.client.Chats.Create(ctx, modelName, config, history)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create chat session: %w", err)
 	}
 
-	// Send the last message
+	// 最後のメッセージを送信
 	resp, err := chat.SendMessage(ctx, genai.Part{Text: lastMsg.Content})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
 
-	// Extract text content
+	// テキスト内容を抽出
 	content := resp.Text()
 
-	// Map finish reason
+	// 終了理由をマッピング
 	finishReason := "stop"
 	if len(resp.Candidates) > 0 {
 		finishReason = fmt.Sprintf("%v", resp.Candidates[0].FinishReason)
 	}
 
-	// Extract token usage
+	// トークン使用量を抽出
 	usage := TokenUsage{}
 	if resp.UsageMetadata != nil {
 		usage.PromptTokens = int(resp.UsageMetadata.PromptTokenCount)
@@ -151,8 +151,8 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 	}, nil
 }
 
-// Close closes the Gemini client
+// CloseはGeminiクライアントのクローズ処理（明示的なクローズは不要）
 func (c *GeminiClient) Close() error {
-	// The new genai client doesn't require explicit closing
+	// 新しいgenaiクライアントは明示的なクローズ不要
 	return nil
 }
