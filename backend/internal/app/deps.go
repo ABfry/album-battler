@@ -35,8 +35,7 @@ type Dependencies struct {
 	EventDispatcher service.EventDispatcher
 
 	// Usecase
-	JoinRoomUseCase  *room.JoinRoomUseCase
-	LeaveRoomUseCase *room.LeaveRoomUseCase
+	CreateRoomUseCase *room.CreateRoomUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -112,18 +111,18 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register("user_left_room", userLeftHandler)
 
+	gameStartedHandler := handlers.NewGameStartedHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register("game_started", gameStartedHandler)
+
 	return nil
 }
 
 // UseCase関連の初期化
 func initUseCases(deps *Dependencies) error {
 	// Room Usecases
-	deps.JoinRoomUseCase = room.NewJoinRoomUseCase(
-		deps.RoomRepository,
-		deps.EventDispatcher,
-	)
-
-	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
+	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
 	)
