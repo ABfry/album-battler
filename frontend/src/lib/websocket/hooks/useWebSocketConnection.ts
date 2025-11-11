@@ -1,47 +1,43 @@
-"use client";
+import { useEffect, useRef, useState } from "react";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  ReactNode,
-} from "react";
+export type ConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
 
-type WebSocketContextType = {
-  getWebSocket: () => WebSocket | null;
-  status: "connecting" | "connected" | "disconnected" | "error";
+export type WebSocketConnection = {
+  status: ConnectionStatus;
   messages: string[];
+  sendMessage: (data: string) => void;
+  getWebSocket: () => WebSocket | null;
 };
 
-const WebSocketContext = createContext<WebSocketContextType>({
-  getWebSocket: () => null,
-  status: "connecting",
-  messages: [],
-});
-
-export function useWebSocket() {
-  return useContext(WebSocketContext);
-}
-
-type WebSocketProviderProps = {
-  children: ReactNode;
-};
-
-export function WebSocketProvider({ children }: WebSocketProviderProps) {
+/**
+ * WebSocket接続を管理するカスタムフック
+ * @param url - WebSocketサーバのURL
+ * @returns WebSocket接続の状態と操作関数
+ */
+export function useWebSocketConnection(url: string): WebSocketConnection {
   const wsRef = useRef<WebSocket | null>(null);
-  const [status, setStatus] = useState<
-    "connecting" | "connected" | "disconnected" | "error"
-  >("connecting");
+  const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [messages, setMessages] = useState<string[]>([]);
 
   // WebSocketインスタンスを取得する関数
   const getWebSocket = () => wsRef.current;
 
+  // メッセージ送信関数
+  const sendMessage = (data: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(data);
+    } else {
+      console.warn("WebSocket is not open. Cannot send message.");
+    }
+  };
+
   useEffect(() => {
     // WebSocket接続を作成
-    const websocket = new WebSocket("ws://localhost:8080/ws");
+    const websocket = new WebSocket(url);
     wsRef.current = websocket;
 
     websocket.onopen = () => {
@@ -73,11 +69,12 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         websocket.close();
       }
     };
-  }, []);
+  }, [url]);
 
-  return (
-    <WebSocketContext.Provider value={{ getWebSocket, status, messages }}>
-      {children}
-    </WebSocketContext.Provider>
-  );
+  return {
+    status,
+    messages,
+    sendMessage,
+    getWebSocket,
+  };
 }
