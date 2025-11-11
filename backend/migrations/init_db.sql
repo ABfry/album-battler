@@ -26,7 +26,7 @@ CREATE TABLE rooms (
     status ENUM('waiting', 'full', 'battling', 'result', 'closed') NOT NULL DEFAULT 'waiting',
     CHECK (room_number BETWEEN 0 AND 9999),
     CONSTRAINT fk_rooms_host_user FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    UNIQUE KEY uq_rooms_room_number (room_number)
+    UNIQUE KEY uq_rooms_room_number_status (room_number, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE battles (

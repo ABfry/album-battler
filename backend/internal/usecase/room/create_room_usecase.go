@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
@@ -36,16 +37,43 @@ func NewCreateRoomUseCase(
 }
 
 func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput) (*CreateRoomOutput, error) {
+	const maxRetries = 3
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		output, err := uc.tryCreateRoom(ctx, input)
+
+		if err == nil {
+			return output, nil // 成功
+		}
+
+		// 重複エラーの場合はリトライ
+		if isDuplicateRoomNumberError(err) {
+			continue
+		}
+
+		// それ以外のエラーは即座に返す
+		return nil, err
+	}
+
+	return nil, errors.New("failed to create room after retries: no available room number")
+}
+
+func (uc *CreateRoomUseCase) tryCreateRoom(ctx context.Context, input CreateRoomInput) (*CreateRoomOutput, error) {
 	// 既存の部屋を取得して、使用されていない部屋番号を見つける
 	rooms, err := uc.roomRepo.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// 使用中の部屋番号を集める
+	// 使用中の部屋番号を集める（アクティブな部屋のみ）
 	usedNumbers := make(map[int]bool)
 	for _, room := range rooms {
-		usedNumbers[room.RoomNumber] = true
+		// WaitJoin, FullyJoined, InBattle の部屋のみ番号を占有
+		if room.Status == entity.WaitJoin ||
+			room.Status == entity.FullyJoined ||
+			room.Status == entity.InBattle {
+			usedNumbers[room.RoomNumber] = true
+		}
 	}
 
 	// 1~9999の範囲で使用されていない部屋番号を見つける
@@ -77,7 +105,7 @@ func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput)
 		return nil, err
 	}
 
-	// 永続化
+	// 永続化 (重複エラーが発生する可能性あり)
 	if err := uc.roomRepo.Save(ctx, room); err != nil {
 		return nil, err
 	}
@@ -92,4 +120,16 @@ func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput)
 		RoomID:     room.ID,
 		RoomNumber: room.RoomNumber,
 	}, nil
+}
+
+// 部屋番号の重複エラーかどうかを判定する
+func isDuplicateRoomNumberError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	// MySQL duplicate entry error (1062)
+	return strings.Contains(errStr, "Duplicate entry") ||
+		strings.Contains(errStr, "duplicate key") ||
+		strings.Contains(errStr, "1062")
 }
