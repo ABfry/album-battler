@@ -21,17 +21,11 @@ type RoomHandler struct {
 
 func NewRoomHandler(
 	createRoomUC *room.CreateRoomUseCase,
-	joinRoomUC *room.JoinRoomUseCase,
-	startGameUC *room.StartGameUseCase,
-	getRoomUC *room.GetRoomUseCase,
 	roomManager service.RoomManager,
 	eventPublisher service.EventPublisher,
 ) *RoomHandler {
 	return &RoomHandler{
 		createRoomUC:   createRoomUC,
-		joinRoomUC:     joinRoomUC,
-		startGameUC:    startGameUC,
-		getRoomUC:      getRoomUC,
 		roomManager:    roomManager,
 		eventPublisher: eventPublisher,
 	}
