@@ -21,38 +21,53 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 }
 
 func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
-	var user entity.User
-	var idStr string
-	var createdAt time.Time
-
-	query := `SELECT id, name, icon_url, hashed_password, created_at FROM users WHERE id = ?`
-	err := r.db.QueryRowContext(ctx, query, id.String()).Scan(&idStr, &user.Name, &user.IconUrl, &user.HashedPassword, &createdAt)
+	// 共通関数を利用して1件取得
+	row, err := findRowByKey(ctx, r.db, UsersTable, "id", id.String())
 	if err != nil {
+		return nil, err
+	}
+
+	var (
+		idStr          string
+		name           string
+		iconUrl        string
+		hashedPassword string
+		createdAt      time.Time
+	)
+
+	// スキャン処理
+	if err := row.Scan(&idStr, &name, &iconUrl, &hashedPassword, &createdAt); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil // ユーザーが見つからない場合はnilを返す
+			return nil, nil // 見つからない場合はnilを返す
 		}
 		return nil, err
 	}
 
-	// 文字列IDをUUIDに変換
+	// UUIDへ変換
 	parsedID, err := uuid.Parse(idStr)
 	if err != nil {
 		return nil, err
 	}
 
-	user.ID = parsedID
-	user.CreatedAt = createdAt
-
-	return &user, nil
+	// Entityを返す
+	return &entity.User{
+		ID:             parsedID,
+		Name:           name,
+		IconUrl:        iconUrl,
+		HashedPassword: hashedPassword,
+		CreatedAt:      createdAt,
+	}, nil
 }
 
 func (r *mysqlUserRepository) Save(ctx context.Context, user *entity.User) error {
-	query := `INSERT INTO users (id, name, icon_url, hashed_password, created_at) VALUES (?, ?, ?, ?, ?)
-	          ON DUPLICATE KEY UPDATE name = VALUES(name), icon_url = VALUES(icon_url), hashed_password = VALUES(hashed_password)`
-
-	_, err := r.db.ExecContext(ctx, query, user.ID.String(), user.Name, user.IconUrl, user.HashedPassword, user.CreatedAt)
-	if err != nil {
-		return err
-	}
-	return nil
+	return save(
+		ctx,
+		r.db,
+		UsersTable,
+		user.ID.String(),
+		user.Name,
+		user.IconUrl,
+		user.HashedPassword,
+		user.CreatedAt,
+	)
 }
