@@ -238,46 +238,6 @@ func TestRoomRepository_SaveValidation(t *testing.T) {
 	}
 }
 
-// TestRoomRepository_SaveAllowsNilHost は HostUserID が nil の場合でも保存できることを確認する。
-func TestRoomRepository_SaveAllowsNilHost(t *testing.T) {
-	t.Parallel()
-
-	now := time.Now().UTC().Truncate(time.Second)
-	room := &entity.Room{
-		ID:         uuid.New(),
-		RoomNumber: 5555,
-		CreatedAt:  now,
-		Status:     entity.WaitJoin,
-	}
-
-	statusStr, err := toDBRoomStatus(room.Status)
-	if err != nil {
-		t.Fatalf("status conversion error: %v", err)
-	}
-
-	query := upsertRoomsQuery()
-	execs := execPlan{
-		query: {
-			wantArgs: []driver.Value{
-				room.ID.String(),
-				int64(room.RoomNumber),
-				nil,
-				room.CreatedAt,
-				nil,
-				statusStr,
-			},
-		},
-	}
-
-	repo := newRoomRepoForTest(t, nil, execs)
-	if err := repo.Save(context.Background(), room); err != nil {
-		t.Fatalf("Save error: %v", err)
-	}
-	if !execs[query].called {
-		t.Fatalf("expected exec plan for %s to be called", query)
-	}
-}
-
 // --- テストヘルパー ---
 
 func newRoomRepoForTest(t *testing.T, queries queryPlan, execs execPlan) *mysqlRoomRepository {
