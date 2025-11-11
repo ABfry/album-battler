@@ -19,7 +19,7 @@ const (
 
 var tableColumns = map[TableName][]string{
 	UsersTable:       {"id", "name", "icon_url", "hashed_password", "created_at"},
-	RoomsTable:       {"id", "room_number", "host_user_id", "created_at"},
+	RoomsTable:       {"id", "room_number", "host_user_id", "created_at", "expired_at", "status"},
 	BattlesTable:     {"id", "room_id", "status", "started_at", "ended_at"},
 	BattleUsersTable: {"battle_id", "user_id", "score"},
 	ImagesTable:      {"id", "user_id", "battle_id", "image_url", "uploaded_at", "ai_score", "user_score"},
@@ -42,6 +42,22 @@ func findRowsByKey(ctx context.Context, db *sql.DB, table TableName, key string,
 	}
 
 	rows, err := db.QueryContext(ctx, query, value)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// findAllRows は WHERE 句なしで指定テーブル全件を取得する。
+// why: RoomRepository などで単純な全件取得を繰り返し記述するのを避けるため。
+func findAllRows(ctx context.Context, db *sql.DB, table TableName) (*sql.Rows, error) {
+	columns, ok := tableColumns[table]
+	if !ok {
+		return nil, fmt.Errorf("unknown table: %s", table)
+	}
+
+	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(columns, ", "), table)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
