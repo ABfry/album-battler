@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
 
 CREATE DATABASE IF NOT EXISTS album_battler CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE album_battler;
@@ -19,7 +21,7 @@ CREATE TABLE users (
 CREATE TABLE rooms (
     id CHAR(36) PRIMARY KEY,
     room_number INT NOT NULL,
-    host_user_id CHAR(36) NOT NULL,
+    host_user_id CHAR(36),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expired_at DATETIME,
     status ENUM('waiting', 'full', 'battling', 'result', 'closed') NOT NULL DEFAULT 'waiting',
@@ -62,3 +64,28 @@ CREATE INDEX idx_battles_room ON battles (room_id);
 CREATE INDEX idx_images_user ON images (user_id);
 CREATE INDEX idx_images_battle ON images (battle_id);
 CREATE INDEX idx_battle_users_user ON battle_users (user_id);
+
+-- 仮ユーザーデータの挿入 (開発用)
+-- パスワードはすべて "password123" (bcryptでハッシュ化: $2a$10$YourHashedPasswordHere)
+INSERT INTO users (id, name, icon_url, hashed_password, created_at) VALUES
+    (
+        '550e8400-e29b-41d4-a716-446655440001',
+        'テストユーザー1',
+        'https://api.dicebear.com/7.x/avataaars/svg?seed=test1',
+        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '2025-01-01 10:00:00'
+    ),
+    (
+        '550e8400-e29b-41d4-a716-446655440002',
+        'テストユーザー2',
+        'https://api.dicebear.com/7.x/avataaars/svg?seed=test2',
+        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '2025-01-02 11:30:00'
+    ),
+    (
+        '550e8400-e29b-41d4-a716-446655440003',
+        'テストユーザー3',
+        'https://api.dicebear.com/7.x/avataaars/svg?seed=test3',
+        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '2025-01-03 14:45:00'
+    );
