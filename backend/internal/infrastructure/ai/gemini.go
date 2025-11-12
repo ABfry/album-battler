@@ -222,7 +222,11 @@ func downloadImage(ctx context.Context, url string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to download image: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close response body: %v\n", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", fmt.Errorf("failed to download image: status %d", resp.StatusCode)
