@@ -108,6 +108,19 @@ AWS_ACCESS_KEY_ID=your-access-key
 AWS_SECRET_ACCESS_KEY=your-secret-key
 ```
 
+Frontend 環境変数ファイルを作成：
+
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+`frontend/.env.local` を編集して、必要な値を設定：
+
+```env
+# WebSocket Server URL
+NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080/ws
+```
+
 ### 3. Docker Compose で起動
 
 ```bash
