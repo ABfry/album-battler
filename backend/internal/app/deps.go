@@ -187,16 +187,31 @@ func initDatabase() (*sql.DB, error) {
 		db.SetMaxIdleConns(cfg.maxIdleConns)
 	}
 
-	// 接続確認
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// 接続確認（リトライロジック付き）
+	maxRetries := 5
+	retryInterval := 2 * time.Second
 
-	if err := db.PingContext(ctx); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
+	for i := 0; i < maxRetries; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := db.PingContext(ctx)
+		cancel()
+
+		if err == nil {
+			// 接続成功
+			fmt.Printf("Database connection established successfully")
+			return db, nil
+		}
+
+		fmt.Printf("Database connection attempt %d/%d failed: %v", i+1, maxRetries, err)
+
+		if i < maxRetries-1 {
+			fmt.Printf("Retrying in %v...", retryInterval)
+			time.Sleep(retryInterval)
+		}
 	}
 
-	return db, nil
+	_ = db.Close()
+	return nil, fmt.Errorf("failed to connect to database after %d attempts", maxRetries)
 }
 
 func initRepositories(deps *Dependencies) error {
