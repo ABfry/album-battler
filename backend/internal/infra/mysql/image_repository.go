@@ -21,12 +21,6 @@ type mysqlImageRepository struct {
 	db *sql.DB
 }
 
-// rowScanner は *sql.Row と *sql.Rows の双方で共有できる Scan インターフェース。
-// createImage を 1 箇所に集約するために定義しておく。
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
 // NewImageRepository は MySQL 接続を受け取り ImageRepository 実装を返す。
 // why: 他レイヤーから具体型を直接扱わせないことでテスト容易性を確保する。
 func NewImageRepository(db *sql.DB) repository.ImageRepository {

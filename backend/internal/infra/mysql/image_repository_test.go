@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"testing"
 	"time"
 
@@ -94,12 +95,22 @@ func TestImageRepository_FindByUserID(t *testing.T) {
 // queryPlan はクエリ文字列ごとの期待行を表す。
 type queryPlan map[string]*stubRowsTemplate
 
+// execPlan は INSERT/UPDATE 等の実行を表す。
+type execPlan map[string]*execExpectation
+
+type execExpectation struct {
+	wantArgs []driver.Value
+	result   driver.Result
+	err      error
+	called   bool
+}
+
 // newImageRepoForTest はクエリ結果を固定した mysqlImageRepository を返す。
 func newImageRepoForTest(t *testing.T, plan queryPlan) *mysqlImageRepository {
 	t.Helper()
 
 	driverName := fmt.Sprintf("image_stub_%s", uuid.New().String())
-	sql.Register(driverName, &stubDriver{plan: plan})
+	sql.Register(driverName, &stubDriver{queries: plan})
 
 	db, err := sql.Open(driverName, "")
 	if err != nil {
@@ -133,17 +144,19 @@ func imageColumns() []string {
 
 // stubDriver は database/sql/driver を実装し、事前定義した結果を返す。
 type stubDriver struct {
-	plan queryPlan
+	queries queryPlan
+	execs   execPlan
 }
 
 // Open はスタブコネクションを返す。
 func (d *stubDriver) Open(string) (driver.Conn, error) {
-	return &stubConn{plan: d.plan}, nil
+	return &stubConn{queries: d.queries, execs: d.execs}, nil
 }
 
 // stubConn は QueryContext のみをサポートする簡易接続。
 type stubConn struct {
-	plan queryPlan
+	queries queryPlan
+	execs   execPlan
 }
 
 func (c *stubConn) Prepare(string) (driver.Stmt, error) { return &stubStmt{}, nil }
@@ -154,11 +167,39 @@ func (c *stubConn) Begin() (driver.Tx, error) {
 
 // QueryContext はクエリに一致するスタブ行を返す。
 func (c *stubConn) QueryContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Rows, error) {
-	tpl, ok := c.plan[query]
+	tpl, ok := c.queries[query]
 	if !ok {
 		return nil, fmt.Errorf("unexpected query: %s", query)
 	}
 	return tpl.clone(), nil
+}
+
+// ExecContext は登録済みの execPlan に従って挙動を決める。
+func (c *stubConn) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	if c.execs == nil {
+		return nil, fmt.Errorf("unexpected exec query without plan: %s", query)
+	}
+	exp, ok := c.execs[query]
+	if !ok {
+		return nil, fmt.Errorf("unexpected exec query: %s", query)
+	}
+	if exp.wantArgs != nil {
+		got := make([]driver.Value, len(args))
+		for i, a := range args {
+			got[i] = a.Value
+		}
+		if !reflect.DeepEqual(got, exp.wantArgs) {
+			return nil, fmt.Errorf("exec args mismatch: want=%v got=%v", exp.wantArgs, got)
+		}
+	}
+	exp.called = true
+	if exp.err != nil {
+		return nil, exp.err
+	}
+	if exp.result != nil {
+		return exp.result, nil
+	}
+	return stubResult{}, nil
 }
 
 // stubStmt は Prepare 時に必要となるが使用しない。
@@ -172,6 +213,12 @@ func (s *stubStmt) Exec(_ []driver.Value) (driver.Result, error) {
 func (s *stubStmt) Query(_ []driver.Value) (driver.Rows, error) {
 	return nil, errors.New("query via stmt not supported")
 }
+
+// stubResult は Exec のダミー戻り値。
+type stubResult struct{}
+
+func (stubResult) LastInsertId() (int64, error) { return 0, nil }
+func (stubResult) RowsAffected() (int64, error) { return 0, nil }
 
 // stubRowsTemplate は複数回クエリされる可能性があるため clone で都度コピーする。
 type stubRowsTemplate struct {
