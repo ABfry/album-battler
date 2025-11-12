@@ -107,6 +107,11 @@ func (r *Room) AddUser(userID uuid.UUID) error {
 
 	r.UserIDs = append(r.UserIDs, userID)
 
+	// 満員になったら自動的にFullyJoinedへ遷移
+	if len(r.UserIDs) >= r.MaxUsers {
+		r.Status = FullyJoined
+	}
+
 	// ドメインイベント記録
 	r.RecordEvent(event.UserJoinedRoomEvent{
 		RoomID:     r.ID,
@@ -148,6 +153,11 @@ func (r *Room) RemoveUser(userID uuid.UUID) error {
 		r.HostUserID = nil
 	}
 
+	// 満員状態から空きができたらWaitJoinに戻す
+	if r.Status == FullyJoined && len(r.UserIDs) < r.MaxUsers {
+		r.Status = WaitJoin
+	}
+
 	// 部屋が解散したか (全員退出)
 	roomDissolved := len(r.UserIDs) == 0
 
@@ -171,6 +181,10 @@ func (r *Room) IsExpired() bool {
 
 func (r *Room) IsFull() bool {
 	return len(r.UserIDs) >= r.MaxUsers
+}
+
+func (r *Room) IsActive() bool {
+	return r.Status == WaitJoin || r.Status == FullyJoined || r.Status == InBattle
 }
 
 func (r *Room) Dissolve() error {
