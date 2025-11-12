@@ -2,36 +2,36 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
+	"net/http"
+
+	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
 
 	"google.golang.org/genai"
 )
 
-var _ Client = (*GeminiClient)(nil)
+var _ llm.LLMClient = (*GeminiClient)(nil)
 
-// Gemini向けのClientインターフェース実装
 type GeminiClient struct {
 	client       *genai.Client
 	defaultModel string
 }
 
-// GeminiConfigはGeminiクライアントの設定を保持
+// Geminiクライアントの設定
 type GeminiConfig struct {
 	APIKey       string
 	DefaultModel string // 例: "gemini-2.0-flash", "gemini-1.5-pro"
 }
 
-// NewGeminiClientは新しいGeminiクライアントを作成
 func NewGeminiClient(ctx context.Context, config GeminiConfig) (*GeminiClient, error) {
 	if config.APIKey == "" {
 		return nil, fmt.Errorf("gemini API key is required")
 	}
 
 	if config.DefaultModel == "" {
-		config.DefaultModel = "gemini-2.0-flash"
+		config.DefaultModel = "gemini-2.5-flash"
 	}
 
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
@@ -48,8 +48,8 @@ func NewGeminiClient(ctx context.Context, config GeminiConfig) (*GeminiClient, e
 	}, nil
 }
 
-// GenerateはGeminiのAPIでテキスト生成を行う
-func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*GenerateResponse, error) {
+// GeminiのAPIでテキスト生成する
+func (c *GeminiClient) Generate(ctx context.Context, req *llm.GenerateRequest) (*llm.GenerateResponse, error) {
 	if req == nil {
 		return nil, errors.New("request cannot be nil")
 	}
@@ -67,6 +67,8 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 	// 生成設定を構築
 	config := &genai.GenerateContentConfig{}
 
+	// MaxOutputTokensを設定
+	// 注: Gemini SDKではMaxOutputTokensを設定しない場合、モデルのデフォルト値が使用される
 	if req.MaxTokens > 0 {
 		config.MaxOutputTokens = int32(req.MaxTokens)
 	}
@@ -141,14 +143,14 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 	}
 
 	// トークン使用量を抽出
-	usage := TokenUsage{}
+	usage := llm.TokenUsage{}
 	if resp.UsageMetadata != nil {
 		usage.PromptTokens = int(resp.UsageMetadata.PromptTokenCount)
 		usage.CompletionTokens = int(resp.UsageMetadata.CandidatesTokenCount)
 		usage.TotalTokens = int(resp.UsageMetadata.TotalTokenCount)
 	}
 
-	return &GenerateResponse{
+	return &llm.GenerateResponse{
 		Content:      content,
 		FinishReason: finishReason,
 		Usage:        usage,
@@ -157,15 +159,15 @@ func (c *GeminiClient) Generate(ctx context.Context, req *GenerateRequest) (*Gen
 
 // GenerateThemeは写真撮影バトル用のテーマを生成する
 func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
-	req := &GenerateRequest{
-		Messages: []Message{
+	req := &llm.GenerateRequest{
+		Messages: []llm.Message{
 			{
 				Role:    "user",
 				Content: GenerateThemePrompt,
 			},
 		},
-		Temperature: 1.0, // 創造性を高めるため高めの温度設定
-		MaxTokens:   100, // テーマ名のみなので少なめ
+		Temperature: 0.9, // 創造性を高めるため高めの温度設定
+		MaxTokens:   0,   // デフォルト値を使用（テスト用）
 	}
 
 	resp, err := c.Generate(ctx, req)
@@ -182,20 +184,20 @@ func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
 	return theme, nil
 }
 
-// JudgeImageは提出された画像を評価し、スコアと理由を返す
-func (c *GeminiClient) JudgeImage(ctx context.Context, req *ImageJudgeRequest) (*ImageJudgeResponse, error) {
+// 提出された画像を評価し、スコアと理由を返す
+func (c *GeminiClient) JudgeImage(ctx context.Context, req *llm.ImageJudgeRequest) (*llm.ImageJudgeResponse, error) {
 	if req == nil || len(req.ImageURLs) == 0 {
 		return nil, errors.New("no images provided")
 	}
 
-	results := make([]JudgeResult, 0, len(req.ImageURLs))
+	results := make([]llm.JudgeResult, 0, len(req.ImageURLs))
 
 	// 各画像を個別に評価
 	for _, imageURL := range req.ImageURLs {
-		result, err := c.judgeOneImage(ctx, imageURL)
+		result, err := c.judgeOneImage(ctx, req.Theme, imageURL)
 		if err != nil {
 			// エラーが発生した画像はスコア0で記録
-			results = append(results, JudgeResult{
+			results = append(results, llm.JudgeResult{
 				Score:  0,
 				Reason: fmt.Sprintf("評価エラー: %v", err),
 			})
@@ -204,89 +206,149 @@ func (c *GeminiClient) JudgeImage(ctx context.Context, req *ImageJudgeRequest) (
 		results = append(results, result)
 	}
 
-	return &ImageJudgeResponse{
+	return &llm.ImageJudgeResponse{
 		Results: results,
 	}, nil
 }
 
-// judgeOneImageは1枚の画像を評価する内部ヘルパー関数
-func (c *GeminiClient) judgeOneImage(ctx context.Context, imageURL string) (JudgeResult, error) {
-	// チャット生成設定
+// downloadImageはURLから画像をダウンロードしてバイト配列とMIMEタイプを返す
+func downloadImage(ctx context.Context, url string) ([]byte, string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to download image: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("failed to download image: status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	mimeType := resp.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = "image/jpeg" // デフォルト
+	}
+
+	return data, mimeType, nil
+}
+
+// 1枚の画像を評価する内部ヘルパー関数（Models API使用）
+func (c *GeminiClient) judgeOneImage(ctx context.Context, theme, imageURL string) (llm.JudgeResult, error) {
+	// 画像をダウンロード
+	imageBytes, mimeType, err := downloadImage(ctx, imageURL)
+	if err != nil {
+		return llm.JudgeResult{}, fmt.Errorf("failed to download image: %w", err)
+	}
+
+	// Function Declarationを定義
+	judgeImageFunc := &genai.FunctionDeclaration{
+		Name:        "judge_image",
+		Description: "画像を評価してスコア（0-100）と理由を返す",
+		Parameters: &genai.Schema{
+			Type: genai.TypeObject,
+			Properties: map[string]*genai.Schema{
+				"score": {
+					Type:        genai.TypeInteger,
+					Description: "画像の評価スコア（0-100）",
+				},
+				"reason": {
+					Type:        genai.TypeString,
+					Description: "評価の理由",
+				},
+			},
+			Required: []string{"score", "reason"},
+		},
+	}
+
+	// プロンプトテキストと画像のPartsを構築
+	prompt := fmt.Sprintf("お題「%s」に対して、この写真を評価してください。", theme)
+	parts := []*genai.Part{
+		genai.NewPartFromText(prompt),
+		genai.NewPartFromBytes(imageBytes, mimeType),
+	}
+
+	// Contentsを構築
+	contents := []*genai.Content{
+		genai.NewContentFromParts(parts, genai.RoleUser),
+	}
+
+	// 生成設定（Function Calling有効化）
 	config := &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr(float32(0.7)),
-		MaxOutputTokens: 500,
-		SystemInstruction: &genai.Content{
-			Parts: []*genai.Part{
-				{Text: JudgeImagePrompt},
+		Temperature: genai.Ptr(float32(0.7)),
+		// MaxOutputTokensを設定しない（APIデフォルト値を使用）
+		SystemInstruction: genai.NewContentFromParts([]*genai.Part{
+			genai.NewPartFromText(JudgeImagePrompt),
+		}, genai.RoleUser),
+		Tools: []*genai.Tool{
+			{
+				FunctionDeclarations: []*genai.FunctionDeclaration{judgeImageFunc},
 			},
 		},
 	}
 
-	// チャットセッション作成
-	chat, err := c.client.Chats.Create(ctx, c.defaultModel, config, nil)
+	// Models APIで画像評価を実行
+	result, err := c.client.Models.GenerateContent(ctx, c.defaultModel, contents, config)
 	if err != nil {
-		return JudgeResult{}, fmt.Errorf("failed to create chat: %w", err)
+		return llm.JudgeResult{}, fmt.Errorf("failed to generate content: %w", err)
 	}
 
-	// 画像URLとテキストプロンプトを組み合わせて送信
-	resp, err := chat.SendMessage(ctx,
-		genai.Part{Text: "この写真を評価してください。"},
-		genai.Part{FileData: &genai.FileData{
-			MIMEType: "image/jpeg", // 一般的な画像形式として設定
-			FileURI:  imageURL,
-		}},
-	)
-	if err != nil {
-		return JudgeResult{}, fmt.Errorf("failed to send message: %w", err)
+	// Function Callのレスポンスを処理
+	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
+		return llm.JudgeResult{}, errors.New("no response from AI")
 	}
 
-	// レスポンステキストを取得
-	responseText := resp.Text()
-	if responseText == "" {
-		return JudgeResult{}, errors.New("empty response from AI")
+	// Function Callのパートを探す
+	var functionCall *genai.FunctionCall
+	for _, part := range result.Candidates[0].Content.Parts {
+		if part.FunctionCall != nil {
+			functionCall = part.FunctionCall
+			break
+		}
 	}
 
-	// JSON解析を試みる
-	var jsonResult struct {
-		Score  int    `json:"score"`
-		Reason string `json:"reason"`
+	if functionCall == nil {
+		return llm.JudgeResult{}, errors.New("no function call in response")
 	}
 
-	// JSONとしてパース（簡易実装、エラーハンドリングは要改善）
-	if err := parseJSONResponse(responseText, &jsonResult); err != nil {
-		return JudgeResult{}, fmt.Errorf("failed to parse JSON response: %w", err)
+	// Function Callの引数からスコアと理由を取得
+	scoreArg, ok := functionCall.Args["score"]
+	if !ok {
+		return llm.JudgeResult{}, errors.New("score not found in function call")
 	}
 
-	return JudgeResult{
-		Score:  jsonResult.Score,
-		Reason: jsonResult.Reason,
+	reasonArg, ok := functionCall.Args["reason"]
+	if !ok {
+		return llm.JudgeResult{}, errors.New("reason not found in function call")
+	}
+
+	// 型変換
+	score, ok := scoreArg.(float64)
+	if !ok {
+		return llm.JudgeResult{}, fmt.Errorf("invalid score type: %T", scoreArg)
+	}
+
+	reason, ok := reasonArg.(string)
+	if !ok {
+		return llm.JudgeResult{}, fmt.Errorf("invalid reason type: %T", reasonArg)
+	}
+
+	return llm.JudgeResult{
+		Score:  int(score),
+		Reason: reason,
 	}, nil
 }
 
-// parseJSONResponseはAIのレスポンスからJSON部分を抽出してパースする
-func parseJSONResponse(text string, v any) error {
-	// AIが余分なテキストを含めることがあるため、JSON部分のみを抽出
-	text = strings.TrimSpace(text)
-
-	// コードブロック（```json ... ```）で囲まれている場合は除去
-	if after, found := strings.CutPrefix(text, "```json"); found {
-		text = strings.TrimSuffix(after, "```")
-		text = strings.TrimSpace(text)
-	} else if after, found := strings.CutPrefix(text, "```"); found {
-		text = strings.TrimSuffix(after, "```")
-		text = strings.TrimSpace(text)
-	}
-
-	// JSON部分をパース
-	if err := json.Unmarshal([]byte(text), v); err != nil {
-		return fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-
-	return nil
-}
-
-// CloseはGeminiクライアントのクローズ処理（明示的なクローズは不要）
+// Geminiクライアントのクローズ処理（明示的なクローズは不要）
 func (c *GeminiClient) Close() error {
-	// 新しいgenaiクライアントは明示的なクローズ不要
+	// 明示的なクローズ不要
 	return nil
 }
