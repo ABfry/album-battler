@@ -41,6 +41,11 @@ func (r *mysqlRoomRepository) FindByID(ctx context.Context, id uuid.UUID) (*enti
 		return nil, err
 	}
 
+	// 部屋が見つからなかった場合はnilを返す
+	if room == nil {
+		return nil, nil
+	}
+
 	// room_users から UserIDs を読み込む
 	if err := r.loadUserIDs(ctx, room); err != nil {
 		return nil, err
@@ -59,6 +64,11 @@ func (r *mysqlRoomRepository) FindByRoomNumber(ctx context.Context, roomNumber i
 	room, err := r.createRoom(row)
 	if err != nil {
 		return nil, err
+	}
+
+	// 部屋が見つからなかった場合はnilを返す
+	if room == nil {
+		return nil, nil
 	}
 
 	// room_users から UserIDs を読み込む

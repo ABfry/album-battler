@@ -36,6 +36,9 @@ func (uc *JoinRoomUseCase) Execute(ctx context.Context, input JoinRoomInput) err
 	if err != nil {
 		return err
 	}
+	if room == nil {
+		return errors.New("room not found")
+	}
 
 	// 期限チェック
 	if room.IsExpired() {

@@ -35,6 +35,9 @@ func (uc *LeaveRoomUseCase) Execute(ctx context.Context, input LeaveRoomInput) e
 	if err != nil {
 		return err
 	}
+	if room == nil {
+		return fmt.Errorf("room not found")
+	}
 
 	// ユーザーを削除 (ドメインロジック + イベント記録)
 	if err := room.RemoveUser(input.UserID); err != nil {
