@@ -36,7 +36,17 @@ func (r *mysqlRoomRepository) FindByID(ctx context.Context, id uuid.UUID) (*enti
 	if err != nil {
 		return nil, err
 	}
-	return r.createRoom(row)
+	room, err := r.createRoom(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// room_users から UserIDs を読み込む
+	if err := r.loadUserIDs(ctx, room); err != nil {
+		return nil, err
+	}
+
+	return room, nil
 }
 
 // FindByRoomNumber は表示用のルーム番号をキーに 1 件取得する。
@@ -46,7 +56,17 @@ func (r *mysqlRoomRepository) FindByRoomNumber(ctx context.Context, roomNumber i
 	if err != nil {
 		return nil, err
 	}
-	return r.createRoom(row)
+	room, err := r.createRoom(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// room_users から UserIDs を読み込む
+	if err := r.loadUserIDs(ctx, room); err != nil {
+		return nil, err
+	}
+
+	return room, nil
 }
 
 // FindAll は rooms テーブル全件を読み出す。
@@ -66,6 +86,10 @@ func (r *mysqlRoomRepository) FindAll(ctx context.Context) ([]*entity.Room, erro
 	for rows.Next() {
 		room, err := r.createRoom(rows)
 		if err != nil {
+			return nil, err
+		}
+		// room_users から UserIDs を読み込む
+		if err := r.loadUserIDs(ctx, room); err != nil {
 			return nil, err
 		}
 		rooms = append(rooms, room)
@@ -91,7 +115,8 @@ func (r *mysqlRoomRepository) Save(ctx context.Context, room *entity.Room) error
 		hostUserID = nil // 明示的にnilを設定
 	}
 
-	return save(
+	// rooms テーブルを保存
+	if err := save(
 		ctx,
 		r.db,
 		RoomsTable,
@@ -101,10 +126,88 @@ func (r *mysqlRoomRepository) Save(ctx context.Context, room *entity.Room) error
 		room.CreatedAt,
 		room.ExpiredAt,
 		statusStr,
-	)
+		room.MaxUsers,
+	); err != nil {
+		return err
+	}
+
+	// room_users テーブルを更新（全削除→再挿入）
+	return r.saveUserIDs(ctx, room)
 }
 
 // --- private helpers ---
+
+// loadUserIDs は room_users テーブルから UserIDs を読み込んで room に設定する。
+// why: 部屋に所属するユーザー一覧を取得し、ドメインエンティティに反映するため。
+func (r *mysqlRoomRepository) loadUserIDs(ctx context.Context, room *entity.Room) error {
+	query := "SELECT user_id FROM room_users WHERE room_id = ? ORDER BY joined_at"
+	rows, err := r.db.QueryContext(ctx, query, room.ID.String())
+	if err != nil {
+		return fmt.Errorf("failed to load user IDs: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			fmt.Printf("failed to close rows: %v\n", closeErr)
+		}
+	}()
+
+	var userIDs []uuid.UUID
+	for rows.Next() {
+		var userIDStr string
+		if err := rows.Scan(&userIDStr); err != nil {
+			return fmt.Errorf("failed to scan user ID: %w", err)
+		}
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse user ID: %w", err)
+		}
+		userIDs = append(userIDs, userID)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	room.UserIDs = userIDs
+	return nil
+}
+
+// saveUserIDs は room_users テーブルに UserIDs を保存する。
+// why: 既存のユーザー関連付けを全削除してから再挿入することで、整合性を保つ。
+func (r *mysqlRoomRepository) saveUserIDs(ctx context.Context, room *entity.Room) error {
+	// トランザクション開始
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			fmt.Printf("failed to rollback transaction: %v\n", err)
+		}
+	}()
+
+	// 既存のroom_usersを削除
+	deleteQuery := "DELETE FROM room_users WHERE room_id = ?"
+	if _, err := tx.ExecContext(ctx, deleteQuery, room.ID.String()); err != nil {
+		return fmt.Errorf("failed to delete room_users: %w", err)
+	}
+
+	// UserIDsを再挿入
+	if len(room.UserIDs) > 0 {
+		insertQuery := "INSERT INTO room_users (room_id, user_id, joined_at) VALUES (?, ?, NOW())"
+		for _, userID := range room.UserIDs {
+			if _, err := tx.ExecContext(ctx, insertQuery, room.ID.String(), userID.String()); err != nil {
+				return fmt.Errorf("failed to insert room_user: %w", err)
+			}
+		}
+	}
+
+	// コミット
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
 
 // createRoom は 1 行分のスキャン結果から entity.Room を生成する。
 // why: カラム順序と変換ロジックを集中管理し、スキーマ変更時の漏れを防ぐ。
@@ -116,9 +219,10 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 		createdAt    time.Time
 		expiredAt    sql.NullTime
 		statusString string
+		maxUsers     int
 	)
 
-	if err := scanner.Scan(&idStr, &roomNumber, &hostUserID, &createdAt, &expiredAt, &statusString); err != nil {
+	if err := scanner.Scan(&idStr, &roomNumber, &hostUserID, &createdAt, &expiredAt, &statusString, &maxUsers); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -144,6 +248,7 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 		CreatedAt:  createdAt,
 		ExpiredAt:  expiredAt.Time,
 		Status:     status,
+		MaxUsers:   maxUsers,
 	}
 	room.HostUserID = &hostID
 	return room, nil
