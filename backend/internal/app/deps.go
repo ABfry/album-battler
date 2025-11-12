@@ -129,10 +129,14 @@ func initEvents(deps *Dependencies) error {
 
 // UseCase関連の初期化
 func initUseCases(deps *Dependencies) error {
+	// Domain Services
+	roomNumberGenerator := service.NewRoomNumberGenerator()
+
 	// Room Usecases
 	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
+		roomNumberGenerator,
 	)
 
 	deps.JoinRoomUseCase = room.NewJoinRoomUseCase(
