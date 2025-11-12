@@ -107,7 +107,7 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Printf("JoinRoom error: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "JoinRoom error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
