@@ -25,6 +25,7 @@ CREATE TABLE rooms (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expired_at DATETIME,
     status ENUM('waiting', 'full', 'battling', 'result', 'closed') NOT NULL DEFAULT 'waiting',
+    max_users INT NOT NULL DEFAULT 5,
     CHECK (room_number BETWEEN 0 AND 9999),
     CONSTRAINT fk_rooms_host_user FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     UNIQUE KEY uq_rooms_room_number_status (room_number, status)
@@ -59,11 +60,21 @@ CREATE TABLE battle_users (
     CONSTRAINT fk_battle_users_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE room_users (
+    room_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (room_id, user_id),
+    CONSTRAINT fk_room_users_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_room_users_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE INDEX idx_rooms_host_user ON rooms (host_user_id);
 CREATE INDEX idx_battles_room ON battles (room_id);
 CREATE INDEX idx_images_user ON images (user_id);
 CREATE INDEX idx_images_battle ON images (battle_id);
 CREATE INDEX idx_battle_users_user ON battle_users (user_id);
+CREATE INDEX idx_room_users_user ON room_users (user_id);
 
 -- 仮ユーザーデータの挿入 (開発用)
 -- パスワードはすべて "password123" (bcryptでハッシュ化: $2a$10$YourHashedPasswordHere)
