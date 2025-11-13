@@ -13,6 +13,7 @@ import (
 type RoomHandler struct {
 	createRoomUC   *room.CreateRoomUseCase
 	joinRoomUC     *room.JoinRoomUseCase
+	leaveRoomUC    *room.LeaveRoomUseCase
 	startGameUC    *room.StartGameUseCase
 	getRoomUC      *room.GetRoomUseCase
 	roomManager    service.RoomManager
@@ -22,6 +23,7 @@ type RoomHandler struct {
 func NewRoomHandler(
 	createRoomUC *room.CreateRoomUseCase,
 	joinRoomUC *room.JoinRoomUseCase,
+	leaveRoomUC *room.LeaveRoomUseCase,
 	startGameUC *room.StartGameUseCase,
 	getRoomUC *room.GetRoomUseCase,
 	roomManager service.RoomManager,
@@ -30,6 +32,7 @@ func NewRoomHandler(
 	return &RoomHandler{
 		createRoomUC:   createRoomUC,
 		joinRoomUC:     joinRoomUC,
+		leaveRoomUC:    leaveRoomUC,
 		startGameUC:    startGameUC,
 		getRoomUC:      getRoomUC,
 		roomManager:    roomManager,
@@ -119,6 +122,52 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		"message": "joined successfully",
 	}); err != nil {
 		log.Printf("Failed to encode response: %v", err)
+	}
+}
+
+// POST /room/{room_id}/leave
+func (h *RoomHandler) LeaveRoom(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// URLからroom_idを取得 (簡易的にQuery Paramで受け取る)
+	roomIDStr := r.URL.Query().Get("room_id")
+	if roomIDStr == "" {
+		http.Error(w, "room_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	roomID, err := uuid.Parse(roomIDStr)
+	if err != nil {
+		http.Error(w, "Invalid room_id format", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		UserID string `json:"user_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		return
+	}
+
+	err = h.leaveRoomUC.Execute(r.Context(), room.LeaveRoomInput{
+		UserID: userID,
+		RoomID: roomID,
+	})
+	if err != nil {
+		log.Printf("LeaveRoom error: %v", err)
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
 	}
 }
 

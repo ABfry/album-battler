@@ -12,6 +12,7 @@ func (s *APIServer) registerRoutes() {
 	roomHandler := NewRoomHandler(
 		s.deps.CreateRoomUseCase,
 		s.deps.JoinRoomUseCase,
+		s.deps.LeaveRoomUseCase,
 		s.deps.StartGameUseCase,
 		s.deps.GetRoomUseCase,
 		s.deps.RoomManager,
