@@ -103,3 +103,52 @@ variable "rds_backup_retention_period" {
   default     = 7
 }
 
+# ECS設定
+variable "ecs_log_retention_days" {
+  description = "CloudWatch Logsの保持期間 (日)"
+  type        = number
+  default     = 7
+}
+
+variable "frontend_cpu" {
+  description = "Frontendタスクのvirtual CPU units"
+  type        = string
+  default     = "512"
+}
+
+variable "frontend_memory" {
+  description = "Frontendタスクのメモリ (MB)"
+  type        = string
+  default     = "1024"
+}
+
+variable "frontend_desired_count" {
+  description = "Frontendタスクの希望数"
+  type        = number
+  default     = 1
+}
+
+variable "backend_cpu" {
+  description = "Backendタスクのvirtual CPU units"
+  type        = string
+  default     = "1024"
+}
+
+variable "backend_memory" {
+  description = "Backendタスクのメモリ (MB)"
+  type        = string
+  default     = "2048"
+}
+
+variable "backend_desired_count" {
+  description = "Backendタスクの希望数"
+  type        = number
+  default     = 1
+}
+
+# API Keys
+variable "gemini_api_key" {
+  description = "Gemini API Key"
+  type        = string
+  sensitive   = true
+}
