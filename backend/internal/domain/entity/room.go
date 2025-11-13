@@ -18,6 +18,58 @@ const (
 	Closed
 )
 
+// roomStatusStrings は RoomStatus から文字列表現への変換マップ
+var roomStatusStrings = map[RoomStatus]string{
+	WaitJoin:    "waiting",
+	FullyJoined: "full",
+	InBattle:    "battling",
+	Result:      "result",
+	Closed:      "closed",
+}
+
+// stringToRoomStatus は文字列から RoomStatus への変換マップ
+var stringToRoomStatus = map[string]RoomStatus{
+	"waiting":  WaitJoin,
+	"full":     FullyJoined,
+	"battling": InBattle,
+	"result":   Result,
+	"closed":   Closed,
+}
+
+// String はデバッグやログ出力用の文字列表現を返す
+func (s RoomStatus) String() string {
+	if str, ok := roomStatusStrings[s]; ok {
+		return str
+	}
+	return "unknown"
+}
+
+// MarshalJSON は JSON エンコード時に文字列として出力する
+func (s RoomStatus) MarshalJSON() ([]byte, error) {
+	str := s.String()
+	if str == "unknown" {
+		return nil, errors.New("invalid room status")
+	}
+	return []byte(`"` + str + `"`), nil
+}
+
+// UnmarshalJSON は JSON デコード時に文字列から RoomStatus へ変換する
+func (s *RoomStatus) UnmarshalJSON(data []byte) error {
+	// クォートを除去
+	str := string(data)
+	if len(str) < 2 || str[0] != '"' || str[len(str)-1] != '"' {
+		return errors.New("invalid room status format")
+	}
+	str = str[1 : len(str)-1]
+
+	status, ok := stringToRoomStatus[str]
+	if !ok {
+		return errors.New("unknown room status: " + str)
+	}
+	*s = status
+	return nil
+}
+
 func GetValidTransitions(status RoomStatus) []RoomStatus {
 	switch status {
 	case WaitJoin:
