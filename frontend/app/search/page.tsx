@@ -1,20 +1,32 @@
 // app/search/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 export default function SearchPage() {
   const [roomId, setRoomId] = useState("");
   const router = useRouter();
 
+  // ルームID入力のハンドラ（数字のみ・最大4桁）
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // 1. 数字以外をすべて削除
+    const numbersOnly = value.replace(/[^\d]/g, "");
+
+    // 2. 先頭から最大4桁だけを取り出す
+    const fourDigits = numbersOnly.match(/^\d{0,4}/)?.[0] ?? "";
+
+    setRoomId(fourDigits);
+  };
+
   const handleJoin = () => {
-    const trimmed = roomId.trim();
-    if (!trimmed) {
-      alert("部屋番号を入力してください");
+    if (roomId.length !== 4) {
+      alert("部屋番号は数字4桁で入力してください");
       return;
     }
-    router.push(`/room/${trimmed}`);
+    router.push(`/room/${roomId}`);
   };
 
   return (
@@ -30,11 +42,12 @@ export default function SearchPage() {
           </p>
 
           <input
+            type="text"
+            inputMode="numeric" // スマホで数字キーボードを出す
             value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
+            onChange={handleChange}
             className="w-full border-b border-gray-500 pb-1 text-center focus:outline-none"
-            placeholder="0000"
-            maxLength={4}
+            placeholder="1234"
           />
 
           <button
