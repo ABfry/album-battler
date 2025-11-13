@@ -2,13 +2,25 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { roomApi } from "@/src/lib/api/roomApi";
-import type { Room, RoomInfoResponse, RoomStatus } from "@/src/lib/api/types";
+import { RoomStatus } from "@/src/lib/api/types";
+import type { Room, RoomInfoResponse } from "@/src/lib/api/types";
 
 type UseRoomInfoResult = {
   room: Room | null;
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+};
+
+/**
+ * 文字列をRoomStatus enumに安全に変換
+ */
+const statusMap: Record<string, RoomStatus> = {
+  waiting: RoomStatus.WaitJoin,
+  full: RoomStatus.FullyJoined,
+  battling: RoomStatus.InBattle,
+  result: RoomStatus.Result,
+  closed: RoomStatus.Closed,
 };
 
 /**
@@ -20,7 +32,7 @@ function mapToRoom(roomId: string, data: RoomInfoResponse): Room {
     roomNumber: data.room_number,
     hostUserId: data.host_user_id,
     users: data.users,
-    status: data.room_status as RoomStatus, // 文字列をRoomStatus enumに変換
+    status: statusMap[data.room_status] ?? RoomStatus.WaitJoin,
     isExpired: data.is_expired,
   };
 }
