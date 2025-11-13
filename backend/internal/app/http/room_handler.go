@@ -125,19 +125,9 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// POST /room/{room_id}/leave
+// POST /room/{id}/leave
 func (h *RoomHandler) LeaveRoom(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// URLからroom_idを取得 (簡易的にQuery Paramで受け取る)
-	roomIDStr := r.URL.Query().Get("room_id")
-	if roomIDStr == "" {
-		http.Error(w, "room_id parameter is required", http.StatusBadRequest)
-		return
-	}
+	roomIDStr := r.PathValue("id")
 
 	roomID, err := uuid.Parse(roomIDStr)
 	if err != nil {
@@ -168,6 +158,14 @@ func (h *RoomHandler) LeaveRoom(w http.ResponseWriter, r *http.Request) {
 		log.Printf("LeaveRoom error: %v", err)
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "left successfully",
+	}); err != nil {
+		log.Printf("Failed to encode response: %v", err)
 	}
 }
 
