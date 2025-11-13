@@ -169,15 +169,10 @@ func (h *RoomHandler) LeaveRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// POST /room/{room_id}/start
+// POST /room/{id}/start
 func (h *RoomHandler) StartGame(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// URLからroom_idを取得 (簡易的にQuery Paramで受け取る)
-	roomIDStr := r.URL.Query().Get("room_id")
+	// パスパラメータからroom_idを取得
+	roomIDStr := r.PathValue("id")
 	if roomIDStr == "" {
 		http.Error(w, "room_id parameter is required", http.StatusBadRequest)
 		return
@@ -223,15 +218,10 @@ func (h *RoomHandler) StartGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /room/{room_id}
+// GET /room/{id}
 func (h *RoomHandler) GetRoom(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// URLからroom_idを取得 (簡易的にQuery Paramで受け取る)
-	roomIDStr := r.URL.Query().Get("room_id")
+	// パスパラメータからroom_idを取得
+	roomIDStr := r.PathValue("id")
 	if roomIDStr == "" {
 		http.Error(w, "room_id parameter is required", http.StatusBadRequest)
 		return
