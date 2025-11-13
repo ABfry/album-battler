@@ -14,3 +14,13 @@ s3_allowed_origins    = ["*"]
 vpc_cidr             = "10.0.0.0/16"
 availability_zones   = ["ap-northeast-1a", "ap-northeast-1c"]
 public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+
+# RDS設定
+db_name                     = "album_battler"
+db_username                 = "<username>"
+db_password                 = "<password>"
+rds_instance_class          = "db.t4g.micro"
+rds_allocated_storage       = 20
+rds_multi_az                = false
+rds_skip_final_snapshot     = true
+rds_backup_retention_period = 7
