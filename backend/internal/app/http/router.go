@@ -8,6 +8,20 @@ func (s *APIServer) registerRoutes() {
 		s.deps.WebSocketHub)
 	s.mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
+	// Roomハンドラ
+	roomHandler := NewRoomHandler(
+		s.deps.CreateRoomUseCase,
+		s.deps.JoinRoomUseCase,
+		s.deps.StartGameUseCase,
+		s.deps.GetRoomUseCase,
+		s.deps.RoomManager,
+		s.deps.EventPublisher,
+	)
+	s.mux.HandleFunc("POST /room", roomHandler.CreateRoom)
+	s.mux.HandleFunc("POST /room/join", roomHandler.JoinRoom)
+	s.mux.HandleFunc("POST /room/{id}/start", roomHandler.StartGame)
+	s.mux.HandleFunc("GET /room/{id}", roomHandler.GetRoom)
+
 	// ヘルスチェック
 	// s.mux.HandleFunc("/healthz", s.handleHealthz)
 }

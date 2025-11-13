@@ -10,7 +10,8 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - mysql_data:/var/lib/mysql
+      # 開発用ではデータ永続化を無効にする
+      # - mysql_data:/var/lib/mysql
       - ./backend/migrations/init_db.sql:/docker-entrypoint-initdb.d/01-init_db.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]

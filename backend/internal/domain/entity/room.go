@@ -18,6 +18,58 @@ const (
 	Closed
 )
 
+// roomStatusStrings は RoomStatus から文字列表現への変換マップ
+var roomStatusStrings = map[RoomStatus]string{
+	WaitJoin:    "waiting",
+	FullyJoined: "full",
+	InBattle:    "battling",
+	Result:      "result",
+	Closed:      "closed",
+}
+
+// stringToRoomStatus は文字列から RoomStatus への変換マップ
+var stringToRoomStatus = map[string]RoomStatus{
+	"waiting":  WaitJoin,
+	"full":     FullyJoined,
+	"battling": InBattle,
+	"result":   Result,
+	"closed":   Closed,
+}
+
+// String はデバッグやログ出力用の文字列表現を返す
+func (s RoomStatus) String() string {
+	if str, ok := roomStatusStrings[s]; ok {
+		return str
+	}
+	return "unknown"
+}
+
+// MarshalJSON は JSON エンコード時に文字列として出力する
+func (s RoomStatus) MarshalJSON() ([]byte, error) {
+	str := s.String()
+	if str == "unknown" {
+		return nil, errors.New("invalid room status")
+	}
+	return []byte(`"` + str + `"`), nil
+}
+
+// UnmarshalJSON は JSON デコード時に文字列から RoomStatus へ変換する
+func (s *RoomStatus) UnmarshalJSON(data []byte) error {
+	// クォートを除去
+	str := string(data)
+	if len(str) < 2 || str[0] != '"' || str[len(str)-1] != '"' {
+		return errors.New("invalid room status format")
+	}
+	str = str[1 : len(str)-1]
+
+	status, ok := stringToRoomStatus[str]
+	if !ok {
+		return errors.New("unknown room status: " + str)
+	}
+	*s = status
+	return nil
+}
+
 func GetValidTransitions(status RoomStatus) []RoomStatus {
 	switch status {
 	case WaitJoin:
@@ -107,6 +159,11 @@ func (r *Room) AddUser(userID uuid.UUID) error {
 
 	r.UserIDs = append(r.UserIDs, userID)
 
+	// 満員になったら自動的にFullyJoinedへ遷移
+	if len(r.UserIDs) >= r.MaxUsers {
+		r.Status = FullyJoined
+	}
+
 	// ドメインイベント記録
 	r.RecordEvent(event.UserJoinedRoomEvent{
 		RoomID:     r.ID,
@@ -148,6 +205,11 @@ func (r *Room) RemoveUser(userID uuid.UUID) error {
 		r.HostUserID = nil
 	}
 
+	// 満員状態から空きができたらWaitJoinに戻す
+	if r.Status == FullyJoined && len(r.UserIDs) < r.MaxUsers {
+		r.Status = WaitJoin
+	}
+
 	// 部屋が解散したか (全員退出)
 	roomDissolved := len(r.UserIDs) == 0
 
@@ -173,9 +235,34 @@ func (r *Room) IsFull() bool {
 	return len(r.UserIDs) >= r.MaxUsers
 }
 
+func (r *Room) IsActive() bool {
+	return r.Status == WaitJoin || r.Status == FullyJoined || r.Status == InBattle
+}
+
 func (r *Room) Dissolve() error {
 	r.UserIDs = []uuid.UUID{}
 	r.HostUserID = nil
 	r.Status = Closed
+	return nil
+}
+
+func (r *Room) StartGame() error {
+	// ホストが存在することを確認
+	if r.HostUserID == nil {
+		return errors.New("no host in room")
+	}
+
+	// 状態遷移の検証
+	if err := r.ChangeStatus(InBattle); err != nil {
+		return err
+	}
+
+	// ドメインイベント記録
+	r.RecordEvent(event.GameStartedEvent{
+		RoomID:     r.ID,
+		RoomNumber: r.RoomNumber,
+		OccurredOn: time.Now(),
+	})
+
 	return nil
 }
