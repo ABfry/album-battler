@@ -156,6 +156,7 @@ func initUseCases(deps *Dependencies) error {
 
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
 		deps.RoomRepository,
+		deps.UserRepository,
 	)
 
 	return nil
