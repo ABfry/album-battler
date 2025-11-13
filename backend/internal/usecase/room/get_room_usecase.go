@@ -13,23 +13,32 @@ type GetRoomInput struct {
 	RoomID uuid.UUID
 }
 
+type UserInfo struct {
+	ID      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	IconURL string    `json:"icon_url"`
+}
+
 type GetRoomOutput struct {
-	RoomNumber int           `json:"room_number"`
-	Users      []uuid.UUID   `json:"users"`
-	IsExpired  bool          `json:"is_expired"`
-	RoomStatus entity.RoomStatus `json:"room_status"`
-	HostUserID *uuid.UUID    `json:"host_user_id"`
+	RoomNumber int                 `json:"room_number"`
+	Users      []UserInfo          `json:"users"`
+	IsExpired  bool                `json:"is_expired"`
+	RoomStatus entity.RoomStatus   `json:"room_status"`
+	HostUserID *uuid.UUID          `json:"host_user_id"`
 }
 
 type GetRoomUseCase struct {
 	roomRepo repository.RoomRepository
+	userRepo repository.UserRepository
 }
 
 func NewGetRoomUseCase(
 	roomRepo repository.RoomRepository,
+	userRepo repository.UserRepository,
 ) *GetRoomUseCase {
 	return &GetRoomUseCase{
 		roomRepo: roomRepo,
+		userRepo: userRepo,
 	}
 }
 
@@ -42,9 +51,25 @@ func (uc *GetRoomUseCase) Execute(ctx context.Context, input GetRoomInput) (*Get
 		return nil, errors.New("room not found")
 	}
 
+	// ユーザー情報を取得
+	users, err := uc.userRepo.FindByIDs(ctx, room.UserIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// entity.User → UserInfoに変換
+	userInfos := make([]UserInfo, len(users))
+	for i, user := range users {
+		userInfos[i] = UserInfo{
+			ID:      user.ID,
+			Name:    user.Name,
+			IconURL: user.IconUrl,
+		}
+	}
+
 	return &GetRoomOutput{
 		RoomNumber: room.RoomNumber,
-		Users:      room.UserIDs,
+		Users:      userInfos,
 		IsExpired:  room.IsExpired(),
 		RoomStatus: room.Status,
 		HostUserID: room.HostUserID,
