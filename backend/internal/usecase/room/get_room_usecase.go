@@ -2,6 +2,7 @@ package room
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
@@ -36,6 +37,9 @@ func (uc *GetRoomUseCase) Execute(ctx context.Context, input GetRoomInput) (*Get
 	room, err := uc.roomRepo.FindByID(ctx, input.RoomID)
 	if err != nil {
 		return nil, err
+	}
+	if room == nil {
+		return nil, errors.New("room not found")
 	}
 
 	return &GetRoomOutput{

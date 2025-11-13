@@ -22,17 +22,20 @@ type CreateRoomOutput struct {
 }
 
 type CreateRoomUseCase struct {
-	roomRepo   repository.RoomRepository
-	dispatcher service.EventDispatcher
+	roomRepo            repository.RoomRepository
+	dispatcher          service.EventDispatcher
+	roomNumberGenerator service.RoomNumberGenerator
 }
 
 func NewCreateRoomUseCase(
 	roomRepo repository.RoomRepository,
 	dispatcher service.EventDispatcher,
+	roomNumberGenerator service.RoomNumberGenerator,
 ) *CreateRoomUseCase {
 	return &CreateRoomUseCase{
-		roomRepo:   roomRepo,
-		dispatcher: dispatcher,
+		roomRepo:            roomRepo,
+		dispatcher:          dispatcher,
+		roomNumberGenerator: roomNumberGenerator,
 	}
 }
 
@@ -59,34 +62,16 @@ func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput)
 }
 
 func (uc *CreateRoomUseCase) tryCreateRoom(ctx context.Context, input CreateRoomInput) (*CreateRoomOutput, error) {
-	// 既存の部屋を取得して、使用されていない部屋番号を見つける
+	// 既存の部屋を取得
 	rooms, err := uc.roomRepo.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// 使用中の部屋番号を集める（アクティブな部屋のみ）
-	usedNumbers := make(map[int]bool)
-	for _, room := range rooms {
-		// WaitJoin, FullyJoined, InBattle の部屋のみ番号を占有
-		if room.Status == entity.WaitJoin ||
-			room.Status == entity.FullyJoined ||
-			room.Status == entity.InBattle {
-			usedNumbers[room.RoomNumber] = true
-		}
-	}
-
-	// 1~9999の範囲で使用されていない部屋番号を見つける
-	var roomNumber int
-	for i := 1; i <= 9999; i++ {
-		if !usedNumbers[i] {
-			roomNumber = i
-			break
-		}
-	}
-
-	if roomNumber == 0 {
-		return nil, errors.New("no available room number")
+	// ドメインサービスで使用可能な部屋番号を生成
+	roomNumber, err := uc.roomNumberGenerator.Generate(rooms)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO 決める

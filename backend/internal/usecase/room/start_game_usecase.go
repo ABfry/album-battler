@@ -35,6 +35,9 @@ func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) e
 	if err != nil {
 		return err
 	}
+	if room == nil {
+		return errors.New("room not found")
+	}
 
 	// ホストであることを確認
 	if room.HostUserID == nil || *room.HostUserID != input.UserID {
