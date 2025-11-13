@@ -37,3 +37,20 @@ output "s3_bucket_region" {
   description = "S3バケットリージョン"
   value       = module.s3_storage.bucket_region
 }
+
+# RDS Outputs
+output "rds_endpoint" {
+  description = "RDSエンドポイント"
+  value       = module.rds.endpoint
+}
+
+output "rds_address" {
+  description = "RDSアドレス"
+  value       = module.rds.address
+}
+
+output "rds_port" {
+  description = "RDSポート"
+  value       = module.rds.port
+}
+
