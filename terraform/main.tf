@@ -98,3 +98,29 @@ module "s3_storage" {
     Environment = var.environment
   }
 }
+
+# RDSモジュール
+module "rds" {
+  source = "./modules/rds"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  subnet_ids         = aws_subnet.public[*].id
+  security_group_ids = [module.ecs.ecs_tasks_security_group_id]
+
+  db_name     = var.db_name
+  db_username = var.db_username
+  db_password = var.db_password
+
+  instance_class    = var.rds_instance_class
+  allocated_storage = var.rds_allocated_storage
+  multi_az          = var.rds_multi_az
+
+  skip_final_snapshot     = var.rds_skip_final_snapshot
+  backup_retention_period = var.rds_backup_retention_period
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
