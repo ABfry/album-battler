@@ -2,45 +2,50 @@ package room
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/google/uuid"
 )
 
-type LeaveRoomInput struct {
-	UserID uuid.UUID
+type StartGameInput struct {
 	RoomID uuid.UUID
+	UserID uuid.UUID // ホスト検証用
 }
 
-type LeaveRoomUseCase struct {
+type StartGameUseCase struct {
 	roomRepo   repository.RoomRepository
 	dispatcher service.EventDispatcher
 }
 
-func NewLeaveRoomUseCase(
+func NewStartGameUseCase(
 	roomRepo repository.RoomRepository,
 	dispatcher service.EventDispatcher,
-) *LeaveRoomUseCase {
-	return &LeaveRoomUseCase{
+) *StartGameUseCase {
+	return &StartGameUseCase{
 		roomRepo:   roomRepo,
 		dispatcher: dispatcher,
 	}
 }
 
-func (uc *LeaveRoomUseCase) Execute(ctx context.Context, input LeaveRoomInput) error {
+func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) error {
 	// 部屋を取得
 	room, err := uc.roomRepo.FindByID(ctx, input.RoomID)
 	if err != nil {
 		return err
 	}
 	if room == nil {
-		return fmt.Errorf("room not found")
+		return errors.New("room not found")
 	}
 
-	// ユーザーを削除 (ドメインロジック + イベント記録)
-	if err := room.RemoveUser(input.UserID); err != nil {
+	// ホストであることを確認
+	if room.HostUserID == nil || *room.HostUserID != input.UserID {
+		return errors.New("only host can start the game")
+	}
+
+	// ゲーム開始 (状態遷移 + イベント記録)
+	if err := room.StartGame(); err != nil {
 		return err
 	}
 
@@ -52,7 +57,6 @@ func (uc *LeaveRoomUseCase) Execute(ctx context.Context, input LeaveRoomInput) e
 	// ドメインイベントを配信
 	events := room.PopEvents()
 	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
-		fmt.Println("failed to dispatch domain events", "error", err)
 		return err
 	}
 
