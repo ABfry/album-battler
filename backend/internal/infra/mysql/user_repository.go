@@ -3,6 +3,8 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
@@ -57,6 +59,76 @@ func (r *mysqlUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*enti
 		HashedPassword: hashedPassword,
 		CreatedAt:      createdAt,
 	}, nil
+}
+
+func (r *mysqlUserRepository) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.User, error) {
+	if len(ids) == 0 {
+		return []*entity.User{}, nil
+	}
+
+	// IDをstring配列に変換
+	idStrings := make([]string, len(ids))
+	for i, id := range ids {
+		idStrings[i] = id.String()
+	}
+
+	// IN句用のプレースホルダーを生成
+	placeholders := make([]string, len(idStrings))
+	args := make([]interface{}, len(idStrings))
+	for i, idStr := range idStrings {
+		placeholders[i] = "?"
+		args[i] = idStr
+	}
+
+	// クエリ構築
+	query := fmt.Sprintf(
+		"SELECT id, name, icon_url, hashed_password, created_at FROM users WHERE id IN (%s)",
+		strings.Join(placeholders, ", "),
+	)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			fmt.Printf("failed to close rows: %v\n", closeErr)
+		}
+	}()
+
+	var users []*entity.User
+	for rows.Next() {
+		var (
+			idStr          string
+			name           string
+			iconUrl        string
+			hashedPassword string
+			createdAt      time.Time
+		)
+
+		if err := rows.Scan(&idStr, &name, &iconUrl, &hashedPassword, &createdAt); err != nil {
+			return nil, err
+		}
+
+		parsedID, err := uuid.Parse(idStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse user ID: %w", err)
+		}
+
+		users = append(users, &entity.User{
+			ID:             parsedID,
+			Name:           name,
+			IconUrl:        iconUrl,
+			HashedPassword: hashedPassword,
+			CreatedAt:      createdAt,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (r *mysqlUserRepository) Save(ctx context.Context, user *entity.User) error {

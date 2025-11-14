@@ -41,3 +41,18 @@ func (e UserLeftRoomEvent) EventType() string {
 func (e UserLeftRoomEvent) OccurredAt() time.Time {
 	return e.OccurredOn
 }
+
+// ゲームが開始されたイベント
+type GameStartedEvent struct {
+	RoomID     uuid.UUID
+	RoomNumber int
+	OccurredOn time.Time
+}
+
+func (e GameStartedEvent) EventType() string {
+	return "game_started"
+}
+
+func (e GameStartedEvent) OccurredAt() time.Time {
+	return e.OccurredOn
+}
