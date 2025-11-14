@@ -29,7 +29,7 @@ func TestBattleRepository_FindByID(t *testing.T) {
 			mustGetBattleQuery(t, "id"): {
 				columns: battleColumns(),
 				rows: [][]driver.Value{
-					{battleID.String(), roomID.String(), now},
+					{battleID.String(), roomID.String(), now, "夕焼け", nil},
 				},
 			},
 		},
@@ -65,7 +65,7 @@ func TestBattleRepository_FindByRoomID(t *testing.T) {
 			mustGetBattleQuery(t, "room_id"): {
 				columns: battleColumns(),
 				rows: [][]driver.Value{
-					{battleID.String(), roomID.String(), now},
+					{battleID.String(), roomID.String(), now, "猫", nil},
 				},
 			},
 		},
@@ -91,6 +91,7 @@ func TestBattleRepository_Save(t *testing.T) {
 		ID:        uuid.New(),
 		RoomID:    roomID,
 		StartedAt: now,
+		Theme:     "都会の夜景",
 	}
 
 	query := upsertBattlesQuery()
@@ -100,6 +101,7 @@ func TestBattleRepository_Save(t *testing.T) {
 				battle.ID.String(),
 				battle.RoomID.String(),
 				battle.StartedAt,
+				battle.Theme,
 			},
 		},
 	}
