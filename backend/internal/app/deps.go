@@ -14,6 +14,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/infra/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
+	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
@@ -24,7 +25,10 @@ type Dependencies struct {
 	db *sql.DB
 
 	// Repository
-	RoomRepository repository.RoomRepository
+	RoomRepository   repository.RoomRepository
+	BattleRepository repository.BattleRepository
+	ImageRepository  repository.ImageRepository
+	UserRepository   repository.UserRepository
 
 	// WebSocket関連
 	WebSocketHub   *websocket.Hub
@@ -35,8 +39,11 @@ type Dependencies struct {
 	EventDispatcher service.EventDispatcher
 
 	// Usecase
-	JoinRoomUseCase  *room.JoinRoomUseCase
-	LeaveRoomUseCase *room.LeaveRoomUseCase
+	CreateRoomUseCase *room.CreateRoomUseCase
+	JoinRoomUseCase   *room.JoinRoomUseCase
+	LeaveRoomUseCase  *room.LeaveRoomUseCase
+	StartGameUseCase  *room.StartGameUseCase
+	GetRoomUseCase    *room.GetRoomUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -112,12 +119,26 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register("user_left_room", userLeftHandler)
 
+	gameStartedHandler := handlers.NewGameStartedHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register("game_started", gameStartedHandler)
+
 	return nil
 }
 
 // UseCase関連の初期化
 func initUseCases(deps *Dependencies) error {
+	// Domain Services
+	roomNumberGenerator := service.NewRoomNumberGenerator()
+
 	// Room Usecases
+	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+		roomNumberGenerator,
+	)
+
 	deps.JoinRoomUseCase = room.NewJoinRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
@@ -126,6 +147,16 @@ func initUseCases(deps *Dependencies) error {
 	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
+	)
+
+	deps.StartGameUseCase = room.NewStartGameUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+
+	deps.GetRoomUseCase = room.NewGetRoomUseCase(
+		deps.RoomRepository,
+		deps.UserRepository,
 	)
 
 	return nil
@@ -161,23 +192,38 @@ func initDatabase() (*sql.DB, error) {
 		db.SetMaxIdleConns(cfg.maxIdleConns)
 	}
 
-	// 接続確認
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// 接続確認（リトライロジック付き）
+	maxRetries := 5
+	retryInterval := 2 * time.Second
 
-	if err := db.PingContext(ctx); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
+	for i := 0; i < maxRetries; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := db.PingContext(ctx)
+		cancel()
+
+		if err == nil {
+			// 接続成功
+			fmt.Printf("Database connection established successfully")
+			return db, nil
+		}
+
+		fmt.Printf("Database connection attempt %d/%d failed: %v", i+1, maxRetries, err)
+
+		if i < maxRetries-1 {
+			fmt.Printf("Retrying in %v...", retryInterval)
+			time.Sleep(retryInterval)
+		}
 	}
 
-	return db, nil
+	_ = db.Close()
+	return nil, fmt.Errorf("failed to connect to database after %d attempts", maxRetries)
 }
 
 func initRepositories(deps *Dependencies) error {
-	// TODO
-	// deps.UserRepository = mysql.NewUserRepository(deps.db)
-	// deps.AlbumRepository = mysql.NewAlbumRepository(deps.db)
-	// deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+	deps.RoomRepository = mysql.NewRoomRepository(deps.db)
+	deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+	deps.ImageRepository = mysql.NewImageRepository(deps.db)
+	deps.UserRepository = mysql.NewUserRepository(deps.db)
 
 	return nil
 }
