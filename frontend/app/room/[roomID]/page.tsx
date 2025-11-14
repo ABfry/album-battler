@@ -2,65 +2,84 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 
-export default function RoomDetailPage() {
-  // URLのパラメータ（例: /room/1111 → roomID = "1111"）
-  const { roomID } = useParams() as { roomID: string };
+type Player = {
+  id: number;
+  name: string;
+  joined: boolean;
+};
+
+export default function RoomPage() {
+  const { roomId } = useParams() as { roomId: string };
   const router = useRouter();
 
-  // 仮のプレイヤーデータ
-  const players = ["井上", "岩崎"];
-  const watcherCount = 5;
+  // 仮のプレイヤー情報（joined=false が「待機中..」枠）
+  const [players] = useState<Player[]>([
+    { id: 1, name: "岩崎", joined: true },
+    { id: 2, name: "井上", joined: true },
+    { id: 3, name: "シバタ", joined: true },
+    { id: 4, name: "なかむら", joined: true },
+    { id: 5, name: "待機中・・", joined: false },
+  ]);
 
-  const handleReady = () => {
-    alert("準備完了の処理を書く（APIなど）");
-  };
-
-  const handleExit = () => {
-    router.push("/title");
+  const handleBattle = () => {
+    alert("バトル開始の処理を書く");
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="flex h-[640px] w-[360px] flex-col rounded-2xl border border-gray-400 bg-white px-6 py-10 shadow-lg">
-        {/* 部屋番号表示 */}
-        <h2 className="mb-8 text-center text-xl font-semibold">
-          部屋番号: {roomID}
-        </h2>
+    <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
+      {/* 戻るボタン */}
+      <button
+        onClick={() => router.push("/title")}
+        className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
+      >
+        ◀
+      </button>
 
-        {/* プレイヤー一覧 */}
-        <div className="mb-6">
-          <p className="mb-1 font-semibold">プレイヤー</p>
-          <ul className="list-inside list-disc text-sm">
-            {players.map((name) => (
-              <li key={name}>{name}</li>
+      {/* ルーム全体コンテナ（縦長スマホ想定） */}
+      <div className="flex h-[640px] w-[360px] flex-col items-center">
+        {/* タイトル */}
+        <h1 className="mt-12 mb-4 text-3xl font-black tracking-widest text-[#b57c39]">
+          ルーム
+        </h1>
+
+        {/* 部屋番号（必要なら表示） */}
+        <p className="mb-4 text-xs text-gray-700">部屋番号: {roomId}</p>
+
+        {/* プレイヤー一覧カード */}
+        <div className="w-full max-w-xs rounded-xl border border-[#3551b8] bg-white px-6 py-6 shadow-[0_8px_0_rgba(0,0,0,0.15)]">
+          <ul className="space-y-3">
+            {players.map((p) => (
+              <li key={p.id} className="flex items-center gap-3">
+                {/* アイコンの丸 */}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-black">
+                  {/* 中の顔アイコンはシンプルに線だけ */}
+                  <div className="h-5 w-5 rounded-full border border-gray-400" />
+                </div>
+
+                {/* 名前 */}
+                <span
+                  className={
+                    p.joined
+                      ? "text-lg font-black"
+                      : "text-lg font-black text-gray-300"
+                  }
+                >
+                  {p.name}
+                </span>
+              </li>
             ))}
           </ul>
         </div>
 
-        {/* 観戦者数 */}
-        <div className="mb-10">
-          <p className="mb-1 font-semibold">観戦</p>
-          <ul className="list-inside list-disc text-sm">
-            <li>{watcherCount}名</li>
-          </ul>
-        </div>
-
-        {/* ボタン群 */}
-        <div className="mt-auto flex flex-col items-center gap-4">
-          <button
-            onClick={handleReady}
-            className="w-40 rounded-md border border-gray-500 bg-white py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
-          >
-            準備完了
-          </button>
-          <button
-            onClick={handleExit}
-            className="w-40 rounded-md border border-gray-500 bg-white py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
-          >
-            退出
-          </button>
-        </div>
+        {/* バトルボタン */}
+        <button
+          onClick={handleBattle}
+          className="mt-8 w-56 rounded-xl bg-[#6b5337] py-3 text-lg font-black text-white shadow-[0_6px_0_rgba(0,0,0,0.35)] active:translate-y-1 active:shadow-[0_2px_0_rgba(0,0,0,0.35)]"
+        >
+          バトル！！
+        </button>
       </div>
     </main>
   );
