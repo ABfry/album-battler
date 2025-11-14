@@ -29,3 +29,6 @@ Thumbs.db
 tmp/
 dist/
 build/
+
+# Playwright MCP
+.playwright-mcp/

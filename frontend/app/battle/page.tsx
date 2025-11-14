@@ -24,7 +24,7 @@ export default function BattlePage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+    <div className="flex min-h-screen items-center justify-center">
       <main className="flex w-full max-w-2xl flex-col gap-6 p-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
