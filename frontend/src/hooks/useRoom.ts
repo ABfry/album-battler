@@ -7,6 +7,7 @@ import type { CreateRoomResponse } from "@/src/lib/api/types";
 type UseRoomResult = {
   createRoom: (userId: string) => Promise<CreateRoomResponse | null>;
   joinRoom: (userId: string, roomNumber: number) => Promise<boolean>;
+  leaveRoom: (roomId: string, userId: string) => Promise<boolean>;
   startGame: (roomId: string, userId: string) => Promise<boolean>;
   loading: boolean;
   error: string | null;
@@ -52,6 +53,22 @@ export function useRoom(): UseRoomResult {
     }
   };
 
+  const leaveRoom = async (roomId: string, userId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await roomApi.leaveRoom(roomId, userId);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to leave room";
+      setError(message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const startGame = async (roomId: string, userId: string) => {
     setLoading(true);
     setError(null);
@@ -68,5 +85,5 @@ export function useRoom(): UseRoomResult {
     }
   };
 
-  return { createRoom, joinRoom, startGame, loading, error };
+  return { createRoom, joinRoom, leaveRoom, startGame, loading, error };
 }

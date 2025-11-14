@@ -4,6 +4,8 @@ import type {
   CreateRoomResponse,
   JoinRoomRequest,
   JoinRoomResponse,
+  LeaveRoomRequest,
+  LeaveRoomResponse,
   RoomInfoResponse,
   StartGameRequest,
   StartGameResponse,
@@ -60,6 +62,20 @@ export const roomApi = {
     return fetchApi<StartGameResponse>(`/room/${roomId}/start`, {
       method: "POST",
       body: JSON.stringify({ user_id: userId } satisfies StartGameRequest),
+    });
+  },
+
+  /**
+   * 部屋から退出
+   * POST /room/{id}/leave
+   */
+  leaveRoom: async (
+    roomId: string,
+    userId: string
+  ): Promise<LeaveRoomResponse> => {
+    return fetchApi<LeaveRoomResponse>(`/room/${roomId}/leave`, {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId } satisfies LeaveRoomRequest),
     });
   },
 };
