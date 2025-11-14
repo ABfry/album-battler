@@ -12,6 +12,10 @@ export type StartGameRequest = {
   user_id: string;
 };
 
+export type LeaveRoomRequest = {
+  user_id: string;
+};
+
 // レスポンス型
 export type CreateRoomResponse = {
   room_id: string;
@@ -38,6 +42,10 @@ export type RoomInfoResponse = {
 
 export type StartGameResponse = {
   result: string;
+};
+
+export type LeaveRoomResponse = {
+  message: string;
 };
 
 // ドメイン型

@@ -13,8 +13,9 @@ import type { CreateRoomResponse } from "@/src/lib/api/types";
  * ロジック・状態管理を担当
  */
 export function ApiTestPage() {
-  // 部屋作成・参加・ゲーム開始の操作
-  const { createRoom, joinRoom, startGame, loading, error } = useRoom();
+  // 部屋作成・参加・退出・ゲーム開始の操作
+  const { createRoom, joinRoom, leaveRoom, startGame, loading, error } =
+    useRoom();
 
   // WebSocket接続
   const { connect, disconnect } = useWebSocket();
@@ -35,6 +36,7 @@ export function ApiTestPage() {
 
   // 各操作の成功状態
   const [joinSuccess, setJoinSuccess] = useState(false);
+  const [leaveSuccess, setLeaveSuccess] = useState(false);
   const [startSuccess, setStartSuccess] = useState(false);
 
   // WebSocket接続の初期化
@@ -83,7 +85,16 @@ export function ApiTestPage() {
     setJoinSuccess(success);
   };
 
-  // 3. ゲーム開始
+  // 3. 部屋退出
+  const handleLeaveRoom = async (roomId: string, userId: string) => {
+    const success = await leaveRoom(roomId, userId);
+    setLeaveSuccess(success);
+    if (success) {
+      setTimeout(() => refetch(), 500);
+    }
+  };
+
+  // 4. ゲーム開始
   const handleStartGame = async () => {
     if (!createdRoom) return;
     const success = await startGame(
@@ -102,9 +113,11 @@ export function ApiTestPage() {
       error={error}
       roomError={roomError}
       joinSuccess={joinSuccess}
+      leaveSuccess={leaveSuccess}
       startSuccess={startSuccess}
       onCreateRoom={handleCreateRoom}
       onJoinRoom={handleJoinRoom}
+      onLeaveRoom={handleLeaveRoom}
       onStartGame={handleStartGame}
       onRefetch={refetch}
     />
