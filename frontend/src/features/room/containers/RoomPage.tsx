@@ -9,7 +9,7 @@ import { Room } from "../components/Room";
  * 実際のロジック
  */
 export function RoomPage() {
-  const { status, messages, connect, disconnect } = useWebSocket();
+  const { status, messages, connect } = useWebSocket();
 
   const connectionUrl =
     process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080/ws";

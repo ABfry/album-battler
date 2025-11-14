@@ -1,4 +1,3 @@
-// src/lib/websocket/types.ts
 export type WebSocketMessage<T = unknown> = {
   type: string;
   payload: T;
