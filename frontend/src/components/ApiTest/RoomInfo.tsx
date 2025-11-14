@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Room } from "@/src/lib/api/types";
 
 type Props = {
@@ -59,9 +60,11 @@ export function RoomInfo({ room, loading, error, onRefetch }: Props) {
                   key={user.id}
                   className="flex items-center gap-2 rounded bg-white p-2"
                 >
-                  <img
+                  <Image
                     src={user.icon_url}
                     alt={user.name}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 rounded-full"
                   />
                   <div>
