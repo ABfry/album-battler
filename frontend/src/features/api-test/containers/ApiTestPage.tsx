@@ -3,10 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
-import { useWebSocket } from "@/lib/websocket/contexts/WebSocketContext";
-import { useWebSocketEvents } from "@/lib/websocket/hooks/useWebSocketEvents";
+import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
+import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 import { ApiTestView } from "../components/ApiTestView";
 import type { CreateRoomResponse } from "@/src/lib/api/types";
+import type {
+  PlayerJoinRoomPayload,
+  PlayerLeaveRoomPayload,
+  StartGamePayload,
+} from "@/src/lib/websocket/types";
 
 /**
  * API テストページ Container
@@ -47,20 +52,29 @@ export function ApiTestPage() {
 
   // WebSocketイベントの購読
   useEffect(() => {
-    const unsubscribeJoin = subscribe("player_join_room", (payload) => {
-      console.log("Player joined room:", payload.room_id);
-      refetch();
-    });
+    const unsubscribeJoin = subscribe(
+      "player_join_room",
+      (payload: PlayerJoinRoomPayload) => {
+        console.log("Player joined room:", payload.room_id);
+        refetch();
+      }
+    );
 
-    const unsubscribeLeave = subscribe("player_leave_room", (payload) => {
-      console.log("Player left room:", payload.room_id);
-      refetch();
-    });
+    const unsubscribeLeave = subscribe(
+      "player_leave_room",
+      (payload: PlayerLeaveRoomPayload) => {
+        console.log("Player left room:", payload.room_id);
+        refetch();
+      }
+    );
 
-    const unsubscribeStart = subscribe("start_game", (payload) => {
-      console.log("Game started:", payload.room_id);
-      refetch();
-    });
+    const unsubscribeStart = subscribe(
+      "start_game",
+      (payload: StartGamePayload) => {
+        console.log("Game started:", payload.room_id);
+        refetch();
+      }
+    );
 
     return () => {
       unsubscribeJoin();
