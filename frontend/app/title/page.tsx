@@ -13,7 +13,7 @@ export default function TitlePage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100">
+    <main className="flex min-h-screen items-center justify-center">
       <div className="flex h-[640px] w-[360px] flex-col items-center justify-center gap-6 rounded-2xl border border-gray-400 bg-white shadow-lg">
         <h1 className="mb-6 text-xl font-semibold">アルバムバトラー</h1>
 
