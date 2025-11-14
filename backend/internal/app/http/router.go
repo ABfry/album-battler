@@ -12,6 +12,7 @@ func (s *APIServer) registerRoutes() {
 	roomHandler := NewRoomHandler(
 		s.deps.CreateRoomUseCase,
 		s.deps.JoinRoomUseCase,
+		s.deps.LeaveRoomUseCase,
 		s.deps.StartGameUseCase,
 		s.deps.GetRoomUseCase,
 		s.deps.RoomManager,
@@ -19,6 +20,7 @@ func (s *APIServer) registerRoutes() {
 	)
 	s.mux.HandleFunc("POST /room", roomHandler.CreateRoom)
 	s.mux.HandleFunc("POST /room/join", roomHandler.JoinRoom)
+	s.mux.HandleFunc("POST /room/{id}/leave", roomHandler.LeaveRoom)
 	s.mux.HandleFunc("POST /room/{id}/start", roomHandler.StartGame)
 	s.mux.HandleFunc("GET /room/{id}", roomHandler.GetRoom)
 
