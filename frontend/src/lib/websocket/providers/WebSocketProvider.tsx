@@ -12,6 +12,7 @@ type WebSocketProviderProps = {
 /**
  * WebSocketProvider
  * WebSocket接続を管理して，Contextを通じて子コンポーネントに状態を渡す
+ * 自動接続はせず、connect()を呼ぶまで接続しない（遅延接続）
  */
 export function WebSocketProvider({ url, children }: WebSocketProviderProps) {
   const connection = useWebSocketConnection(url);
@@ -21,6 +22,8 @@ export function WebSocketProvider({ url, children }: WebSocketProviderProps) {
     status: connection.status,
     messages: connection.messages,
     sendMessage: connection.sendMessage,
+    connect: connection.connect,
+    disconnect: connection.disconnect,
   };
 
   return (

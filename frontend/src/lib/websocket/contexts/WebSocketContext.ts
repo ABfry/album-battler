@@ -6,6 +6,8 @@ export type WebSocketContextType = {
   status: ConnectionStatus;
   messages: string[];
   sendMessage: (data: string) => void;
+  connect: () => void;
+  disconnect: () => void;
 };
 
 export const WebSocketContext = createContext<WebSocketContextType | null>(
