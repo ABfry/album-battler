@@ -18,3 +18,9 @@ lint:
 
 lint-ci:
 	cd backend && GOEXPERIMENT=synctest go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run ./...
+
+storybook:
+	cd frontend && npm run storybook
+
+storybook-stop:
+	pkill -f "storybook dev" || echo "Storybookプロセスが見つかりませんでした"
