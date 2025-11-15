@@ -1,5 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+const isWebSocketBusy = (socket: WebSocket | null) => {
+  if (!socket) {
+    return false;
+  }
+  return (
+    socket.readyState === WebSocket.CONNECTING ||
+    socket.readyState === WebSocket.OPEN ||
+    socket.readyState === WebSocket.CLOSING
+  );
+};
+
+const canCloseWebSocket = (socket: WebSocket | null) => {
+  if (!socket) {
+    return false;
+  }
+  return (
+    socket.readyState === WebSocket.CONNECTING ||
+    socket.readyState === WebSocket.OPEN
+  );
+};
+
 export type ConnectionStatus =
   | "idle"
   | "connecting"
@@ -25,7 +46,7 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
   const wsRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [messages, setMessages] = useState<string[]>([]);
-  const shouldConnectRef = useRef(false);
+  const [shouldConnect, setShouldConnect] = useState(false);
 
   // WebSocketインスタンスを取得する関数
   const getWebSocket = useCallback(() => wsRef.current, []);
@@ -41,24 +62,19 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
 
   // 接続開始
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already connected");
+    if (isWebSocketBusy(wsRef.current)) {
+      console.log("WebSocket is already connecting or active");
       return;
     }
-    shouldConnectRef.current = true;
+    setShouldConnect(true);
     setStatus("connecting");
   }, []);
 
   // 切断
   const disconnect = useCallback(() => {
-    shouldConnectRef.current = false;
+    setShouldConnect(false);
     if (wsRef.current) {
-      // 接続中または接続済みの場合のみclose()を呼ぶ
-      const currentState = wsRef.current.readyState;
-      if (
-        currentState === WebSocket.CONNECTING ||
-        currentState === WebSocket.OPEN
-      ) {
+      if (canCloseWebSocket(wsRef.current)) {
         wsRef.current.close();
       }
       wsRef.current = null;
@@ -67,16 +83,12 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
   }, []);
 
   useEffect(() => {
-    if (!shouldConnectRef.current) {
+    if (!shouldConnect) {
       return;
     }
 
-    // 既に接続中または接続済みなら何もしない（重複接続を防ぐ）
-    const currentState = wsRef.current?.readyState;
-    if (
-      currentState === WebSocket.CONNECTING ||
-      currentState === WebSocket.OPEN
-    ) {
+    // 既に接続状態にある場合は新規接続を作成しない
+    if (isWebSocketBusy(wsRef.current)) {
       return;
     }
 
@@ -103,21 +115,26 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
 
     websocket.onclose = () => {
       console.log("WebSocket disconnected");
+      if (wsRef.current === websocket) {
+        wsRef.current = null;
+      }
       setStatus("disconnected");
       setMessages((prev) => [...prev, "Disconnected from server"]);
     };
 
     // クリーンアップ
     return () => {
-      // 接続中または接続済みの場合のみclose()を呼ぶ
-      if (
-        websocket.readyState === WebSocket.CONNECTING ||
-        websocket.readyState === WebSocket.OPEN
-      ) {
+      if (canCloseWebSocket(websocket)) {
         websocket.close();
       }
+      if (
+        wsRef.current === websocket &&
+        websocket.readyState === WebSocket.CLOSED
+      ) {
+        wsRef.current = null;
+      }
     };
-  }, [url]);
+  }, [shouldConnect, url]);
 
   return {
     status,
