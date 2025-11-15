@@ -53,7 +53,14 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
   const disconnect = useCallback(() => {
     shouldConnectRef.current = false;
     if (wsRef.current) {
-      wsRef.current.close();
+      // 接続中または接続済みの場合のみclose()を呼ぶ
+      const currentState = wsRef.current.readyState;
+      if (
+        currentState === WebSocket.CONNECTING ||
+        currentState === WebSocket.OPEN
+      ) {
+        wsRef.current.close();
+      }
       wsRef.current = null;
     }
     setStatus("disconnected");
@@ -64,8 +71,12 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
       return;
     }
 
-    // 既に接続済みなら何もしない（再接続ループを防ぐ）
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    // 既に接続中または接続済みなら何もしない（重複接続を防ぐ）
+    const currentState = wsRef.current?.readyState;
+    if (
+      currentState === WebSocket.CONNECTING ||
+      currentState === WebSocket.OPEN
+    ) {
       return;
     }
 
@@ -98,7 +109,11 @@ export function useWebSocketConnection(url: string): WebSocketConnection {
 
     // クリーンアップ
     return () => {
-      if (websocket.readyState === WebSocket.OPEN) {
+      // 接続中または接続済みの場合のみclose()を呼ぶ
+      if (
+        websocket.readyState === WebSocket.CONNECTING ||
+        websocket.readyState === WebSocket.OPEN
+      ) {
         websocket.close();
       }
     };
