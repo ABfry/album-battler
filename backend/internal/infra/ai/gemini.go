@@ -163,6 +163,8 @@ func (c *GeminiClient) Generate(ctx context.Context, req *llm.GenerateRequest) (
 	}, nil
 }
 
+const themeGenerationMaxAttempts = 5
+
 // 写真撮影バトル用のテーマを生成
 func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
 	// Function Declarationを定義
@@ -201,13 +203,36 @@ func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
 		},
 	}
 
-	// Models APIでテーマ生成を実行
-	result, err := c.client.Models.GenerateContent(ctx, c.defaultModel, contents, config)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate content: %w", err)
+	var lastErr error
+	for attempt := 1; attempt <= themeGenerationMaxAttempts; attempt++ {
+		// Models APIでテーマ生成を実行
+		result, err := c.client.Models.GenerateContent(ctx, c.defaultModel, contents, config)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d: failed to generate content: %w", attempt, err)
+			continue
+		}
+
+		theme, err := extractThemeFromResult(result)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d: %w", attempt, err)
+			continue
+		}
+
+		return theme, nil
 	}
 
-	// Function Callのレスポンスを処理
+	if lastErr == nil {
+		lastErr = errors.New("unknown error while generating theme")
+	}
+
+	return "", fmt.Errorf("failed to generate theme after %d attempts: %w", themeGenerationMaxAttempts, lastErr)
+}
+
+func extractThemeFromResult(result *genai.GenerateContentResponse) (string, error) {
+	if result == nil {
+		return "", errors.New("response is nil")
+	}
+
 	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
 		return "", errors.New("no response from AI")
 	}
