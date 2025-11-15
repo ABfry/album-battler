@@ -29,11 +29,13 @@ func (s *APIServer) registerRoutes() {
 		s.deps.CreateBattleUseCase,
 		s.deps.GetBattleUseCase,
 		s.deps.GetBattleIDUseCase,
+		s.deps.ImageSendUseCase,
 	)
 
 	s.mux.HandleFunc("POST /battle", battleHandler.CreateBattle) // デバッグ用
 	s.mux.HandleFunc("GET /battle/{id}", battleHandler.GetBattle)
 	s.mux.HandleFunc("GET /room/{id}/battle-id", battleHandler.GetBattleIDByRoom)
+	s.mux.HandleFunc("POST /battle/{id}/send-image", battleHandler.SendImage)
 
 	// ヘルスチェック
 	// s.mux.HandleFunc("/healthz", s.handleHealthz)

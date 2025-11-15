@@ -20,11 +20,13 @@ func NewBattleHandler(
 	createBattleUC *battle.CreateBattleUseCase,
 	getBattleUC *battle.GetBattleUseCase,
 	getBattleIDUC *battle.GetBattleIDUseCase,
+	imageSendUC *battle.ImageSendUseCase,
 ) *BattleHandler {
 	return &BattleHandler{
 		createBattleUC:   createBattleUC,
 		getBattleUC:      getBattleUC,
 		getBattleIDUseUC: getBattleIDUC,
+		getImageSendUC:   imageSendUC,
 	}
 }
 
