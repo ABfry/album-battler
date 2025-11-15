@@ -7,5 +7,5 @@ import (
 )
 
 type BattleUserRepository interface {
-	Save(ctx context.Context, battleID, userID uuid.UUID) error
+	SaveBatch(ctx context.Context, battleID uuid.UUID, userIDs []uuid.UUID) error
 }
