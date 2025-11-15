@@ -22,7 +22,7 @@ export function RoomLeaveButton({
 
   return (
     <div className="rounded-lg border p-4">
-      <h2 className="mb-4 text-xl font-bold">5. Leave Room</h2>
+      <h2 className="mb-4 text-xl font-bold">4. Leave Room</h2>
 
       <div className="space-y-4">
         <div>
