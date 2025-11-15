@@ -53,6 +53,13 @@ func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) e
 		return errors.New("only host can start the game")
 	}
 
+	// ゲーム開始と同時にバトルを生成
+	if _, err := uc.battleUseCase.Execute(ctx, battleusecase.CreateBattleInput{
+		RoomID: room.ID,
+	}); err != nil {
+		return fmt.Errorf("failed to create battle: %w", err)
+	}
+
 	// ゲーム開始 (状態遷移 + イベント記録)
 	if err := room.StartGame(); err != nil {
 		return err
@@ -61,13 +68,6 @@ func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) e
 	// 永続化
 	if err := uc.roomRepo.Save(ctx, room); err != nil {
 		return err
-	}
-
-	// ゲーム開始と同時にバトルを生成
-	if _, err := uc.battleUseCase.Execute(ctx, battleusecase.CreateBattleInput{
-		RoomID: room.ID,
-	}); err != nil {
-		return fmt.Errorf("failed to create battle: %w", err)
 	}
 
 	// ドメインイベントを配信
