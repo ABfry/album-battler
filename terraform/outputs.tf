@@ -54,3 +54,28 @@ output "rds_port" {
   value       = module.rds.port
 }
 
+# ECS Outputs
+output "ecs_cluster_name" {
+  description = "ECSクラスター名"
+  value       = module.ecs.cluster_name
+}
+
+output "alb_dns_name" {
+  description = "ALB DNS名（アプリケーションURL）"
+  value       = module.ecs.alb_dns_name
+}
+
+output "alb_url" {
+  description = "アプリケーションURL"
+  value       = "http://${module.ecs.alb_dns_name}"
+}
+
+output "frontend_ecr_repository_url" {
+  description = "Frontend ECRリポジトリURL"
+  value       = module.ecs.frontend_ecr_repository_url
+}
+
+output "backend_ecr_repository_url" {
+  description = "Backend ECRリポジトリURL"
+  value       = module.ecs.backend_ecr_repository_url
+}
