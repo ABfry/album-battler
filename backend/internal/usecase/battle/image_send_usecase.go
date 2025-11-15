@@ -30,12 +30,14 @@ type ImageSendUseCase struct {
 }
 
 func NewImageSendUseCase(
+	battleRepo repository.BattleRepository,
 	imageRepo repository.ImageRepository,
 	imageValidator service.ImageValidator,
 	imageStorage service.ImageStorage,
 	dispatcher service.EventDispatcher,
 ) *ImageSendUseCase {
 	return &ImageSendUseCase{
+		battleRepo:     battleRepo,
 		imageRepo:      imageRepo,
 		imageValidator: imageValidator,
 		imageStorage:   imageStorage,

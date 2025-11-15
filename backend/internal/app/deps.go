@@ -256,6 +256,7 @@ func initUseCases(deps *Dependencies) error {
 	)
 
 	deps.ImageSendUseCase = battle.NewImageSendUseCase(
+		deps.BattleRepository,
 		deps.ImageRepository,
 		deps.ImageValidator,
 		deps.ImageStorage,
