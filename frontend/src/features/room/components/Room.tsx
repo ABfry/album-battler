@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type RoomProps = {
-  status: "connecting" | "connected" | "disconnected" | "error";
+  status: "idle" | "connecting" | "connected" | "disconnected" | "error";
   messages: string[];
   connectionUrl: string;
 };
@@ -12,6 +12,8 @@ type RoomProps = {
 export function Room({ status, messages, connectionUrl }: RoomProps) {
   const getStatusColor = () => {
     switch (status) {
+      case "idle":
+        return "bg-gray-400";
       case "connected":
         return "bg-green-500";
       case "connecting":
@@ -24,7 +26,7 @@ export function Room({ status, messages, connectionUrl }: RoomProps) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+    <div className="flex min-h-screen items-center justify-center">
       <main className="flex w-full max-w-2xl flex-col gap-6 p-8">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold text-black dark:text-white">

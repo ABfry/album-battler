@@ -36,7 +36,7 @@ func (h *UserLeftRoomHandler) Handle(ctx context.Context, evt event.DomainEvent)
 
 	// WebSocket通知を部屋のメンバーに送信 (通知のみ、詳細はREST APIで取得)
 	broadcastEvent := service.BroadcastEvent{
-		Type: "player_leave_room",
+		Type: evt.EventType(),
 		Payload: map[string]interface{}{
 			"room_id": e.RoomID.String(), // 最小限の情報のみ
 		},

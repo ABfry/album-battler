@@ -12,10 +12,13 @@ import (
 
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
+	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
+	"github.com/ABfry/album-battler/backend/internal/infra/ai"
 	"github.com/ABfry/album-battler/backend/internal/infra/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
 	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
+	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
 
@@ -25,10 +28,11 @@ type Dependencies struct {
 	db *sql.DB
 
 	// Repository
-	RoomRepository   repository.RoomRepository
-	BattleRepository repository.BattleRepository
-	ImageRepository  repository.ImageRepository
-	UserRepository   repository.UserRepository
+	RoomRepository       repository.RoomRepository
+	BattleRepository     repository.BattleRepository
+	BattleUserRepository repository.BattleUserRepository
+	ImageRepository      repository.ImageRepository
+	UserRepository       repository.UserRepository
 
 	// WebSocket関連
 	WebSocketHub   *websocket.Hub
@@ -38,12 +42,19 @@ type Dependencies struct {
 	// Event関連
 	EventDispatcher service.EventDispatcher
 
+	// AI関連
+	LLMClient llm.LLMClient
+
 	// Usecase
 	CreateRoomUseCase *room.CreateRoomUseCase
 	JoinRoomUseCase   *room.JoinRoomUseCase
 	LeaveRoomUseCase  *room.LeaveRoomUseCase
 	StartGameUseCase  *room.StartGameUseCase
 	GetRoomUseCase    *room.GetRoomUseCase
+
+	CreateBattleUseCase *battle.CreateBattleUseCase
+	GetBattleUseCase    *battle.GetBattleUseCase
+	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -75,9 +86,15 @@ func NewDependencies() (*Dependencies, error) {
 		return nil, fmt.Errorf("initialize events: %w", err)
 	}
 
+	// AI関連の初期化
+	if err := initLLM(deps); err != nil {
+		_ = deps.Close()
+		return nil, fmt.Errorf("initialize llm client: %w", err)
+	}
+
 	// Usecase関連の初期化
 	if err := initUseCases(deps); err != nil {
-		_ = db.Close()
+		_ = deps.Close()
 		return nil, fmt.Errorf("initialize usecases: %w", err)
 	}
 
@@ -127,6 +144,27 @@ func initEvents(deps *Dependencies) error {
 	return nil
 }
 
+func initLLM(deps *Dependencies) error {
+	apiKey := strings.TrimSpace(os.Getenv("GEMINI_API_KEY"))
+	if apiKey == "" {
+		return errors.New("GEMINI_API_KEY is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := ai.NewGeminiClient(ctx, ai.GeminiConfig{
+		APIKey:       apiKey,
+		DefaultModel: strings.TrimSpace(os.Getenv("GEMINI_MODEL")),
+	})
+	if err != nil {
+		return fmt.Errorf("create gemini client: %w", err)
+	}
+
+	deps.LLMClient = client
+	return nil
+}
+
 // UseCase関連の初期化
 func initUseCases(deps *Dependencies) error {
 	// Domain Services
@@ -144,6 +182,21 @@ func initUseCases(deps *Dependencies) error {
 		deps.EventDispatcher,
 	)
 
+	deps.CreateBattleUseCase = battle.NewCreateBattleUseCase(
+		deps.BattleRepository,
+		deps.BattleUserRepository,
+		deps.RoomRepository,
+		deps.LLMClient,
+	)
+
+	deps.GetBattleUseCase = battle.NewGetBattleUseCase(
+		deps.BattleRepository,
+	)
+
+	deps.GetBattleIDUseCase = battle.NewGetBattleIDUseCase(
+		deps.BattleRepository,
+	)
+
 	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
@@ -152,6 +205,7 @@ func initUseCases(deps *Dependencies) error {
 	deps.StartGameUseCase = room.NewStartGameUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
+		deps.CreateBattleUseCase,
 	)
 
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
@@ -222,6 +276,7 @@ func initDatabase() (*sql.DB, error) {
 func initRepositories(deps *Dependencies) error {
 	deps.RoomRepository = mysql.NewRoomRepository(deps.db)
 	deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+	deps.BattleUserRepository = mysql.NewBattleUserRepository(deps.db)
 	deps.ImageRepository = mysql.NewImageRepository(deps.db)
 	deps.UserRepository = mysql.NewUserRepository(deps.db)
 
@@ -229,10 +284,21 @@ func initRepositories(deps *Dependencies) error {
 }
 
 func (d *Dependencies) Close() error {
-	if d.db != nil {
-		return d.db.Close()
+	var err error
+
+	if d.LLMClient != nil {
+		if closeErr := d.LLMClient.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
 	}
-	return nil
+
+	if d.db != nil {
+		if dbErr := d.db.Close(); dbErr != nil && err == nil {
+			err = dbErr
+		}
+	}
+
+	return err
 }
 
 func (d *Dependencies) DB() *sql.DB {
