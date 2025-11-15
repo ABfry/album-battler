@@ -22,8 +22,8 @@ var tableColumns = map[TableName][]string{
 	UsersTable:       {"id", "name", "icon_url", "hashed_password", "created_at"},
 	RoomsTable:       {"id", "room_number", "host_user_id", "created_at", "expired_at", "status", "max_users"},
 	RoomUsersTable:   {"room_id", "user_id", "joined_at"},
-	BattlesTable:     {"id", "room_id", "started_at"},
-	BattleUsersTable: {"battle_id", "user_id", "score"},
+	BattlesTable:     {"id", "room_id", "started_at", "theme"},
+	BattleUsersTable: {"battle_id", "user_id"},
 	ImagesTable:      {"id", "user_id", "battle_id", "image_url", "uploaded_at", "ai_score", "user_score"},
 }
 

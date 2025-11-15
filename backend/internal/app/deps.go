@@ -16,6 +16,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
 	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
+	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
 
@@ -25,10 +26,11 @@ type Dependencies struct {
 	db *sql.DB
 
 	// Repository
-	RoomRepository   repository.RoomRepository
-	BattleRepository repository.BattleRepository
-	ImageRepository  repository.ImageRepository
-	UserRepository   repository.UserRepository
+	RoomRepository       repository.RoomRepository
+	BattleRepository     repository.BattleRepository
+	BattleUserRepository repository.BattleUserRepository
+	ImageRepository      repository.ImageRepository
+	UserRepository       repository.UserRepository
 
 	// WebSocket関連
 	WebSocketHub   *websocket.Hub
@@ -44,6 +46,10 @@ type Dependencies struct {
 	LeaveRoomUseCase  *room.LeaveRoomUseCase
 	StartGameUseCase  *room.StartGameUseCase
 	GetRoomUseCase    *room.GetRoomUseCase
+
+	CreateBattleUseCase *battle.CreateBattleUseCase
+	GetBattleUseCase    *battle.GetBattleUseCase
+	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -144,6 +150,20 @@ func initUseCases(deps *Dependencies) error {
 		deps.EventDispatcher,
 	)
 
+	deps.CreateBattleUseCase = battle.NewCreateBattleUseCase(
+		deps.BattleRepository,
+		deps.BattleUserRepository,
+		deps.RoomRepository,
+	)
+
+	deps.GetBattleUseCase = battle.NewGetBattleUseCase(
+		deps.BattleRepository,
+	)
+
+	deps.GetBattleIDUseCase = battle.NewGetBattleIDUseCase(
+		deps.BattleRepository,
+	)
+
 	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
@@ -152,6 +172,7 @@ func initUseCases(deps *Dependencies) error {
 	deps.StartGameUseCase = room.NewStartGameUseCase(
 		deps.RoomRepository,
 		deps.EventDispatcher,
+		deps.CreateBattleUseCase,
 	)
 
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
@@ -222,6 +243,7 @@ func initDatabase() (*sql.DB, error) {
 func initRepositories(deps *Dependencies) error {
 	deps.RoomRepository = mysql.NewRoomRepository(deps.db)
 	deps.BattleRepository = mysql.NewBattleRepository(deps.db)
+	deps.BattleUserRepository = mysql.NewBattleUserRepository(deps.db)
 	deps.ImageRepository = mysql.NewImageRepository(deps.db)
 	deps.UserRepository = mysql.NewUserRepository(deps.db)
 
