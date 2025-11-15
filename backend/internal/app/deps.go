@@ -18,6 +18,8 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/infra/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
 	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
+	"github.com/ABfry/album-battler/backend/internal/infra/storage"
+	"github.com/ABfry/album-battler/backend/internal/infra/validator"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
@@ -46,6 +48,10 @@ type Dependencies struct {
 	// AI関連
 	LLMClient llm.LLMClient
 
+	// Image関連
+	ImageValidator service.ImageValidator
+	ImageStorage   service.ImageStorage
+
 	// Usecase
 	CreateRoomUseCase *room.CreateRoomUseCase
 	JoinRoomUseCase   *room.JoinRoomUseCase
@@ -56,6 +62,7 @@ type Dependencies struct {
 	CreateBattleUseCase *battle.CreateBattleUseCase
 	GetBattleUseCase    *battle.GetBattleUseCase
 	GetBattleIDUseCase  *battle.GetBattleIDUseCase
+	ImageSendUseCase    *battle.ImageSendUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -91,6 +98,12 @@ func NewDependencies() (*Dependencies, error) {
 	if err := initLLM(deps); err != nil {
 		_ = deps.Close()
 		return nil, fmt.Errorf("initialize llm client: %w", err)
+	}
+
+	// Image関連の初期化
+	if err := initImage(deps); err != nil {
+		_ = deps.Close()
+		return nil, fmt.Errorf("initialize image services: %w", err)
 	}
 
 	// Usecase関連の初期化
@@ -166,6 +179,34 @@ func initLLM(deps *Dependencies) error {
 	return nil
 }
 
+func initImage(deps *Dependencies) error {
+	// ImageValidator の初期化 (最大5MBまで許可)
+	const maxImageSize = 5 * 1024 * 1024 // 5MB
+	deps.ImageValidator = validator.NewImageValidator(maxImageSize)
+
+	// ImageStorage の初期化 (S3)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	bucket := strings.TrimSpace(os.Getenv("S3_BUCKET"))
+	if bucket == "" {
+		return errors.New("S3_BUCKET is not set")
+	}
+
+	region := strings.TrimSpace(os.Getenv("AWS_REGION"))
+	if region == "" {
+		region = "ap-northeast-1" // デフォルトリージョン
+	}
+
+	imageStorage, err := storage.NewS3ImageStorage(ctx, bucket, region)
+	if err != nil {
+		return fmt.Errorf("create s3 image storage: %w", err)
+	}
+
+	deps.ImageStorage = imageStorage
+	return nil
+}
+
 // UseCase関連の初期化
 func initUseCases(deps *Dependencies) error {
 	// Domain Services
@@ -212,6 +253,14 @@ func initUseCases(deps *Dependencies) error {
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
 		deps.RoomRepository,
 		deps.UserRepository,
+	)
+
+	deps.ImageSendUseCase = battle.NewImageSendUseCase(
+		deps.BattleRepository,
+		deps.ImageRepository,
+		deps.ImageValidator,
+		deps.ImageStorage,
+		deps.EventDispatcher,
 	)
 
 	return nil

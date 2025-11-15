@@ -13,17 +13,20 @@ type BattleHandler struct {
 	createBattleUC   *battle.CreateBattleUseCase
 	getBattleUC      *battle.GetBattleUseCase
 	getBattleIDUseUC *battle.GetBattleIDUseCase
+	getImageSendUC   *battle.ImageSendUseCase
 }
 
 func NewBattleHandler(
 	createBattleUC *battle.CreateBattleUseCase,
 	getBattleUC *battle.GetBattleUseCase,
 	getBattleIDUC *battle.GetBattleIDUseCase,
+	imageSendUC *battle.ImageSendUseCase,
 ) *BattleHandler {
 	return &BattleHandler{
 		createBattleUC:   createBattleUC,
 		getBattleUC:      getBattleUC,
 		getBattleIDUseUC: getBattleIDUC,
+		getImageSendUC:   imageSendUC,
 	}
 }
 
@@ -122,6 +125,60 @@ func (h *BattleHandler) GetBattleIDByRoom(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// POST /battle/{id}/send-image
+func (h *BattleHandler) SendImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	battleIDStr := r.PathValue("id")
+	battleID, err := uuid.Parse(battleIDStr)
+	if err != nil {
+		http.Error(w, "Invalid battle_id format", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		UserID      string `json:"user_id"`
+		ImageBase64 []byte `json:"image_base64"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		return
+	}
+
+	// コンテンツタイプを検出
+	contentType := http.DetectContentType(req.ImageBase64)
+
+	err = h.getImageSendUC.Execute(r.Context(), battle.ImageSendInput{
+		UserID:      userID,
+		BattleID:    battleID,
+		ImageBase64: req.ImageBase64,
+		ContentType: contentType,
+	})
+	if err != nil {
+		http.Error(w, "Failed to send image", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"result": "ok",
+	}); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
