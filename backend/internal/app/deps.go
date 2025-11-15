@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	domainEvent "github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
@@ -128,18 +129,18 @@ func initEvents(deps *Dependencies) error {
 		deps.RoomManager,
 		deps.EventPublisher,
 	)
-	dispatcherImpl.Register("user_joined_room", userJoinedHandler)
+	dispatcherImpl.Register(domainEvent.UserJoinedRoomEvent{}.EventType(), userJoinedHandler)
 
 	userLeftHandler := handlers.NewUserLeftRoomHandler(
 		deps.RoomManager,
 		deps.EventPublisher,
 	)
-	dispatcherImpl.Register("user_left_room", userLeftHandler)
+	dispatcherImpl.Register(domainEvent.UserLeftRoomEvent{}.EventType(), userLeftHandler)
 
 	gameStartedHandler := handlers.NewGameStartedHandler(
 		deps.EventPublisher,
 	)
-	dispatcherImpl.Register("game_started", gameStartedHandler)
+	dispatcherImpl.Register(domainEvent.GameStartedEvent{}.EventType(), gameStartedHandler)
 
 	return nil
 }
