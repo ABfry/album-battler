@@ -49,6 +49,7 @@ type Dependencies struct {
 
 	CreateBattleUseCase *battle.CreateBattleUseCase
 	GetBattleUseCase    *battle.GetBattleUseCase
+	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -149,21 +150,6 @@ func initUseCases(deps *Dependencies) error {
 		deps.EventDispatcher,
 	)
 
-	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
-		deps.RoomRepository,
-		deps.EventDispatcher,
-	)
-
-	deps.StartGameUseCase = room.NewStartGameUseCase(
-		deps.RoomRepository,
-		deps.EventDispatcher,
-	)
-
-	deps.GetRoomUseCase = room.NewGetRoomUseCase(
-		deps.RoomRepository,
-		deps.UserRepository,
-	)
-
 	deps.CreateBattleUseCase = battle.NewCreateBattleUseCase(
 		deps.BattleRepository,
 		deps.BattleUserRepository,
@@ -172,6 +158,26 @@ func initUseCases(deps *Dependencies) error {
 
 	deps.GetBattleUseCase = battle.NewGetBattleUseCase(
 		deps.BattleRepository,
+	)
+
+	deps.GetBattleIDUseCase = battle.NewGetBattleIDUseCase(
+		deps.BattleRepository,
+	)
+
+	deps.LeaveRoomUseCase = room.NewLeaveRoomUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+
+	deps.StartGameUseCase = room.NewStartGameUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
+		deps.CreateBattleUseCase,
+	)
+
+	deps.GetRoomUseCase = room.NewGetRoomUseCase(
+		deps.RoomRepository,
+		deps.UserRepository,
 	)
 
 	return nil

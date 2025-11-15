@@ -3,9 +3,11 @@ package room
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
+	battleusecase "github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/google/uuid"
 )
 
@@ -15,17 +17,24 @@ type StartGameInput struct {
 }
 
 type StartGameUseCase struct {
-	roomRepo   repository.RoomRepository
-	dispatcher service.EventDispatcher
+	roomRepo      repository.RoomRepository
+	dispatcher    service.EventDispatcher
+	battleUseCase BattleCreator
+}
+
+type BattleCreator interface {
+	Execute(ctx context.Context, input battleusecase.CreateBattleInput) (*battleusecase.CreateBattleOutput, error)
 }
 
 func NewStartGameUseCase(
 	roomRepo repository.RoomRepository,
 	dispatcher service.EventDispatcher,
+	battleUseCase BattleCreator,
 ) *StartGameUseCase {
 	return &StartGameUseCase{
-		roomRepo:   roomRepo,
-		dispatcher: dispatcher,
+		roomRepo:      roomRepo,
+		dispatcher:    dispatcher,
+		battleUseCase: battleUseCase,
 	}
 }
 
@@ -42,6 +51,13 @@ func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) e
 	// ホストであることを確認
 	if room.HostUserID == nil || *room.HostUserID != input.UserID {
 		return errors.New("only host can start the game")
+	}
+
+	// ゲーム開始と同時にバトルを生成
+	if _, err := uc.battleUseCase.Execute(ctx, battleusecase.CreateBattleInput{
+		RoomID: room.ID,
+	}); err != nil {
+		return fmt.Errorf("failed to create battle: %w", err)
 	}
 
 	// ゲーム開始 (状態遷移 + イベント記録)
