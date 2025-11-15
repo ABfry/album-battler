@@ -7,6 +7,7 @@ import (
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
+	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
 	"github.com/google/uuid"
 )
 
@@ -22,17 +23,20 @@ type CreateBattleUseCase struct {
 	battleRepo     repository.BattleRepository
 	battleUserRepo repository.BattleUserRepository
 	roomRepo       repository.RoomRepository
+	llmClient      llm.LLMClient
 }
 
 func NewCreateBattleUseCase(
 	battleRepo repository.BattleRepository,
 	battleUserRepo repository.BattleUserRepository,
 	roomRepo repository.RoomRepository,
+	llmClient llm.LLMClient,
 ) *CreateBattleUseCase {
 	return &CreateBattleUseCase{
 		battleRepo:     battleRepo,
 		battleUserRepo: battleUserRepo,
 		roomRepo:       roomRepo,
+		llmClient:      llmClient,
 	}
 }
 
@@ -45,9 +49,22 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 	}
 	userIDs := room.UserIDs
 
+	if uc.llmClient == nil {
+		return nil, errors.New("llm client is not configured")
+	}
+
+	// お題を生成 (Gemini)
+	theme, err := uc.llmClient.GenerateTheme(ctx)
+	if err != nil {
+		fmt.Println("failed to generate battle theme", err)
+		return nil, errors.New("failed to generate battle theme")
+	}
+	if theme == "" {
+		return nil, errors.New("battle theme is empty")
+	}
+
 	// バトルを作成
-	// todo: テーマAIから生成
-	battle, err := entity.NewBattle(input.RoomID, userIDs, "test仮")
+	battle, err := entity.NewBattle(input.RoomID, userIDs, theme)
 	if err != nil {
 		return nil, errors.New("failed to create battle")
 	}
