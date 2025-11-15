@@ -24,22 +24,37 @@ func NewBattleUserRepository(db *sql.DB) repository.BattleUserRepository {
 	return &mysqlBattleUserRepository{db: db}
 }
 
-// Save は battle_users テーブルへ upsert を行う。
-// why: 参加登録とスコア更新を同じエンドポイントで扱い、複合PK重複時は score を最新化するため。
-func (r *mysqlBattleUserRepository) Save(ctx context.Context, battleID, userID uuid.UUID) error {
+// SaveBatch は複数のユーザーをバトルに一括登録する。
+func (r *mysqlBattleUserRepository) SaveBatch(ctx context.Context, battleID uuid.UUID, userIDs []uuid.UUID) error {
 	if battleID == uuid.Nil {
 		return errors.New("battleID is required")
 	}
-	if userID == uuid.Nil {
-		return errors.New("userID is required")
+	if len(userIDs) == 0 {
+		return errors.New("userIDs is required")
 	}
 
-	return save(
-		ctx,
-		r.db,
-		BattleUsersTable,
-		battleID.String(),
-		userID.String(),
-		0, // スコア初期値
-	)
+	// バルクインサート用のクエリを構築
+	query := "INSERT INTO battle_users (battle_id, user_id) VALUES "
+	values := []interface{}{}
+	placeholders := []string{}
+
+	for _, userID := range userIDs {
+		if userID == uuid.Nil {
+			return errors.New("userID cannot be nil")
+		}
+		placeholders = append(placeholders, "(?, ?)")
+		values = append(values, battleID.String(), userID.String())
+	}
+
+	query += placeholders[0]
+	for i := 1; i < len(placeholders); i++ {
+		query += ", " + placeholders[i]
+	}
+
+	_, err := r.db.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.New("failed to save battle_users")
+	}
+
+	return nil
 }

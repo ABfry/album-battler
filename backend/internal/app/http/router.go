@@ -24,6 +24,17 @@ func (s *APIServer) registerRoutes() {
 	s.mux.HandleFunc("POST /room/{id}/start", roomHandler.StartGame)
 	s.mux.HandleFunc("GET /room/{id}", roomHandler.GetRoom)
 
+	// Battleハンドラ
+	battleHandler := NewBattleHandler(
+		s.deps.CreateBattleUseCase,
+		s.deps.GetBattleUseCase,
+		s.deps.GetBattleIDUseCase,
+	)
+
+	s.mux.HandleFunc("POST /battle", battleHandler.CreateBattle) // デバッグ用
+	s.mux.HandleFunc("GET /battle/{id}", battleHandler.GetBattle)
+	s.mux.HandleFunc("GET /room/{id}/battle-id", battleHandler.GetBattleIDByRoom)
+
 	// ヘルスチェック
 	// s.mux.HandleFunc("/healthz", s.handleHealthz)
 }
