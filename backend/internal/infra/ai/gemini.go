@@ -157,26 +157,80 @@ func (c *GeminiClient) Generate(ctx context.Context, req *llm.GenerateRequest) (
 	}, nil
 }
 
-// GenerateThemeは写真撮影バトル用のテーマを生成する
+// 写真撮影バトル用のテーマを生成
 func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
-	req := &llm.GenerateRequest{
-		Messages: []llm.Message{
+	// Function Declarationを定義
+	generateThemeFunc := &genai.FunctionDeclaration{
+		Name:        "generate_theme",
+		Description: "写真撮影バトル用のテーマを生成する",
+		Parameters: &genai.Schema{
+			Type: genai.TypeObject,
+			Properties: map[string]*genai.Schema{
+				"theme": {
+					Type:        genai.TypeString,
+					Description: "生成されたテーマ",
+				},
+			},
+			Required: []string{"theme"},
+		},
+	}
+
+	// プロンプトを構築
+	parts := []*genai.Part{
+		genai.NewPartFromText(GenerateThemePrompt),
+	}
+
+	// Contentsを構築
+	contents := []*genai.Content{
+		genai.NewContentFromParts(parts, genai.RoleUser),
+	}
+
+	// 生成設定（Function Calling有効化）
+	config := &genai.GenerateContentConfig{
+		Temperature: genai.Ptr(float32(0.9)),
+		Tools: []*genai.Tool{
 			{
-				Role:    "user",
-				Content: GenerateThemePrompt,
+				FunctionDeclarations: []*genai.FunctionDeclaration{generateThemeFunc},
 			},
 		},
-		Temperature: 0.9, // 創造性を高めるため高めの温度設定
-		MaxTokens:   0,   // デフォルト値を使用（テスト用）
 	}
 
-	resp, err := c.Generate(ctx, req)
+	// Models APIでテーマ生成を実行
+	result, err := c.client.Models.GenerateContent(ctx, c.defaultModel, contents, config)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate theme: %w", err)
+		return "", fmt.Errorf("failed to generate content: %w", err)
 	}
 
-	// 生成されたテーマから余分な空白や改行を除去
-	theme := resp.Content
+	// Function Callのレスポンスを処理
+	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
+		return "", errors.New("no response from AI")
+	}
+
+	// Function Callのパートを探す
+	var functionCall *genai.FunctionCall
+	for _, part := range result.Candidates[0].Content.Parts {
+		if part.FunctionCall != nil {
+			functionCall = part.FunctionCall
+			break
+		}
+	}
+
+	if functionCall == nil {
+		return "", errors.New("no function call in response")
+	}
+
+	// Function Callの引数からテーマを取得
+	themeArg, ok := functionCall.Args["theme"]
+	if !ok {
+		return "", errors.New("theme not found in function call")
+	}
+
+	// 型変換
+	theme, ok := themeArg.(string)
+	if !ok {
+		return "", fmt.Errorf("invalid theme type: %T", themeArg)
+	}
+
 	if theme == "" {
 		return "", errors.New("generated theme is empty")
 	}
