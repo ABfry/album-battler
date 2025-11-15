@@ -22,6 +22,7 @@ type ImageSendInput struct {
 }
 
 type ImageSendUseCase struct {
+	battleRepo     repository.BattleRepository
 	imageRepo      repository.ImageRepository
 	imageValidator service.ImageValidator
 	imageStorage   service.ImageStorage
@@ -69,10 +70,27 @@ func (uc *ImageSendUseCase) Execute(ctx context.Context, input ImageSendInput) e
 		return errors.New("failed to create image entity")
 	}
 
+	battle, err := uc.battleRepo.FindByID(ctx, input.BattleID)
+	if err != nil {
+		fmt.Printf("Failed to find battle: %v", err)
+		return errors.New("failed to find battle")
+	}
+	if battle == nil {
+		fmt.Printf("Battle not found: %s", input.BattleID)
+		return errors.New("battle not found")
+	}
+
 	// 画像情報の保存
 	if err := uc.imageRepo.Save(ctx, image); err != nil {
 		fmt.Printf("Failed to save image info: %v", err)
 		return errors.New("failed to save image info")
+	}
+
+	// ドメインイベントを配信
+	events := battle.PopEvents()
+	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
+		fmt.Println("failed to dispatch domain events", "error", err)
+		return err
 	}
 
 	return nil

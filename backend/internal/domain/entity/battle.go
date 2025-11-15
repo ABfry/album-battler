@@ -4,10 +4,13 @@ import (
 	"errors"
 	"time"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/google/uuid"
 )
 
 type Battle struct {
+	event.AggregateRoot
+
 	ID        uuid.UUID
 	RoomID    uuid.UUID
 	StartedAt time.Time
