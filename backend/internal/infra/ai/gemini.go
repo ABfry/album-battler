@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
 
@@ -13,6 +14,11 @@ import (
 )
 
 var _ llm.LLMClient = (*GeminiClient)(nil)
+
+const (
+	// 画像評価の最大並列実行数
+	maxConcurrentImageJudge = 3
+)
 
 type GeminiClient struct {
 	client       *genai.Client
@@ -244,21 +250,45 @@ func (c *GeminiClient) JudgeImage(ctx context.Context, req *llm.ImageJudgeReques
 		return nil, errors.New("no images provided")
 	}
 
-	results := make([]llm.JudgeResult, 0, len(req.ImageURLs))
+	// 結果をインデックスベースで格納
+	results := make([]llm.JudgeResult, len(req.ImageURLs))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 
-	// 各画像を個別に評価
-	for _, imageURL := range req.ImageURLs {
-		result, err := c.judgeOneImage(ctx, req.Theme, imageURL)
-		if err != nil {
-			// エラーが発生した画像はスコア0で記録
-			results = append(results, llm.JudgeResult{
-				Score:  0,
-				Reason: fmt.Sprintf("評価エラー: %v", err),
-			})
-			continue
-		}
-		results = append(results, result)
+	// セマフォで同時実行数を制限
+	semaphore := make(chan struct{}, maxConcurrentImageJudge)
+
+	// 各画像を並列評価
+	for i, imageURL := range req.ImageURLs {
+		wg.Add(1)
+		go func(index int, url string) {
+			defer wg.Done()
+
+			// セマフォ取得
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }() // セマフォ解放
+
+			// 画像評価実行
+			result, err := c.judgeOneImage(ctx, req.Theme, url)
+
+			// 結果を排他制御して格納
+			mu.Lock()
+			defer mu.Unlock()
+
+			if err != nil {
+				// エラーが発生した画像はスコア0で記録
+				results[index] = llm.JudgeResult{
+					Score:  0,
+					Reason: fmt.Sprintf("評価エラー: %v", err),
+				}
+			} else {
+				results[index] = result
+			}
+		}(i, imageURL)
 	}
+
+	// 全ゴルーチンの完了を待機
+	wg.Wait()
 
 	return &llm.ImageJudgeResponse{
 		Results: results,
