@@ -10,17 +10,20 @@ import (
 )
 
 type BattleHandler struct {
-	createBattleUC *battle.CreateBattleUseCase
-	getBattleUC    *battle.GetBattleUseCase
+	createBattleUC   *battle.CreateBattleUseCase
+	getBattleUC      *battle.GetBattleUseCase
+	getBattleIDUseUC *battle.GetBattleIDUseCase
 }
 
 func NewBattleHandler(
 	createBattleUC *battle.CreateBattleUseCase,
 	getBattleUC *battle.GetBattleUseCase,
+	getBattleIDUC *battle.GetBattleIDUseCase,
 ) *BattleHandler {
 	return &BattleHandler{
-		createBattleUC: createBattleUC,
-		getBattleUC:    getBattleUC,
+		createBattleUC:   createBattleUC,
+		getBattleUC:      getBattleUC,
+		getBattleIDUseUC: getBattleIDUC,
 	}
 }
 
@@ -89,6 +92,36 @@ func (h *BattleHandler) GetBattle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(battle); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// GET /room/{id}/battle-id
+func (h *BattleHandler) GetBattleIDByRoom(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	roomIDStr := r.PathValue("id")
+	roomID, err := uuid.Parse(roomIDStr)
+	if err != nil {
+		http.Error(w, "Invalid room_id format", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.getBattleIDUseUC.Execute(r.Context(), battle.GetBattleIDInput{
+		RoomID: roomID,
+	})
+	if err != nil {
+		http.Error(w, "Failed to get battle id", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}

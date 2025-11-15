@@ -49,6 +49,7 @@ type Dependencies struct {
 
 	CreateBattleUseCase *battle.CreateBattleUseCase
 	GetBattleUseCase    *battle.GetBattleUseCase
+	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -156,6 +157,10 @@ func initUseCases(deps *Dependencies) error {
 	)
 
 	deps.GetBattleUseCase = battle.NewGetBattleUseCase(
+		deps.BattleRepository,
+	)
+
+	deps.GetBattleIDUseCase = battle.NewGetBattleIDUseCase(
 		deps.BattleRepository,
 	)
 
