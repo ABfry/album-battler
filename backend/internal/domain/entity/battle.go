@@ -46,3 +46,17 @@ func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string) (*Battle, er
 		UserIDs:   userIDs,
 	}, nil
 }
+
+func (b *Battle) RecordImageSent(userID uuid.UUID, imageURL string) {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.ImageSendEvent{
+		RoomID:     b.RoomID,
+		BattleID:   b.ID,
+		UserID:     userID,
+		ImageURL:   imageURL,
+		OccurredOn: time.Now(),
+	})
+}
