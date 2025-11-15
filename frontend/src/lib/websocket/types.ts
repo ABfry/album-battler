@@ -1,3 +1,10 @@
+export type ConnectionStatus =
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
+
 export type WebSocketMessage<T = unknown> = {
   type: string;
   payload: T;

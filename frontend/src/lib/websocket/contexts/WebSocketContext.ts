@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { ConnectionStatus } from "../hooks/useWebSocketConnection";
+import type { ConnectionStatus } from "../types";
 
 export type WebSocketContextType = {
   getWebSocket: () => WebSocket | null;
