@@ -16,7 +16,7 @@ type UserJoinedRoomEvent struct {
 }
 
 func (e UserJoinedRoomEvent) EventType() string {
-	return "user_joined_room"
+	return "player_join_room"
 }
 
 func (e UserJoinedRoomEvent) OccurredAt() time.Time {
@@ -35,7 +35,7 @@ type UserLeftRoomEvent struct {
 }
 
 func (e UserLeftRoomEvent) EventType() string {
-	return "user_left_room"
+	return "player_leave_room"
 }
 
 func (e UserLeftRoomEvent) OccurredAt() time.Time {
@@ -50,7 +50,7 @@ type GameStartedEvent struct {
 }
 
 func (e GameStartedEvent) EventType() string {
-	return "game_started"
+	return "start_game"
 }
 
 func (e GameStartedEvent) OccurredAt() time.Time {
