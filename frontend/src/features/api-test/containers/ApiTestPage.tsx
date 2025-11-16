@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import { useBattle } from "@/src/hooks/useBattle";
@@ -87,17 +87,6 @@ export function ApiTestPage() {
   const [latestApiResponse, setLatestApiResponse] =
     useState<DebugMessage>(null);
 
-  const createdRoomRef = useRef(createdRoom);
-  const getBattleIDRef = useRef(getBattleID);
-
-  useEffect(() => {
-    createdRoomRef.current = createdRoom;
-  }, [createdRoom]);
-
-  useEffect(() => {
-    getBattleIDRef.current = getBattleID;
-  }, [getBattleID]);
-
   // WebSocket接続の初期化
   useEffect(() => {
     connect();
@@ -142,9 +131,14 @@ export function ApiTestPage() {
           timestamp: new Date().toISOString(),
         });
         refetch();
-        // ゲーム開始時に自動でBattle IDを取得
-        if (createdRoomRef.current?.room_id === payload.room_id) {
-          const id = await getBattleIDRef.current(payload.room_id);
+        // Battle IDをREST APIで取得
+        if (createdRoom) {
+          const id = await getBattleID(createdRoom.room_id);
+          setLatestApiResponse({
+            api: "getBattleID",
+            response: { battle_id: id },
+            timestamp: new Date().toISOString(),
+          });
           setBattleID(id);
         }
       }
@@ -170,7 +164,7 @@ export function ApiTestPage() {
       unsubscribeStart();
       unsubscribeImageSend();
     };
-  }, [subscribe, refetch, refetchImages]);
+  }, [subscribe, refetch, refetchImages, createdRoom, getBattleID]);
 
   // 1. 部屋作成
   const handleCreateRoom = async (userId: string) => {
@@ -223,18 +217,6 @@ export function ApiTestPage() {
     setLatestApiResponse({
       api: "startGame",
       response: { success },
-      timestamp: new Date().toISOString(),
-    });
-  };
-
-  // 5. バトルID取得
-  const handleGetBattleID = async () => {
-    if (!createdRoom) return;
-    const id = await getBattleID(createdRoom.room_id);
-    setBattleID(id);
-    setLatestApiResponse({
-      api: "getBattleID",
-      response: { battle_id: id },
       timestamp: new Date().toISOString(),
     });
   };
@@ -295,7 +277,6 @@ export function ApiTestPage() {
       onJoinRoom={handleJoinRoom}
       onLeaveRoom={handleLeaveRoom}
       onStartGame={handleStartGame}
-      onGetBattleID={handleGetBattleID}
       onCreateBattle={handleCreateBattle}
       onSendImage={handleSendImage}
       onRefetch={refetch}

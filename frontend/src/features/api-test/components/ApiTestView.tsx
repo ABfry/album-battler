@@ -42,7 +42,6 @@ type ApiTestViewProps = {
   onJoinRoom: (userId: string, roomNumber: number) => Promise<void>;
   onLeaveRoom: (roomId: string, userId: string) => Promise<void>;
   onStartGame: () => Promise<void>;
-  onGetBattleID: () => Promise<void>;
   onCreateBattle: () => Promise<void>;
   onSendImage: (userId: string, imageBase64: string) => Promise<void>;
   onRefetch: () => void;
@@ -79,7 +78,6 @@ export function ApiTestView({
   onJoinRoom,
   onLeaveRoom,
   onStartGame,
-  onGetBattleID,
   onCreateBattle,
   onSendImage,
   onRefetch,
@@ -154,13 +152,7 @@ export function ApiTestView({
           />
 
           {/* 6. バトルID取得 */}
-          <BattleIDInfo
-            roomId={createdRoom?.room_id || null}
-            battleID={battleID}
-            onGetBattleID={onGetBattleID}
-            loading={loading}
-            error={error}
-          />
+          <BattleIDInfo battleID={battleID} />
 
           {/* 7. バトル作成 */}
           <BattleCreateForm
