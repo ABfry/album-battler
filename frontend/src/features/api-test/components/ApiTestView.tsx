@@ -15,6 +15,7 @@ import type {
   Battle,
   BattleImage,
 } from "@/src/lib/api/types";
+import type { DebugMessage } from "@/src/lib/types";
 
 type ApiTestViewProps = {
   createdRoom: CreateRoomResponse | null;
@@ -35,8 +36,8 @@ type ApiTestViewProps = {
   battleError: string | null;
   battleInfoError: string | null;
   sendImageSuccess: boolean;
-  latestWsMessage: any;
-  latestApiResponse: any;
+  latestWsMessage: DebugMessage;
+  latestApiResponse: DebugMessage;
   onCreateRoom: (userId: string) => Promise<void>;
   onJoinRoom: (userId: string, roomNumber: number) => Promise<void>;
   onLeaveRoom: (roomId: string, userId: string) => Promise<void>;

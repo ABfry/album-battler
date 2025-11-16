@@ -17,6 +17,7 @@ import type {
   PlayerLeaveRoomPayload,
   StartGamePayload,
 } from "@/src/lib/websocket/types";
+import type { DebugMessage } from "@/src/lib/types";
 
 /**
  * API テストページ Container
@@ -81,8 +82,9 @@ export function ApiTestPage() {
   const [battleID, setBattleID] = useState<string | null>(null);
 
   // デバッグ用: 最新のWebSocketメッセージとAPIレスポンス
-  const [latestWsMessage, setLatestWsMessage] = useState<any>(null);
-  const [latestApiResponse, setLatestApiResponse] = useState<any>(null);
+  const [latestWsMessage, setLatestWsMessage] = useState<DebugMessage>(null);
+  const [latestApiResponse, setLatestApiResponse] =
+    useState<DebugMessage>(null);
 
   const createdRoomRef = useRef(createdRoom);
   const getBattleIDRef = useRef(getBattleID);
