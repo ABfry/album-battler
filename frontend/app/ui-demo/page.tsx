@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/src/components/ui/button";
 import {
   Card,
@@ -8,6 +10,17 @@ import {
 } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/src/components/ui/alert-dialog";
 
 export default function UiDemoPage() {
   return (
@@ -122,6 +135,64 @@ export default function UiDemoPage() {
                   <p className="font-bold">木村</p>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* アラートダイアログセクション */}
+        <Card>
+          <CardHeader>
+            <CardTitle>アラートダイアログ</CardTitle>
+            <CardDescription>確認ダイアログ（はい/いいえ）</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* 基本的な確認ダイアログ */}
+            <div>
+              <p className="mb-2 text-sm font-medium">基本的な確認</p>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="primary">確認ダイアログを開く</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>確認</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      この操作を実行してもよろしいですか？
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>いいえ</AlertDialogCancel>
+                    <AlertDialogAction>はい</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+            {/* 削除確認ダイアログ */}
+            <div>
+              <p className="mb-2 text-sm font-medium">削除確認</p>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">削除する</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>本当に削除しますか？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      この操作は取り消せません。本当に削除してもよろしいですか？
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive hover:bg-destructive/90 text-white"
+                      onClick={() => alert("削除されました")}
+                    >
+                      削除
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>

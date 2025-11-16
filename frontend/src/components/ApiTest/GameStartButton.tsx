@@ -20,7 +20,7 @@ export function GameStartButton({
 }: Props) {
   return (
     <div className="rounded-lg border p-4">
-      <h2 className="mb-4 text-xl font-bold">4. Start Game</h2>
+      <h2 className="mb-4 text-xl font-bold">5. Start Game</h2>
 
       <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">
         <div>
