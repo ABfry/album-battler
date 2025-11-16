@@ -13,20 +13,23 @@ type BattleHandler struct {
 	createBattleUC   *battle.CreateBattleUseCase
 	getBattleUC      *battle.GetBattleUseCase
 	getBattleIDUseUC *battle.GetBattleIDUseCase
-	getImageSendUC   *battle.ImageSendUseCase
+	getImageUC       *battle.GetImageUseCase
+	imageSendUC      *battle.ImageSendUseCase
 }
 
 func NewBattleHandler(
 	createBattleUC *battle.CreateBattleUseCase,
 	getBattleUC *battle.GetBattleUseCase,
 	getBattleIDUC *battle.GetBattleIDUseCase,
+	getImageUC *battle.GetImageUseCase,
 	imageSendUC *battle.ImageSendUseCase,
 ) *BattleHandler {
 	return &BattleHandler{
 		createBattleUC:   createBattleUC,
 		getBattleUC:      getBattleUC,
 		getBattleIDUseUC: getBattleIDUC,
-		getImageSendUC:   imageSendUC,
+		getImageUC:       getImageUC,
+		imageSendUC:      imageSendUC,
 	}
 }
 
@@ -130,6 +133,36 @@ func (h *BattleHandler) GetBattleIDByRoom(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GET /battle/{id}/image
+func (h *BattleHandler) GetImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	battleIDStr := r.PathValue("id")
+	battleID, err := uuid.Parse(battleIDStr)
+	if err != nil {
+		http.Error(w, "Invalid battle_id format", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.getImageUC.Execute(r.Context(), &battle.GetImageInput{
+		BattleID: battleID,
+	})
+	if err != nil {
+		http.Error(w, "Failed to get image", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
 // POST /battle/{id}/send-image
 func (h *BattleHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -163,7 +196,7 @@ func (h *BattleHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	// コンテンツタイプを検出
 	contentType := http.DetectContentType(req.ImageBase64)
 
-	err = h.getImageSendUC.Execute(r.Context(), battle.ImageSendInput{
+	err = h.imageSendUC.Execute(r.Context(), battle.ImageSendInput{
 		UserID:      userID,
 		BattleID:    battleID,
 		ImageBase64: req.ImageBase64,
