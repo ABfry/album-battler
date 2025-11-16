@@ -36,7 +36,7 @@ func (h *UserJoinedRoomHandler) Handle(ctx context.Context, evt event.DomainEven
 
 	// WebSocket通知を部屋のメンバーに送信 (通知のみ、詳細はREST APIで取得)
 	broadcastEvent := service.BroadcastEvent{
-		Type: "player_join_room",
+		Type: e.EventType(),
 		Payload: map[string]interface{}{
 			"room_id": e.RoomID.String(), // 最小限の情報のみ
 		},
