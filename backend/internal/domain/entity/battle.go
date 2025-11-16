@@ -60,3 +60,15 @@ func (b *Battle) RecordImageSent(userID uuid.UUID, imageURL string) {
 		OccurredOn: time.Now(),
 	})
 }
+
+func (b *Battle) RecordClapTimeStarted() {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.StartClapTimeEvent{
+		RoomID:     b.RoomID,
+		BattleID:   b.ID,
+		OccurredOn: time.Now(),
+	})
+}
