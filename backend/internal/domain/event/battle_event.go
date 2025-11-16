@@ -21,3 +21,18 @@ func (e ImageSendEvent) EventType() string {
 func (e ImageSendEvent) OccurredAt() time.Time {
 	return e.OccurredOn
 }
+
+type ClapSendEvent struct {
+	BattleID   uuid.UUID
+	UserID     uuid.UUID
+	ClapCount  int
+	OccurredOn time.Time
+}
+
+func (e ClapSendEvent) EventType() string {
+	return "clap_send"
+}
+
+func (e ClapSendEvent) OccurredAt() time.Time {
+	return e.OccurredOn
+}
