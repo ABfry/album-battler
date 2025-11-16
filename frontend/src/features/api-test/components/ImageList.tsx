@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { BattleImage } from "@/src/lib/api/types";
 
 type Props = {
@@ -52,17 +53,15 @@ export function ImageList({ images, loading, error, onRefetch }: Props) {
               </div>
               <div>
                 <p className="mb-1 text-xs text-gray-600">画像:</p>
-                <img
-                  src={image.imageUrl}
-                  alt={`User ${image.userId}'s image`}
-                  className="max-h-64 w-full rounded border object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = "";
-                    e.currentTarget.alt = "画像の読み込みに失敗しました";
-                    e.currentTarget.className =
-                      "rounded border bg-red-50 p-4 text-center text-xs text-red-600";
-                  }}
-                />
+                <div className="relative h-64 w-full">
+                  <Image
+                    src={image.imageUrl}
+                    alt={`User ${image.userId}'s image`}
+                    fill
+                    className="rounded border object-contain"
+                    unoptimized
+                  />
+                </div>
               </div>
             </div>
           ))}
