@@ -35,6 +35,8 @@ type ApiTestViewProps = {
   battleError: string | null;
   battleInfoError: string | null;
   sendImageSuccess: boolean;
+  latestWsMessage: any;
+  latestApiResponse: any;
   onCreateRoom: (userId: string) => Promise<void>;
   onJoinRoom: (userId: string, roomNumber: number) => Promise<void>;
   onLeaveRoom: (roomId: string, userId: string) => Promise<void>;
@@ -70,6 +72,8 @@ export function ApiTestView({
   battleError,
   battleInfoError,
   sendImageSuccess,
+  latestWsMessage,
+  latestApiResponse,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
@@ -216,6 +220,42 @@ export function ApiTestView({
               2
             )}
           </pre>
+        </div>
+
+        {/* 最新のWebSocketメッセージ */}
+        <div className="mt-8 rounded-lg border bg-white p-4">
+          <h2 className="mb-2 text-lg font-bold">
+            📡 Latest WebSocket Message
+          </h2>
+          {latestWsMessage ? (
+            <div>
+              <div className="mb-2 text-xs text-gray-500">
+                {latestWsMessage.timestamp}
+              </div>
+              <pre className="overflow-x-auto rounded bg-blue-50 p-3 text-xs">
+                {JSON.stringify(latestWsMessage, null, 2)}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No WebSocket messages yet</p>
+          )}
+        </div>
+
+        {/* 最新のAPIレスポンス */}
+        <div className="mt-8 rounded-lg border bg-white p-4">
+          <h2 className="mb-2 text-lg font-bold">🌐 Latest API Response</h2>
+          {latestApiResponse ? (
+            <div>
+              <div className="mb-2 text-xs text-gray-500">
+                {latestApiResponse.timestamp}
+              </div>
+              <pre className="overflow-x-auto rounded bg-green-50 p-3 text-xs">
+                {JSON.stringify(latestApiResponse, null, 2)}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No API responses yet</p>
+          )}
         </div>
       </div>
     </div>

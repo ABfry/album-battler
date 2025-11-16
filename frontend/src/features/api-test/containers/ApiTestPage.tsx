@@ -80,6 +80,10 @@ export function ApiTestPage() {
   const [sendImageSuccess, setSendImageSuccess] = useState(false);
   const [battleID, setBattleID] = useState<string | null>(null);
 
+  // デバッグ用: 最新のWebSocketメッセージとAPIレスポンス
+  const [latestWsMessage, setLatestWsMessage] = useState<any>(null);
+  const [latestApiResponse, setLatestApiResponse] = useState<any>(null);
+
   const createdRoomRef = useRef(createdRoom);
   const getBattleIDRef = useRef(getBattleID);
 
@@ -103,6 +107,11 @@ export function ApiTestPage() {
       "player_join_room",
       (payload: PlayerJoinRoomPayload) => {
         console.log("Player joined room:", payload.room_id);
+        setLatestWsMessage({
+          type: "player_join_room",
+          payload,
+          timestamp: new Date().toISOString(),
+        });
         refetch();
       }
     );
@@ -111,6 +120,11 @@ export function ApiTestPage() {
       "player_leave_room",
       (payload: PlayerLeaveRoomPayload) => {
         console.log("Player left room:", payload.room_id);
+        setLatestWsMessage({
+          type: "player_leave_room",
+          payload,
+          timestamp: new Date().toISOString(),
+        });
         refetch();
       }
     );
@@ -119,6 +133,11 @@ export function ApiTestPage() {
       "start_game",
       async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
+        setLatestWsMessage({
+          type: "start_game",
+          payload,
+          timestamp: new Date().toISOString(),
+        });
         refetch();
         // ゲーム開始時に自動でBattle IDを取得
         if (createdRoomRef.current?.room_id === payload.room_id) {
@@ -142,6 +161,11 @@ export function ApiTestPage() {
       setCreatedRoom(result);
       setJoinSuccess(false);
       setStartSuccess(false);
+      setLatestApiResponse({
+        api: "createRoom",
+        response: result,
+        timestamp: new Date().toISOString(),
+      });
     }
   };
 
@@ -149,12 +173,22 @@ export function ApiTestPage() {
   const handleJoinRoom = async (userId: string, roomNumber: number) => {
     const success = await joinRoom(userId, roomNumber);
     setJoinSuccess(success);
+    setLatestApiResponse({
+      api: "joinRoom",
+      response: { success },
+      timestamp: new Date().toISOString(),
+    });
   };
 
   // 3. 部屋退出
   const handleLeaveRoom = async (roomId: string, userId: string) => {
     const success = await leaveRoom(roomId, userId);
     setLeaveSuccess(success);
+    setLatestApiResponse({
+      api: "leaveRoom",
+      response: { success },
+      timestamp: new Date().toISOString(),
+    });
     if (success) {
       setTimeout(() => refetch(), 500);
     }
@@ -168,6 +202,11 @@ export function ApiTestPage() {
       "550e8400-e29b-41d4-a716-446655440001"
     );
     setStartSuccess(success);
+    setLatestApiResponse({
+      api: "startGame",
+      response: { success },
+      timestamp: new Date().toISOString(),
+    });
   };
 
   // 5. バトルID取得
@@ -175,6 +214,11 @@ export function ApiTestPage() {
     if (!createdRoom) return;
     const id = await getBattleID(createdRoom.room_id);
     setBattleID(id);
+    setLatestApiResponse({
+      api: "getBattleID",
+      response: { battle_id: id },
+      timestamp: new Date().toISOString(),
+    });
   };
 
   // 6. バトル作成
@@ -183,6 +227,11 @@ export function ApiTestPage() {
     const result = await createBattle(createdRoom.room_id);
     if (result) {
       setCreatedBattle(result);
+      setLatestApiResponse({
+        api: "createBattle",
+        response: result,
+        timestamp: new Date().toISOString(),
+      });
     }
   };
 
@@ -195,6 +244,11 @@ export function ApiTestPage() {
       imageBase64
     );
     setSendImageSuccess(success);
+    setLatestApiResponse({
+      api: "sendImage",
+      response: { success },
+      timestamp: new Date().toISOString(),
+    });
     if (success) {
       // 画像送信成功後、画像一覧を再取得
       setTimeout(() => refetchImages(), 500);
@@ -221,6 +275,8 @@ export function ApiTestPage() {
       battleError={battleError}
       battleInfoError={battleInfoError}
       sendImageSuccess={sendImageSuccess}
+      latestWsMessage={latestWsMessage}
+      latestApiResponse={latestApiResponse}
       onCreateRoom={handleCreateRoom}
       onJoinRoom={handleJoinRoom}
       onLeaveRoom={handleLeaveRoom}
