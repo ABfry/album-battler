@@ -156,6 +156,11 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register(domainEvent.GameStartedEvent{}.EventType(), gameStartedHandler)
 
+	imageSendHandler := handlers.NewImageSendHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.ImageSendEvent{}.EventType(), imageSendHandler)
+
 	return nil
 }
 

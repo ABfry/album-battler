@@ -98,3 +98,95 @@ module "s3_storage" {
     Environment = var.environment
   }
 }
+
+# RDSモジュール
+module "rds" {
+  source = "./modules/rds"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  subnet_ids         = aws_subnet.public[*].id
+  security_group_ids = [module.ecs.ecs_tasks_security_group_id]
+
+  db_name     = var.db_name
+  db_username = var.db_username
+  db_password = var.db_password
+
+  instance_class    = var.rds_instance_class
+  allocated_storage = var.rds_allocated_storage
+  multi_az          = var.rds_multi_az
+
+  skip_final_snapshot     = var.rds_skip_final_snapshot
+  backup_retention_period = var.rds_backup_retention_period
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+
+# ECSモジュール
+module "ecs" {
+  source = "./modules/ecs"
+
+  project_name       = var.project_name
+  aws_region         = var.aws_region
+  vpc_id             = aws_vpc.main.id
+  public_subnet_ids  = aws_subnet.public[*].id
+  s3_bucket_name     = var.s3_bucket_name
+
+  log_retention_days = var.ecs_log_retention_days
+
+  frontend_cpu           = var.frontend_cpu
+  frontend_memory        = var.frontend_memory
+  frontend_desired_count = var.frontend_desired_count
+
+  backend_cpu           = var.backend_cpu
+  backend_memory        = var.backend_memory
+  backend_desired_count = var.backend_desired_count
+
+  backend_environment_variables = [
+    {
+      name  = "DB_DRIVER"
+      value = "mysql"
+    },
+    {
+      name  = "DB_HOST"
+      value = module.rds.endpoint
+    },
+    {
+      name  = "DB_PORT"
+      value = "3306"
+    },
+    {
+      name  = "DB_NAME"
+      value = var.db_name
+    },
+    {
+      name  = "DB_USER"
+      value = var.db_username
+    },
+    {
+      name  = "DB_PASSWORD"
+      value = var.db_password
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    },
+    {
+      name  = "S3_BUCKET_NAME"
+      value = var.s3_bucket_name
+    },
+    {
+      name  = "GEMINI_API_KEY"
+      value = var.gemini_api_key
+    }
+  ]
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}

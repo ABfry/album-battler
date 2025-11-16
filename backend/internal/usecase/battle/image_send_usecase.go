@@ -82,6 +82,9 @@ func (uc *ImageSendUseCase) Execute(ctx context.Context, input ImageSendInput) e
 		return errors.New("battle not found")
 	}
 
+	// ドメインイベントを記録
+	battle.RecordImageSent(input.UserID, imageURL)
+
 	// 画像情報の保存
 	if err := uc.imageRepo.Save(ctx, image); err != nil {
 		fmt.Printf("Failed to save image info: %v", err)
