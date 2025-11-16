@@ -3,10 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
+import { useBattle } from "@/src/hooks/useBattle";
+import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 import { ApiTestView } from "../components/ApiTestView";
-import type { CreateRoomResponse } from "@/src/lib/api/types";
+import type {
+  CreateRoomResponse,
+  CreateBattleResponse,
+} from "@/src/lib/api/types";
 import type {
   PlayerJoinRoomPayload,
   PlayerLeaveRoomPayload,
@@ -29,6 +34,14 @@ export function ApiTestPage() {
     error,
   } = useRoom();
 
+  // バトル作成・画像送信の操作
+  const {
+    createBattle,
+    sendImage,
+    loading: battleLoading,
+    error: battleError,
+  } = useBattle();
+
   // WebSocket接続
   const { connect, disconnect } = useWebSocket();
   const { subscribe } = useWebSocketEvents();
@@ -38,6 +51,10 @@ export function ApiTestPage() {
     null
   );
 
+  // 作成されたバトルの情報を保持
+  const [createdBattle, setCreatedBattle] =
+    useState<CreateBattleResponse | null>(null);
+
   // 部屋情報の取得（作成後に自動取得）
   const {
     room,
@@ -46,10 +63,21 @@ export function ApiTestPage() {
     refetch,
   } = useRoomInfo(createdRoom?.room_id || null);
 
+  // バトル情報の取得
+  const {
+    battle,
+    images,
+    loading: battleInfoLoading,
+    error: battleInfoError,
+    refetch: refetchBattle,
+    refetchImages,
+  } = useBattleInfo(createdBattle?.BattleID || null);
+
   // 各操作の成功状態
   const [joinSuccess, setJoinSuccess] = useState(false);
   const [leaveSuccess, setLeaveSuccess] = useState(false);
   const [startSuccess, setStartSuccess] = useState(false);
+  const [sendImageSuccess, setSendImageSuccess] = useState(false);
   const [battleID, setBattleID] = useState<string | null>(null);
 
   const createdRoomRef = useRef(createdRoom);
@@ -149,6 +177,30 @@ export function ApiTestPage() {
     setBattleID(id);
   };
 
+  // 6. バトル作成
+  const handleCreateBattle = async () => {
+    if (!createdRoom) return;
+    const result = await createBattle(createdRoom.room_id);
+    if (result) {
+      setCreatedBattle(result);
+    }
+  };
+
+  // 7. 画像送信
+  const handleSendImage = async (userId: string, imageBase64: string) => {
+    if (!createdBattle) return;
+    const success = await sendImage(
+      createdBattle.BattleID,
+      userId,
+      imageBase64
+    );
+    setSendImageSuccess(success);
+    if (success) {
+      // 画像送信成功後、画像一覧を再取得
+      setTimeout(() => refetchImages(), 500);
+    }
+  };
+
   return (
     <ApiTestView
       createdRoom={createdRoom}
@@ -161,12 +213,24 @@ export function ApiTestPage() {
       leaveSuccess={leaveSuccess}
       startSuccess={startSuccess}
       battleID={battleID}
+      createdBattle={createdBattle}
+      battle={battle}
+      images={images}
+      battleLoading={battleLoading}
+      battleInfoLoading={battleInfoLoading}
+      battleError={battleError}
+      battleInfoError={battleInfoError}
+      sendImageSuccess={sendImageSuccess}
       onCreateRoom={handleCreateRoom}
       onJoinRoom={handleJoinRoom}
       onLeaveRoom={handleLeaveRoom}
       onStartGame={handleStartGame}
       onGetBattleID={handleGetBattleID}
+      onCreateBattle={handleCreateBattle}
+      onSendImage={handleSendImage}
       onRefetch={refetch}
+      onRefetchBattle={refetchBattle}
+      onRefetchImages={refetchImages}
     />
   );
 }
