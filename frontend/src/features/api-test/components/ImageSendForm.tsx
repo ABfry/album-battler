@@ -62,7 +62,7 @@ export function ImageSendForm({
   };
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border bg-white p-4">
       <h2 className="mb-4 text-xl font-bold">9. Send Image</h2>
 
       <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">
