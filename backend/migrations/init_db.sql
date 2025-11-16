@@ -24,7 +24,7 @@ CREATE TABLE rooms (
     host_user_id CHAR(36),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expired_at DATETIME,
-    status ENUM('waiting', 'full', 'battling', 'result', 'closed') NOT NULL DEFAULT 'waiting',
+    status ENUM('waiting', 'full', 'battling', 'clap_time', 'result', 'closed') NOT NULL DEFAULT 'waiting',
     max_users INT NOT NULL DEFAULT 5,
     CHECK (room_number BETWEEN 0 AND 9999),
     CONSTRAINT fk_rooms_host_user FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,

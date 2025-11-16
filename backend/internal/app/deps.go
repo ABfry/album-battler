@@ -167,6 +167,11 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register(domainEvent.ImageSendEvent{}.EventType(), imageSendHandler)
 
+	clapTimeStartedHandler := handlers.NewClapTimeStartedHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.StartClapTimeEvent{}.EventType(), clapTimeStartedHandler)
+
 	return nil
 }
 
@@ -226,7 +231,9 @@ func initUseCases(deps *Dependencies) error {
 	deps.StartClapTimeUseCase = clap.NewStartClapTimeUseCase(
 		deps.BattleRepository,
 		deps.RoomRepository,
+		deps.ImageRepository,
 		deps.EventDispatcher,
+		deps.LLMClient,
 	)
 	deps.ClapScheduler = clapinfra.NewClapScheduler(
 		deps.StartClapTimeUseCase,
