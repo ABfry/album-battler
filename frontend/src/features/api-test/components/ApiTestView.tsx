@@ -1,11 +1,10 @@
-import Image from "next/image";
 import { RoomCreateForm } from "@/src/components/ApiTest/RoomCreateForm";
 import { RoomJoinForm } from "@/src/components/ApiTest/RoomJoinForm";
 import { RoomInfo } from "@/src/components/ApiTest/RoomInfo";
 import { RoomLeaveButton } from "@/src/components/ApiTest/RoomLeaveButton";
 import { GameStartButton } from "@/src/components/ApiTest/GameStartButton";
 import type { CreateRoomResponse, Room } from "@/src/lib/api/types";
-
+import { TitleLogo } from "@/src/components/ui/title-logo";
 type ApiTestViewProps = {
   createdRoom: CreateRoomResponse | null;
   room: Room | null;
@@ -47,14 +46,7 @@ export function ApiTestView({
     <div className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
         <h1 className="mx-auto mb-8 flex flex-col items-center justify-center text-3xl font-bold">
-          <div className="relative flex aspect-963/486 h-32 items-center justify-center">
-            <Image
-              src="/album-battler-logo.png"
-              alt="Album Battler Logo"
-              fill
-              className="object-contain"
-            />
-          </div>
+          <TitleLogo className="h-32" />
           <span className="w-full text-center">REST API Test Page</span>
         </h1>
 
