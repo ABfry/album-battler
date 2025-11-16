@@ -82,6 +82,12 @@ func (uc *ImageSendUseCase) Execute(ctx context.Context, input ImageSendInput) e
 		return errors.New("battle not found")
 	}
 
+	// battle内のユーザか確認
+	if !slices.Contains(battle.UserIDs, input.UserID) {
+		fmt.Printf("User %s is not in battle %s", input.UserID, input.BattleID)
+		return errors.New("user is not in battle")
+	}
+
 	// ドメインイベントを記録
 	battle.RecordImageSent(input.UserID, imageURL)
 
