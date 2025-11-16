@@ -1,0 +1,95 @@
+import type { UserInfo, BattleImage } from "@/src/lib/api/types";
+import { ImageFrame } from "./ImageFrame";
+import { PlayerList } from "./PlayerList";
+
+type BattleProps = {
+  theme: string | null;
+  isLoading: boolean;
+  error: string | null;
+  players: UserInfo[] | undefined;
+  images: BattleImage[];
+  selectedImage: string | null;
+  isDragging: boolean;
+  timeLeft: number;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpenAlbum: () => void;
+  onCancel: () => void;
+  onDragEnter: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+};
+
+/**
+ * バトル画面のメインコンポーネント (Presentational)
+ */
+export function Battle({
+  theme,
+  isLoading,
+  error,
+  players,
+  images,
+  selectedImage,
+  isDragging,
+  timeLeft,
+  fileInputRef,
+  onImageSelect,
+  onOpenAlbum,
+  onCancel,
+  onDragEnter,
+  onDragLeave,
+  onDragOver,
+  onDrop,
+}: BattleProps) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="flex h-screen w-full max-w-4xl flex-col items-center justify-between py-8">
+        {/* タイマー表示（右上） */}
+        <div className="absolute top-8 right-8">
+          <div
+            className={`rounded-lg px-6 py-3 text-4xl font-bold shadow-lg ${
+              timeLeft <= 10
+                ? "bg-red-500 text-white"
+                : "bg-white text-slate-800"
+            }`}
+          >
+            {timeLeft}秒
+          </div>
+        </div>
+
+        {/* お題表示（最上部） */}
+        <div className="w-full text-center">
+          <h1 className="text-4xl font-black text-slate-800 md:text-5xl">
+            {isLoading ? (
+              <span className="text-gray-400">Loading...</span>
+            ) : error ? (
+              <span className="text-red-500">Error: {error}</span>
+            ) : theme ? (
+              theme
+            ) : (
+              <span className="text-gray-400">テーマ未設定</span>
+            )}
+          </h1>
+        </div>
+
+        {/* バトル画像（中央） */}
+        <ImageFrame
+          selectedImage={selectedImage}
+          isDragging={isDragging}
+          fileInputRef={fileInputRef}
+          onImageSelect={onImageSelect}
+          onOpenAlbum={onOpenAlbum}
+          onCancel={onCancel}
+          onDragEnter={onDragEnter}
+          onDragLeave={onDragLeave}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        />
+
+        {/* プレイヤー情報（最下部） */}
+        <PlayerList players={players} images={images} />
+      </div>
+    </div>
+  );
+}
