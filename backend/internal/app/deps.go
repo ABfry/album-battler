@@ -54,8 +54,7 @@ type Dependencies struct {
 	ImageValidator service.ImageValidator
 	ImageStorage   service.ImageStorage
 
-	ClapScheduler        service.ClapScheduler
-	StartClapTimeUseCase *clap.StartClapTimeUseCase
+	ClapScheduler service.ClapScheduler
 
 	// Usecase
 	CreateRoomUseCase *room.CreateRoomUseCase
@@ -69,6 +68,8 @@ type Dependencies struct {
 	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 	GetImageUseCase     *battle.GetImageUseCase
 	ImageSendUseCase    *battle.ImageSendUseCase
+
+	StartClapTimeUseCase *clap.StartClapTimeUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -222,7 +223,11 @@ func initImage(deps *Dependencies) error {
 func initUseCases(deps *Dependencies) error {
 	// Domain Services
 	roomNumberGenerator := service.NewRoomNumberGenerator()
-	deps.StartClapTimeUseCase = clap.NewStartClapTimeUseCase()
+	deps.StartClapTimeUseCase = clap.NewStartClapTimeUseCase(
+		deps.BattleRepository,
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
 	deps.ClapScheduler = clapinfra.NewClapScheduler(
 		deps.StartClapTimeUseCase,
 		time.Minute,
