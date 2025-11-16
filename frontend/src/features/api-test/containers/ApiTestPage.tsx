@@ -57,6 +57,13 @@ export function ApiTestPage() {
   const [createdBattle, setCreatedBattle] =
     useState<CreateBattleResponse | null>(null);
 
+  // 各操作の成功状態
+  const [joinSuccess, setJoinSuccess] = useState(false);
+  const [leaveSuccess, setLeaveSuccess] = useState(false);
+  const [startSuccess, setStartSuccess] = useState(false);
+  const [sendImageSuccess, setSendImageSuccess] = useState(false);
+  const [battleID, setBattleID] = useState<string | null>(null);
+
   // 部屋情報の取得（作成後に自動取得）
   const {
     room,
@@ -65,7 +72,7 @@ export function ApiTestPage() {
     refetch,
   } = useRoomInfo(createdRoom?.room_id || null);
 
-  // バトル情報の取得
+  // バトル情報の取得（start_gameイベントで取得したbattleIDを使用）
   const {
     battle,
     images,
@@ -73,14 +80,7 @@ export function ApiTestPage() {
     error: battleInfoError,
     refetch: refetchBattle,
     refetchImages,
-  } = useBattleInfo(createdBattle?.BattleID || null);
-
-  // 各操作の成功状態
-  const [joinSuccess, setJoinSuccess] = useState(false);
-  const [leaveSuccess, setLeaveSuccess] = useState(false);
-  const [startSuccess, setStartSuccess] = useState(false);
-  const [sendImageSuccess, setSendImageSuccess] = useState(false);
-  const [battleID, setBattleID] = useState<string | null>(null);
+  } = useBattleInfo(battleID);
 
   // デバッグ用: 最新のWebSocketメッセージとAPIレスポンス
   const [latestWsMessage, setLatestWsMessage] = useState<DebugMessage>(null);
@@ -237,12 +237,8 @@ export function ApiTestPage() {
 
   // 7. 画像送信
   const handleSendImage = async (userId: string, imageBase64: string) => {
-    if (!createdBattle) return;
-    const success = await sendImage(
-      createdBattle.BattleID,
-      userId,
-      imageBase64
-    );
+    if (!battleID) return;
+    const success = await sendImage(battleID, userId, imageBase64);
     setSendImageSuccess(success);
     setLatestApiResponse({
       api: "sendImage",

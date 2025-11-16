@@ -173,7 +173,7 @@ export function ApiTestView({
 
           {/* 9. 画像送信 */}
           <ImageSendForm
-            battleId={createdBattle?.BattleID || null}
+            battleId={battleID}
             onSendImage={onSendImage}
             loading={battleLoading}
             error={battleError}
