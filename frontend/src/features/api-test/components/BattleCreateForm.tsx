@@ -18,15 +18,18 @@ export function BattleCreateForm({
 }: Props) {
   return (
     <div className="rounded-lg border p-4">
-      <h2 className="mb-4 text-xl font-bold">7. Create Battle</h2>
-
+      <h2 className="mb-4 text-xl font-bold">7. Create Battle</h2>{" "}
+      <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">
+        <p className="text-sm text-gray-600">
+          💡 デバッグ用で実際には使用されません
+        </p>
+      </div>
       <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">
         <div>
           <p className="text-sm text-gray-600">Room ID:</p>
           <p className="font-mono text-sm">{roomId || "No room selected"}</p>
         </div>
       </div>
-
       <button
         onClick={onCreateBattle}
         disabled={!roomId || loading}
@@ -34,13 +37,11 @@ export function BattleCreateForm({
       >
         {loading ? "Creating..." : "Create Battle"}
       </button>
-
       {error && (
         <div className="mt-3 rounded bg-red-100 p-3 text-red-700">
           Error: {error}
         </div>
       )}
-
       {result && (
         <div className="mt-3 rounded bg-green-100 p-3">
           <p className="text-sm font-semibold text-green-700">

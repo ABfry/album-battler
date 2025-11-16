@@ -24,6 +24,12 @@ export function BattleInfo({ battle, loading, error, onRefetch }: Props) {
         </button>
       </div>
 
+      <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">
+        <p className="text-sm text-gray-600">
+          💡 battleIDセット時に自動でfetchされます
+        </p>
+      </div>
+
       {error && (
         <div className="rounded bg-red-100 p-3 text-red-700">
           Error: {error}

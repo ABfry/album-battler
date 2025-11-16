@@ -13,7 +13,7 @@ export function BattleIDInfo({ battleID }: Props) {
 
       <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">
         <p className="text-sm text-gray-600">
-          💡 start_gameイベント受信時に自動取得されます
+          💡 start_gameイベント受信時に自動でfetchされます
         </p>
       </div>
 
