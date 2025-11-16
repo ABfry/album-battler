@@ -1,9 +1,22 @@
-import { RoomCreateForm } from "@/src/components/ApiTest/RoomCreateForm";
-import { RoomJoinForm } from "@/src/components/ApiTest/RoomJoinForm";
-import { RoomInfo } from "@/src/components/ApiTest/RoomInfo";
-import { RoomLeaveButton } from "@/src/components/ApiTest/RoomLeaveButton";
-import { GameStartButton } from "@/src/components/ApiTest/GameStartButton";
-import type { CreateRoomResponse, Room } from "@/src/lib/api/types";
+import { RoomCreateForm } from "./RoomCreateForm";
+import { RoomJoinForm } from "./RoomJoinForm";
+import { RoomInfo } from "./RoomInfo";
+import { RoomLeaveButton } from "./RoomLeaveButton";
+import { GameStartButton } from "./GameStartButton";
+import { BattleIDInfo } from "./BattleIDInfo";
+import { BattleCreateForm } from "./BattleCreateForm";
+import { BattleInfo } from "./BattleInfo";
+import { ImageSendForm } from "./ImageSendForm";
+import { ImageList } from "./ImageList";
+import type {
+  CreateRoomResponse,
+  CreateBattleResponse,
+  Room,
+  Battle,
+  BattleImage,
+} from "@/src/lib/api/types";
+import type { DebugMessage } from "@/src/lib/types";
+import { TitleLogo } from "@/src/components/ui/title-logo";
 
 type ApiTestViewProps = {
   createdRoom: CreateRoomResponse | null;
@@ -15,11 +28,26 @@ type ApiTestViewProps = {
   joinSuccess: boolean;
   leaveSuccess: boolean;
   startSuccess: boolean;
+  battleID: string | null;
+  createdBattle: CreateBattleResponse | null;
+  battle: Battle | null;
+  images: BattleImage[];
+  battleLoading: boolean;
+  battleInfoLoading: boolean;
+  battleError: string | null;
+  battleInfoError: string | null;
+  sendImageSuccess: boolean;
+  latestWsMessage: DebugMessage;
+  latestApiResponse: DebugMessage;
   onCreateRoom: (userId: string) => Promise<void>;
   onJoinRoom: (userId: string, roomNumber: number) => Promise<void>;
   onLeaveRoom: (roomId: string, userId: string) => Promise<void>;
   onStartGame: () => Promise<void>;
+  onCreateBattle: () => Promise<void>;
+  onSendImage: (userId: string, imageBase64: string) => Promise<void>;
   onRefetch: () => void;
+  onRefetchBattle: () => void;
+  onRefetchImages: () => void;
 };
 
 /**
@@ -36,16 +64,34 @@ export function ApiTestView({
   joinSuccess,
   leaveSuccess,
   startSuccess,
+  battleID,
+  createdBattle,
+  battle,
+  images,
+  battleLoading,
+  battleInfoLoading,
+  battleError,
+  battleInfoError,
+  sendImageSuccess,
+  latestWsMessage,
+  latestApiResponse,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
   onStartGame,
+  onCreateBattle,
+  onSendImage,
   onRefetch,
+  onRefetchBattle,
+  onRefetchImages,
 }: ApiTestViewProps) {
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
-        <h1 className="mb-8 text-3xl font-bold">REST API Test Page</h1>
+        <h1 className="mx-auto mb-8 flex flex-col items-center justify-center text-3xl font-bold">
+          <TitleLogo className="h-32" />
+          <span className="w-full text-center">REST API Test Page</span>
+        </h1>
 
         <div className="mb-6 rounded-lg bg-blue-50 p-4">
           <h2 className="mb-2 font-semibold">📝 使い方</h2>
@@ -55,6 +101,11 @@ export function ApiTestView({
             <li>「Room Info」で参加者を確認</li>
             <li>「Leave Room」で部屋から退出</li>
             <li>「Start Game」でゲームを開始（ホストのみ実行可能）</li>
+            <li>「Get Battle ID」でバトルIDを取得（Start Game後に自動実行）</li>
+            <li>「Create Battle」でバトルを作成（デバッグ用）</li>
+            <li>「Battle Info」でバトル情報を確認</li>
+            <li>「Send Image」で画像を送信</li>
+            <li>「Battle Images」で送信された画像一覧を確認</li>
           </ol>
         </div>
 
@@ -73,6 +124,7 @@ export function ApiTestView({
             loading={loading}
             error={error}
             success={joinSuccess}
+            autoFillRoomNumber={createdRoom?.room_number}
           />
 
           {/* 3. 部屋情報 */}
@@ -102,6 +154,43 @@ export function ApiTestView({
             error={error}
             success={startSuccess}
           />
+
+          {/* 6. バトルID取得 */}
+          <BattleIDInfo battleID={battleID} />
+
+          {/* 7. バトル作成 */}
+          <BattleCreateForm
+            roomId={createdRoom?.room_id || null}
+            onCreateBattle={onCreateBattle}
+            loading={battleLoading}
+            error={battleError}
+            result={createdBattle}
+          />
+
+          {/* 8. バトル情報 */}
+          <BattleInfo
+            battle={battle}
+            loading={battleInfoLoading}
+            error={battleInfoError}
+            onRefetch={onRefetchBattle}
+          />
+
+          {/* 9. 画像送信 */}
+          <ImageSendForm
+            battleId={battleID}
+            onSendImage={onSendImage}
+            loading={battleLoading}
+            error={battleError}
+            success={sendImageSuccess}
+          />
+
+          {/* 10. 画像一覧 */}
+          <ImageList
+            images={images}
+            loading={battleInfoLoading}
+            error={battleInfoError}
+            onRefetch={onRefetchImages}
+          />
         </div>
 
         {/* デバッグ情報 */}
@@ -112,15 +201,58 @@ export function ApiTestView({
               {
                 createdRoom,
                 room,
+                createdBattle,
+                battle,
+                images,
                 loading,
                 roomLoading,
+                battleLoading,
+                battleInfoLoading,
                 error,
                 roomError,
+                battleError,
+                battleInfoError,
               },
               null,
               2
             )}
           </pre>
+        </div>
+
+        {/* 最新のWebSocketメッセージ */}
+        <div className="mt-8 rounded-lg border bg-white p-4">
+          <h2 className="mb-2 text-lg font-bold">
+            📡 Latest WebSocket Message
+          </h2>
+          {latestWsMessage ? (
+            <div>
+              <div className="mb-2 text-xs text-gray-500">
+                {latestWsMessage.timestamp}
+              </div>
+              <pre className="overflow-x-auto rounded bg-blue-50 p-3 text-xs">
+                {JSON.stringify(latestWsMessage, null, 2)}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No WebSocket messages yet</p>
+          )}
+        </div>
+
+        {/* 最新のAPIレスポンス */}
+        <div className="mt-8 rounded-lg border bg-white p-4">
+          <h2 className="mb-2 text-lg font-bold">🌐 Latest API Response</h2>
+          {latestApiResponse ? (
+            <div>
+              <div className="mb-2 text-xs text-gray-500">
+                {latestApiResponse.timestamp}
+              </div>
+              <pre className="overflow-x-auto rounded bg-green-50 p-3 text-xs">
+                {JSON.stringify(latestApiResponse, null, 2)}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No API responses yet</p>
+          )}
         </div>
       </div>
     </div>
