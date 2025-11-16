@@ -1,8 +1,12 @@
-// app/room/[roomId]/page.tsx
+// app/ro
+// om/[roomId]/page.tsx
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRoomInfo } from "@/src/hooks/useRoomInfo";
+import type { PlayerJoinRoomPayload } from "@/src/lib/websocket/types";
+import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 
 type Player = {
   id: number;
@@ -11,9 +15,16 @@ type Player = {
 };
 
 export default function RoomPage() {
-  const { roomId } = useParams() as { roomId: string };
+  const { roomID } = useParams() as { roomID: string };
   const router = useRouter();
 
+  // 部屋情報の取得（作成後に自動取得）
+  const {
+    room,
+    loading: roomLoading,
+    error: roomError,
+    refetch,
+  } = useRoomInfo(roomID);
   // 仮のプレイヤー情報（joined=false が「待機中..」枠）
   const [players] = useState<Player[]>([
     { id: 1, name: "岩崎", joined: true },
@@ -22,6 +33,20 @@ export default function RoomPage() {
     { id: 4, name: "なかむら", joined: true },
     { id: 5, name: "待機中・・", joined: false },
   ]);
+
+  const { subscribe } = useWebSocketEvents();
+  useEffect(() => {
+    const unsubscribeJoin = subscribe(
+      "player_join_room",
+      (payload: PlayerJoinRoomPayload) => {
+        console.log("Player joined room:", payload.room_id);
+        refetch();
+      }
+    );
+    return () => {
+      unsubscribeJoin();
+    };
+  }, [subscribe, refetch]);
 
   const handleBattle = () => {
     alert("バトル開始の処理を書く");
@@ -45,12 +70,12 @@ export default function RoomPage() {
         </h1>
 
         {/* 部屋番号（必要なら表示） */}
-        <p className="mb-4 text-xs text-gray-700">部屋番号: {roomId}</p>
+        <p className="mb-4 text-xs text-gray-700">部屋番号: {roomID}</p>
 
         {/* プレイヤー一覧カード */}
         <div className="w-full max-w-xs rounded-xl border border-[#3551b8] bg-white px-6 py-6 shadow-[0_8px_0_rgba(0,0,0,0.15)]">
           <ul className="space-y-3">
-            {players.map((p) => (
+            {room?.users.map((p) => (
               <li key={p.id} className="flex items-center gap-3">
                 {/* アイコンの丸 */}
                 <div className="flex h-9 w-9 items-center justify-center rounded-full border border-black">
@@ -59,15 +84,7 @@ export default function RoomPage() {
                 </div>
 
                 {/* 名前 */}
-                <span
-                  className={
-                    p.joined
-                      ? "text-lg font-black"
-                      : "text-lg font-black text-gray-300"
-                  }
-                >
-                  {p.name}
-                </span>
+                <span className={"text-lg font-black"}>{p.name}</span>
               </li>
             ))}
           </ul>
