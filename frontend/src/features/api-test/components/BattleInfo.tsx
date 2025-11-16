@@ -13,7 +13,7 @@ type Props = {
  */
 export function BattleInfo({ battle, loading, error, onRefetch }: Props) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border bg-white p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">8. Battle Info</h2>
         <div className="flex gap-2">

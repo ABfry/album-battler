@@ -35,7 +35,7 @@ export function RoomJoinForm({
   };
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border bg-white p-4">
       <h2 className="mb-4 text-xl font-bold">2. Join Room</h2>
 
       <form onSubmit={handleSubmit} className="space-y-3">

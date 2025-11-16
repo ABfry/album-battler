@@ -4,53 +4,228 @@
 
 ### Backend
 
+#### 言語・フレームワーク
+
 - **言語**: Go 1.25.1
-- **アーキテクチャ**: クリーンアーキテクチャ（DDD）
+- **アーキテクチャ**: クリーンアーキテクチャ（DDD）+ イベント駆動アーキテクチャ
 - **データベース**: MySQL 8.0
 - **ストレージ**: AWS S3
-- **主要ライブラリ**:
-  - AWS SDK for Go v2
-  - database/sql (MySQL driver)
+
+#### リアルタイム通信
+
+- **WebSocket**: 独自実装（Gorilla WebSocket ベース）
+- **Hub パターン**: ルーム単位のメッセージブロードキャスト管理
+- **イベント駆動**: ドメインイベント → WebSocket 配信の自動化
+
+#### AI/ML
+
+- **LLM**: Google Gemini 2.5 Flash
+- **機能**:
+  - バトルテーマ自動生成（Function Calling）
+  - 画像評価（マルチモーダル + 並列処理）
+- **統合**: google.golang.org/genai
+
+#### 主要ライブラリ
+
+- AWS SDK for Go v2
+- database/sql (MySQL driver)
+- google.golang.org/genai
 
 ### Frontend
+
+#### 言語・フレームワーク
 
 - **フレームワーク**: Next.js 16.0.1
 - **言語**: TypeScript 5
 - **UI ライブラリ**: React 19.2.0
+- **ルーティング**: App Router
+
+#### UI/UX
+
 - **スタイリング**: Tailwind CSS 4
-- **コード品質**: ESLint, Prettier
+- **コンポーネント**: Radix UI
+- **デザインシステム**: Storybook 8.6.14
+- **フォント**: Google Fonts (Geist, Noto Sans JP)
+
+#### リアルタイム通信
+
+- **WebSocket Client**: ネイティブ WebSocket API
+- **状態管理**: React Context API
+- **型安全**: TypeScript 完全対応
+
+#### コード品質
+
+- **Linter**: ESLint
+- **Formatter**: Prettier
+- **ビルド**: Vite 6.4.1
 
 ### Infrastructure
 
 - **コンテナ**: Docker / Docker Compose
 - **IaC**: Terraform
 - **クラウド**: AWS (VPC, S3)
+- **開発 DB 管理**: phpMyAdmin
 
 ## プロジェクト構造
 
 ```
 album-battler/
-├── backend/              # Go APIサーバー
-│   ├── cmd/             # エントリーポイント
-│   ├── internal/        # アプリケーションコード
-│   │   ├── app/        # HTTPサーバー、ルーティング
-│   │   ├── domain/     # ドメインロジック（エンティティ、リポジトリ、サービス）
-│   │   ├── infra/      # インフラ実装（MySQL、S3、バリデーター）
-│   │   └── usecase/    # ビジネスロジック
-│   ├── migrations/     # DBマイグレーション
+├── backend/                      # Go APIサーバー
+│   ├── cmd/                     # エントリーポイント
+│   │   ├── main.go             # サーバー起動
+│   │   └── test-ai/            # AI機能テストツール
+│   ├── internal/                # アプリケーションコード
+│   │   ├── app/                # インターフェース層
+│   │   │   ├── http/          # HTTPハンドラー、ルーティング
+│   │   │   └── deps.go        # 依存性注入
+│   │   ├── domain/             # ドメイン層
+│   │   │   ├── entity/        # エンティティ（User, Room, Battle, Image）
+│   │   │   ├── event/         # ドメインイベント定義
+│   │   │   ├── repository/    # リポジトリインターフェース
+│   │   │   └── service/       # ドメインサービス（LLM, EventDispatcher, etc.）
+│   │   ├── infra/              # インフラ層
+│   │   │   ├── mysql/         # MySQLリポジトリ実装
+│   │   │   ├── storage/       # S3ストレージ実装
+│   │   │   ├── websocket/     # WebSocket Hub実装
+│   │   │   ├── event/         # イベントハンドラー実装
+│   │   │   ├── ai/            # Gemini統合
+│   │   │   ├── clap/          # 拍手スケジューラー
+│   │   │   └── validator/     # バリデーター実装
+│   │   └── usecase/            # ユースケース層
+│   │       ├── room/          # ルーム管理（作成、参加、退出、開始）
+│   │       ├── battle/        # バトル管理（作成、画像提出、取得）
+│   │       └── clap/          # 拍手フェーズ管理
+│   ├── migrations/             # DBマイグレーション
 │   └── Dockerfile
 │
-├── frontend/            # Next.jsフロントエンド
-│   ├── app/            # App Router
-│   ├── public/         # 静的ファイル
+├── frontend/                    # Next.jsフロントエンド
+│   ├── app/                    # App Router
+│   │   ├── layout.tsx         # WebSocketProvider統合
+│   │   ├── title/             # タイトル画面
+│   │   ├── room/              # ルーム関連画面
+│   │   ├── battle/            # バトル画面
+│   │   ├── search/            # 検索画面
+│   │   ├── api-test/          # API統合テスト画面
+│   │   └── ui-demo/           # UIデモ画面
+│   ├── src/
+│   │   ├── components/        # 共有UIコンポーネント
+│   │   │   ├── ui/           # Radix UI + Storybook対応
+│   │   │   └── ApiTest/      # テスト用コンポーネント
+│   │   ├── features/          # フィーチャーベース設計
+│   │   │   ├── room/
+│   │   │   └── api-test/
+│   │   ├── hooks/             # カスタムフック
+│   │   └── lib/
+│   │       ├── websocket/     # WebSocket統合
+│   │       └── api/           # API Client
+│   ├── .storybook/            # Storybook設定
+│   ├── public/                # 静的ファイル
 │   └── Dockerfile
 │
-├── terraform/          # インフラ定義
-│   ├── modules/        # Terraformモジュール
-│   └── README.md       # インフラドキュメント
+├── terraform/                  # インフラ定義
+│   ├── modules/               # Terraformモジュール
+│   └── README.md              # インフラドキュメント
 │
-├── docker-compose.yml  # 開発環境定義
-└── Makefile           # 開発コマンド
+├── docker-compose.yml         # 開発環境定義
+└── Makefile                   # 開発コマンド
+```
+
+## ゲームフロー
+
+Album Battler は、写真対戦ゲームのリアルタイムマルチプレイヤーシステムです。
+
+### 基本的な流れ
+
+```
+1. ルーム作成・参加
+   ↓
+2. ゲーム開始（ホストのみ）
+   ↓ [Gemini: テーマ自動生成]
+3. 画像提出フェーズ（全プレイヤー）
+   ↓ [S3: 画像保存]
+4. 拍手フェーズ（評価）
+   ↓ [Gemini: 画像評価]
+5. 結果表示
+```
+
+### 詳細フロー
+
+#### 1. ルーム管理フェーズ
+
+```
+[ユーザー] → POST /room
+         → WebSocket接続（user_id付き）
+         → POST /room/join
+         ← WebSocket: player_join_room イベント（全メンバーに配信）
+```
+
+**実装機能:**
+
+- ルーム番号自動生成（0000-9999）
+- ホスト自動選定（最初の参加者）
+- 最大 5 人まで参加可能
+- 退出時の自動ホスト交代
+
+#### 2. ゲーム開始フェーズ
+
+```
+[ホスト] → POST /room/{id}/start
+       ↓
+[Backend] → CreateBattleUseCase
+         → Gemini: テーマ生成（Function Calling）
+         → BattleRepository: 保存
+         → ClapScheduler: 1分後のタイマー設定
+         → EventDispatcher: GameStartedEvent発火
+         ← WebSocket: start_game イベント（ルーム全員に配信）
+```
+
+**Gemini テーマ生成例:**
+
+- "夏の思い出"
+- "動物の可愛い瞬間"
+- "都市の夜景"
+
+#### 3. 画像提出フェーズ
+
+```
+[プレイヤー] → POST /battle/{id}/image
+           ↓
+[Backend] → 画像バリデーション
+         → S3: 画像アップロード
+         → ImageRepository: 保存
+         → EventDispatcher: ImageSendEvent発火
+         ← WebSocket: image_send イベント（ルーム全員に配信）
+         → 全員提出判定
+         → [全員提出時] ClapScheduler.TriggerNow()
+```
+
+**画像バリデーション:**
+
+- MIME type: image/jpeg, image/png
+- サイズ上限: 5MB
+- 形式チェック
+
+#### 4. 拍手フェーズ
+
+```
+[ClapScheduler] → StartClapTimeUseCase
+               → RoomRepository: status更新（battling → clap_time）
+               → EventDispatcher: StartClapTimeEvent発火
+               ← WebSocket: start_clap_time イベント（ルーム全員に配信）
+```
+
+**トリガー条件:**
+
+- タイマー: 画像提出開始から 1 分後
+- 即時実行: 全員が画像を提出した場合
+
+#### 5. 評価・結果フェーズ（実装予定）
+
+```
+[Gemini] → 並列画像評価（最大3並列）
+        → スコア算出（0-100点）
+        → 評価理由生成
+        ← WebSocket: 結果配信
 ```
 
 ## 前提条件
@@ -127,9 +302,14 @@ NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080/ws
 # すべてのサービスを起動（ビルド含む）
 make up
 
-# または
+# すべてのサービスをバックグラウンドで起動
+make upd
+
+# または Docker Compose を直接実行
 docker compose up --build
 ```
+
+停止する場合は `make down`（ボリュームも削除する場合は `make downv`）を使用します。
 
 起動するサービス：
 
@@ -153,12 +333,35 @@ open http://localhost:3000
 ### Make コマンド
 
 ```bash
-# すべてのサービスを起動
+# すべてのサービスを起動（フォアグラウンド）
 make up
 
-# Goコードのリント（自動修正）
+# すべてのサービスをバックグラウンドで起動
+make upd
+
+# コンテナを停止
+make down
+
+# コンテナとボリュームを停止・削除
+make downv
+
+# 各サービスのログを確認
+make log
+
+# Goコードのリント（自動修正あり）
 make lint
+
+# Goコードのリント（CI 相当で自動修正なし）
+make lint-ci
+
+# Frontend Storybook を起動
+make storybook
+
+# Storybook を停止
+make storybook-stop
 ```
+
+`make lint` / `make lint-ci` は backend ディレクトリで golangci-lint を実行します。`make storybook` 系コマンドは frontend 配下で Storybook を起動・停止します。
 
 ### Backend 開発
 
@@ -193,33 +396,479 @@ npm run format
 npm run lint
 ```
 
+## WebSocket API 仕様
+
+### 接続方法
+
+```
+WebSocket URL: ws://localhost:8080/ws?user_id={userId}
+```
+
+**パラメータ:**
+
+- `user_id`: ユーザー ID（UUID 形式）
+
+### メッセージタイプ
+
+WebSocket は 5 種類のメッセージチャネルをサポート:
+
+| チャネル              | 送信元   | 配信先             | 用途                 |
+| --------------------- | -------- | ------------------ | -------------------- |
+| `broadcast`           | ユーザー | 全接続クライアント | 全体ブロードキャスト |
+| `systemBroadcast`     | システム | 全接続クライアント | システム通知         |
+| `roomBroadcast`       | ユーザー | ルーム内メンバー   | ルーム内通信         |
+| `systemRoomBroadcast` | システム | ルーム内メンバー   | システムイベント通知 |
+| `userMessage`         | システム | 特定ユーザー       | 個別通知             |
+
+### イベント一覧
+
+#### 1. player_join_room
+
+ユーザーがルームに参加した時に発火
+
+```json
+{
+  "type": "player_join_room",
+  "data": {
+    "room_id": "uuid",
+    "user_id": "uuid",
+    "user_name": "string",
+    "room_members": ["uuid1", "uuid2"]
+  }
+}
+```
+
+#### 2. player_leave_room
+
+ユーザーがルームから退出した時に発火
+
+```json
+{
+  "type": "player_leave_room",
+  "data": {
+    "room_id": "uuid",
+    "user_id": "uuid",
+    "new_host_id": "uuid or null"
+  }
+}
+```
+
+#### 3. start_game
+
+ゲームが開始された時に発火
+
+```json
+{
+  "type": "start_game",
+  "data": {
+    "room_id": "uuid",
+    "battle_id": "uuid",
+    "theme": "string",
+    "started_at": "timestamp"
+  }
+}
+```
+
+#### 4. image_send
+
+プレイヤーが画像を提出した時に発火
+
+```json
+{
+  "type": "image_send",
+  "data": {
+    "battle_id": "uuid",
+    "user_id": "uuid",
+    "image_url": "string",
+    "submitted_count": 3,
+    "total_players": 5
+  }
+}
+```
+
+#### 5. start_clap_time
+
+拍手フェーズが開始された時に発火
+
+```json
+{
+  "type": "start_clap_time",
+  "data": {
+    "room_id": "uuid",
+    "battle_id": "uuid",
+    "clap_started_at": "timestamp"
+  }
+}
+```
+
+### Frontend 統合例
+
+```typescript
+// WebSocket接続
+const ws = new WebSocket(`ws://localhost:8080/ws?user_id=${userId}`);
+
+// イベント購読
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+
+  switch (message.type) {
+    case "start_game":
+      console.log("Game started:", message.data);
+      break;
+    case "image_send":
+      console.log("Image submitted:", message.data);
+      break;
+    // ...
+  }
+};
+
+// メッセージ送信
+ws.send(
+  JSON.stringify({
+    type: "roomBroadcast",
+    roomId: "uuid",
+    message: "Hello!",
+  })
+);
+```
+
+## AI 機能の詳細
+
+### Gemini 2.5 Flash 統合
+
+Album Battler は Google Gemini 2.5 Flash を使用して、ゲーム体験を向上させています。
+
+#### 1. テーマ自動生成
+
+**機能:** バトル開始時にテーマを自動生成
+
+**実装方法:**
+
+- Function Calling 使用
+- 構造化出力（JSON Schema）
+- 自動リトライ（最大 5 回）
+
+**生成プロンプト例:**
+
+```
+写真対戦ゲームのテーマを1つ生成してください。
+条件:
+- 30文字以内
+- 創造性を刺激する具体的なテーマ
+- 季節や感情、シチュエーションを含む
+```
+
+**出力例:**
+
+```json
+{
+  "theme": "雨上がりの虹と笑顔"
+}
+```
+
+**コード位置:** `backend/internal/infra/ai/gemini.go:GenerateTheme()`
+
+#### 2. 画像評価（実装予定）
+
+**機能:** 提出された画像をテーマに基づいて評価
+
+**実装方法:**
+
+- マルチモーダル対応（画像 + テキスト）
+- 並列処理（最大 3 画像同時評価）
+- スコアリング（0-100 点）
+- 評価理由生成
+
+**評価プロンプト例:**
+
+```
+テーマ「{theme}」に対して、この画像を評価してください。
+
+評価基準:
+- テーマとの一致度 (40点)
+- 創造性 (30点)
+- 写真の質 (30点)
+
+出力形式:
+- score: 0-100
+- reason: 評価理由（100文字以内）
+```
+
+**出力例:**
+
+```json
+{
+  "score": 85,
+  "reason": "虹と笑顔が見事に捉えられており、テーマを完璧に表現しています。構図も美しい。"
+}
+```
+
+**コード位置:** `backend/internal/infra/ai/gemini.go:JudgeImage()`
+
+#### 3. エラーハンドリング
+
+**リトライ戦略:**
+
+- テーマ生成: 最大 5 回リトライ
+- 画像評価: エラー時はスコア 0 で記録
+
+**タイムアウト:**
+
+- デフォルト: 30 秒
+- Function Calling: 60 秒
+
+**ログ記録:**
+
+- トークン使用量追跡
+- エラー詳細ログ
+
+## データベーススキーマ
+
+### ER 図
+
+```
+┌─────────────┐
+│    users    │
+├─────────────┤
+│ id (PK)     │───┐
+│ name        │   │
+│ icon_url    │   │
+│ hashed_pass │   │
+│ created_at  │   │
+└─────────────┘   │
+                  │
+                  │  ┌──────────────┐
+                  ├──│  room_users  │ (多対多)
+                  │  ├──────────────┤
+                  │  │ room_id (FK) │
+                  │  │ user_id (FK) │
+                  │  │ joined_at    │
+                  │  └──────────────┘
+                  │         │
+┌─────────────┐   │         │
+│    rooms    │───┘         │
+├─────────────┤             │
+│ id (PK)     │─────────────┘
+│ room_number │
+│ host_user_id│ (FK → users)
+│ created_at  │
+│ expired_at  │
+│ status      │ (waiting/full/battling/clap_time/result/closed)
+│ max_users   │
+└─────────────┘
+      │
+      │
+      │  ┌─────────────┐
+      └──│   battles   │
+         ├─────────────┤
+         │ id (PK)     │───┐
+         │ room_id (FK)│   │
+         │ started_at  │   │
+         │ theme       │   │
+         └─────────────┘   │
+                           │
+                           │  ┌────────────────┐
+                           ├──│ battle_users   │ (多対多)
+                           │  ├────────────────┤
+                           │  │ battle_id (FK) │
+                           │  │ user_id (FK)   │
+                           │  └────────────────┘
+                           │
+                           │  ┌─────────────┐
+                           └──│   images    │
+                              ├─────────────┤
+                              │ id (PK)     │
+                              │ user_id (FK)│
+                              │ battle_id   │
+                              │ image_url   │
+                              │ uploaded_at │
+                              │ ai_score    │ (0-100 or NULL)
+                              │ user_score  │ (0+ or NULL)
+                              └─────────────┘
+```
+
+### テーブル詳細
+
+#### users
+
+ユーザー情報
+
+| カラム          | 型           | 制約     | 説明             |
+| --------------- | ------------ | -------- | ---------------- |
+| id              | CHAR(36)     | PK       | UUID             |
+| name            | VARCHAR(50)  | NOT NULL | ユーザー名       |
+| icon_url        | TEXT         | NOT NULL | アイコン画像 URL |
+| hashed_password | VARCHAR(255) | NOT NULL | bcrypt ハッシュ  |
+| created_at      | DATETIME     | NOT NULL | 作成日時         |
+
+#### rooms
+
+ゲームルーム
+
+| カラム       | 型       | 制約                    | 説明           |
+| ------------ | -------- | ----------------------- | -------------- |
+| id           | CHAR(36) | PK                      | UUID           |
+| room_number  | INT      | NOT NULL, CHECK(0-9999) | 4 桁ルーム番号 |
+| host_user_id | CHAR(36) | FK(users)               | ホストユーザー |
+| status       | ENUM     | NOT NULL                | ルーム状態     |
+| max_users    | INT      | NOT NULL, DEFAULT 5     | 最大参加者数   |
+| created_at   | DATETIME | NOT NULL                | 作成日時       |
+| expired_at   | DATETIME | NULL                    | 有効期限       |
+
+**status 値:**
+
+- `waiting`: 待機中
+- `full`: 満員
+- `battling`: バトル中（画像提出フェーズ）
+- `clap_time`: 拍手フェーズ
+- `result`: 結果表示中
+- `closed`: 終了
+
+#### battles
+
+バトルセッション
+
+| カラム     | 型           | 制約      | 説明              |
+| ---------- | ------------ | --------- | ----------------- |
+| id         | CHAR(36)     | PK        | UUID              |
+| room_id    | CHAR(36)     | FK(rooms) | ルーム ID         |
+| started_at | DATETIME     | NOT NULL  | 開始日時          |
+| theme      | VARCHAR(100) | NOT NULL  | Gemini 生成テーマ |
+
+#### images
+
+提出画像
+
+| カラム      | 型       | 制約               | 説明                     |
+| ----------- | -------- | ------------------ | ------------------------ |
+| id          | CHAR(36) | PK                 | UUID                     |
+| user_id     | CHAR(36) | FK(users)          | 提出者                   |
+| battle_id   | CHAR(36) | FK(battles)        | バトル ID                |
+| image_url   | TEXT     | NOT NULL           | S3 URL                   |
+| uploaded_at | DATETIME | NOT NULL           | アップロード日時         |
+| ai_score    | FLOAT    | NULL, CHECK(0-100) | AI スコア                |
+| user_score  | INT      | NULL, CHECK(0+)    | ユーザースコア（拍手数） |
+
+#### room_users / battle_users
+
+多対多中間テーブル（参加者管理）
+
 ## アーキテクチャ
 
-### Backend: クリーンアーキテクチャ
+### Backend: クリーンアーキテクチャ + イベント駆動
 
 ```
 ┌─────────────────────────────────────────┐
-│           app/http (Interface)          │
-│  HTTPハンドラー、ルーティング、レスポンス  │
+│       app/http (Interface Layer)        │
+│  HTTPハンドラー、ルーティング、WebSocket  │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│            usecase (Use Case)           │
+│        usecase (Use Case Layer)         │
 │      ビジネスロジック、オーケストレーション  │
+│   • Room管理 • Battle管理 • Clap管理    │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│          domain (Domain Layer)          │
-│  エンティティ、リポジトリIF、ドメインサービス │
+│         domain (Domain Layer)           │
+│  • エンティティ（User, Room, Battle）    │
+│  • リポジトリIF                          │
+│  • ドメインサービス                       │
+│  • ドメインイベント                       │
+│  • イベントディスパッチャー               │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│      infra (Infrastructure Layer)       │
-│   MySQL実装、S3実装、バリデーター実装    │
+│    infra (Infrastructure Layer)         │
+│  • MySQL（リポジトリ実装）               │
+│  • S3（ストレージ実装）                  │
+│  • WebSocket Hub                        │
+│  • EventDispatcher実装                  │
+│  • Gemini統合                           │
+│  • ClapScheduler                        │
 └─────────────────────────────────────────┘
 ```
 
 **依存関係の方向**: 外側 → 内側（Domain 層は外部に依存しない）
+
+### イベント駆動アーキテクチャ
+
+#### 仕組み
+
+```
+[UseCase] → Entity.RecordEvent(event)
+         → UseCase完了後
+         → EventDispatcher.Dispatch(events)
+         → EventHandler実行
+         → WebSocket配信 / DB更新 / 外部API呼び出し
+```
+
+#### 登録済みイベントハンドラー
+
+| イベント              | ハンドラー             | 処理内容                           |
+| --------------------- | ---------------------- | ---------------------------------- |
+| `GameStartedEvent`    | GameStartedHandler     | WebSocket: ルーム全員に配信        |
+| `UserJoinedRoomEvent` | UserJoinedRoomHandler  | WebSocket: ルームメンバーに配信    |
+| `UserLeftRoomEvent`   | UserLeftRoomHandler    | WebSocket: 退出通知 + 新ホスト選定 |
+| `ImageSendEvent`      | ImageSendHandler       | WebSocket: 画像提出通知            |
+| `StartClapTimeEvent`  | ClapTimeStartedHandler | WebSocket: 拍手フェーズ開始通知    |
+
+#### 利点
+
+- **疎結合**: UseCase とインフラ層の分離
+- **拡張性**: 新規イベント・ハンドラーを簡単に追加
+- **テスタビリティ**: イベント記録をモック可能
+- **監査**: 全ドメインイベントをログ記録可能
+
+### WebSocket Hub パターン
+
+#### 構造
+
+```
+                ┌─────────────┐
+                │  WebSocket  │
+                │     Hub     │
+                └──────┬──────┘
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+   ┌────▼────┐    ┌───▼────┐    ┌───▼────┐
+   │ Client1 │    │Client2 │    │Client3 │
+   │(Room A) │    │(Room A)│    │(Room B)│
+   └─────────┘    └────────┘    └────────┘
+```
+
+**機能:**
+
+- クライアント登録・解除
+- ルーム単位のメッセージルーティング
+- ブロードキャスト（全体/ルーム/個別）
+- 接続状態管理
+
+**コード位置:** `backend/internal/infra/websocket/hub.go`
+
+### 非同期スケジューリング（ClapScheduler）
+
+#### 仕組み
+
+```
+[ゲーム開始] → Schedule(1分後, battleID)
+           → Goroutine起動
+           → time.After(1分) 待機
+           → StartClapTimeUseCase実行
+
+[全員提出完了] → TriggerNow(battleID)
+             → 即座にタイマーキャンセル
+             → StartClapTimeUseCase実行
+```
+
+**特徴:**
+
+- 時間ベーストリガー: 1 分後自動実行
+- 即時トリガー: 全員提出時は待機せず実行
+- スレッドセーフ: sync.Mutex で排他制御
+
+**コード位置:** `backend/internal/infra/clap/clap_scheduler.go`
 
 ### 主要コンポーネント
 
@@ -227,17 +876,41 @@ npm run lint
 
 - **Entity**: `User`, `Room`, `Battle`, `Image`
 - **Repository**: データ永続化のインターフェース
-- **Service**: ドメイン固有のロジック（画像検証、ストレージ）
+- **Service**:
+  - `ImageValidator`: 画像検証
+  - `ImageStorage`: S3 ストレージ IF
+  - `LLMService`: Gemini 統合 IF
+  - `EventDispatcher`: イベント配信 IF
+  - `ClapScheduler`: 拍手スケジューラー IF
 
 #### Use Case Layer
 
-- `UploadAlbumImageUseCase`: 画像アップロードビジネスロジック
+**Room 管理:**
+
+- `CreateRoomUseCase`: ルーム作成
+- `JoinRoomUseCase`: ルーム参加
+- `LeaveRoomUseCase`: ルーム退出
+- `GetRoomUseCase`: ルーム情報取得
+- `StartGameUseCase`: ゲーム開始
+
+**Battle 管理:**
+
+- `CreateBattleUseCase`: バトル作成（Gemini 統合）
+- `GetBattleUseCase`: バトル情報取得
+- `ImageSendUseCase`: 画像提出
+
+**Clap 管理:**
+
+- `StartClapTimeUseCase`: 拍手フェーズ開始
 
 #### Infrastructure Layer
 
-- **MySQL**: リポジトリ実装
+- **MySQL**: リポジトリ実装（5 種類）
 - **S3**: 画像ストレージ実装
+- **WebSocket**: Hub + EventPublisher 実装
+- **Gemini**: LLMService 実装
 - **Validator**: 画像バリデーション実装
+- **ClapScheduler**: 非同期タイマー実装
 
 ## インフラ管理
 
