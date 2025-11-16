@@ -9,6 +9,7 @@ type UseRoomResult = {
   joinRoom: (userId: string, roomNumber: number) => Promise<boolean>;
   leaveRoom: (roomId: string, userId: string) => Promise<boolean>;
   startGame: (roomId: string, userId: string) => Promise<boolean>;
+  getBattleID: (roomId: string) => Promise<string | null>;
   loading: boolean;
   error: string | null;
 };
@@ -85,5 +86,29 @@ export function useRoom(): UseRoomResult {
     }
   };
 
-  return { createRoom, joinRoom, leaveRoom, startGame, loading, error };
+  const getBattleID = async (roomId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await roomApi.getBattleID(roomId);
+      return result.BattleID;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to get battle ID";
+      setError(message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    startGame,
+    getBattleID,
+    loading,
+    error,
+  };
 }

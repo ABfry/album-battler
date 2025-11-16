@@ -282,16 +282,18 @@ func toDBRoomStatus(status entity.RoomStatus) (string, error) {
 
 var (
 	dbToEntityRoomStatus = map[string]entity.RoomStatus{
-		"waiting":  entity.WaitJoin,
-		"full":     entity.FullyJoined,
-		"battling": entity.InBattle,
-		"result":   entity.Result,
-		"closed":   entity.Closed,
+		"waiting":   entity.WaitJoin,
+		"full":      entity.FullyJoined,
+		"battling":  entity.InBattle,
+		"clap_time": entity.ClapTime,
+		"result":    entity.Result,
+		"closed":    entity.Closed,
 	}
 	entityToDBRoomStatus = map[entity.RoomStatus]string{
 		entity.WaitJoin:    "waiting",
 		entity.FullyJoined: "full",
 		entity.InBattle:    "battling",
+		entity.ClapTime:    "clap_time",
 		entity.Result:      "result",
 		entity.Closed:      "closed",
 	}

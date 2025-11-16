@@ -14,6 +14,7 @@ const (
 	WaitJoin RoomStatus = iota
 	FullyJoined
 	InBattle
+	ClapTime
 	Result
 	Closed
 )
@@ -23,17 +24,19 @@ var roomStatusStrings = map[RoomStatus]string{
 	WaitJoin:    "waiting",
 	FullyJoined: "full",
 	InBattle:    "battling",
+	ClapTime:    "clap_time",
 	Result:      "result",
 	Closed:      "closed",
 }
 
 // stringToRoomStatus は文字列から RoomStatus への変換マップ
 var stringToRoomStatus = map[string]RoomStatus{
-	"waiting":  WaitJoin,
-	"full":     FullyJoined,
-	"battling": InBattle,
-	"result":   Result,
-	"closed":   Closed,
+	"waiting":   WaitJoin,
+	"full":      FullyJoined,
+	"battling":  InBattle,
+	"clap_time": ClapTime,
+	"result":    Result,
+	"closed":    Closed,
 }
 
 // String はデバッグやログ出力用の文字列表現を返す
@@ -77,6 +80,8 @@ func GetValidTransitions(status RoomStatus) []RoomStatus {
 	case FullyJoined:
 		return []RoomStatus{WaitJoin, InBattle}
 	case InBattle:
+		return []RoomStatus{ClapTime}
+	case ClapTime:
 		return []RoomStatus{Result}
 	case Result:
 		return []RoomStatus{}

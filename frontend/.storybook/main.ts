@@ -11,6 +11,22 @@ const config: StorybookConfig = {
   core: {
     disableTelemetry: true,
   },
+  viteFinal: async (config) => {
+    // Mock Next.js Image for Storybook
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "next/image": join(__dirname, "next-image-stub.tsx"),
+    };
+
+    // Define process.env for Next.js compatibility
+    config.define = {
+      ...config.define,
+      "process.env": {},
+    };
+
+    return config;
+  },
 };
 
 export default config;
