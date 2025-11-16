@@ -30,42 +30,42 @@ func NewJoinRoomUseCase(
 	}
 }
 
-func (uc *JoinRoomUseCase) Execute(ctx context.Context, input JoinRoomInput) error {
+func (uc *JoinRoomUseCase) Execute(ctx context.Context, input JoinRoomInput) (*uuid.UUID, error) {
 	// 部屋を取得
 	room, err := uc.roomRepo.FindByRoomNumber(ctx, input.RoomNumber)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if room == nil {
-		return errors.New("room not found")
+		return nil, errors.New("room not found")
 	}
 
 	// 期限チェック
 	if room.IsExpired() {
-		return errors.New("room has expired")
+		return nil, errors.New("room has expired")
 	}
 
 	// 満員チェック
 	if room.IsFull() {
-		return errors.New("room is full")
+		return nil, errors.New("room is full")
 	}
 
 	// ユーザーを追加 (ドメインロジック + イベント記録)
 	if err := room.AddUser(input.UserID); err != nil {
-		return err
+		return nil, err
 	}
 
 	// 永続化
 	if err := uc.roomRepo.Save(ctx, room); err != nil {
-		return err
+		return nil, err
 	}
 
 	// ドメインイベントを配信
 	events := room.PopEvents()
 	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
 		fmt.Println("failed to dispatch domain events", "error", err)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &room.ID, nil
 }
