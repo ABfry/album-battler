@@ -1,14 +1,31 @@
+import { useEffect, useRef } from "react";
+
 type Props = {
   onJoinRoom: (userId: string, roomNumber: number) => void;
   loading: boolean;
   error: string | null;
   success: boolean;
+  autoFillRoomNumber?: number | null;
 };
 
 /**
  * 部屋参加フォーム (Presentational)
  */
-export function RoomJoinForm({ onJoinRoom, loading, error, success }: Props) {
+export function RoomJoinForm({
+  onJoinRoom,
+  loading,
+  error,
+  success,
+  autoFillRoomNumber,
+}: Props) {
+  const roomNumberInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (autoFillRoomNumber && roomNumberInputRef.current) {
+      roomNumberInputRef.current.value = String(autoFillRoomNumber);
+    }
+  }, [autoFillRoomNumber]);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -36,6 +53,7 @@ export function RoomJoinForm({ onJoinRoom, loading, error, success }: Props) {
         <div>
           <label className="block text-sm font-medium">Room Number:</label>
           <input
+            ref={roomNumberInputRef}
             name="roomNumber"
             type="number"
             defaultValue="1"
