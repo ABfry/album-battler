@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { RoomCreateForm } from "@/src/components/ApiTest/RoomCreateForm";
 import { RoomJoinForm } from "@/src/components/ApiTest/RoomJoinForm";
 import { RoomInfo } from "@/src/components/ApiTest/RoomInfo";
@@ -43,9 +44,19 @@ export function ApiTestView({
   onRefetch,
 }: ApiTestViewProps) {
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
-        <h1 className="mb-8 text-3xl font-bold">REST API Test Page</h1>
+        <h1 className="mx-auto mb-8 flex flex-col items-center justify-center text-3xl font-bold">
+          <div className="relative flex aspect-963/486 h-32 items-center justify-center">
+            <Image
+              src="/album-battler-logo.png"
+              alt="Album Battler Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
+          <span className="w-full text-center">REST API Test Page</span>
+        </h1>
 
         <div className="mb-6 rounded-lg bg-blue-50 p-4">
           <h2 className="mb-2 font-semibold">📝 使い方</h2>
