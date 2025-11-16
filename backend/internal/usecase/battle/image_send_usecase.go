@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ type ImageSendUseCase struct {
 	imageValidator service.ImageValidator
 	imageStorage   service.ImageStorage
 	dispatcher     service.EventDispatcher
+	clapScheduler  service.ClapScheduler
 }
 
 func NewImageSendUseCase(
@@ -35,6 +37,7 @@ func NewImageSendUseCase(
 	imageValidator service.ImageValidator,
 	imageStorage service.ImageStorage,
 	dispatcher service.EventDispatcher,
+	clapScheduler service.ClapScheduler,
 ) *ImageSendUseCase {
 	return &ImageSendUseCase{
 		battleRepo:     battleRepo,
@@ -42,6 +45,7 @@ func NewImageSendUseCase(
 		imageValidator: imageValidator,
 		imageStorage:   imageStorage,
 		dispatcher:     dispatcher,
+		clapScheduler:  clapScheduler,
 	}
 }
 
@@ -82,6 +86,12 @@ func (uc *ImageSendUseCase) Execute(ctx context.Context, input ImageSendInput) e
 		return errors.New("battle not found")
 	}
 
+	// battle内のユーザか確認
+	if !slices.Contains(battle.UserIDs, input.UserID) {
+		fmt.Printf("User %s is not in battle %s", input.UserID, input.BattleID)
+		return errors.New("user is not in battle")
+	}
+
 	// ドメインイベントを記録
 	battle.RecordImageSent(input.UserID, imageURL)
 
@@ -96,6 +106,26 @@ func (uc *ImageSendUseCase) Execute(ctx context.Context, input ImageSendInput) e
 	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
 		fmt.Println("failed to dispatch domain events", "error", err)
 		return err
+	}
+
+	// 投稿した画像数を集計
+	submittedCount, err := uc.imageRepo.CountDistinctUsersByBattleID(ctx, battle.ID)
+	if err != nil {
+		fmt.Printf("Failed to count submitted images: %v", err)
+		return errors.New("failed to count submissions")
+	}
+
+	// デバッグ
+	// fmt.Println("submittedCount", submittedCount)
+	// fmt.Println("battle.UserIDs", len(battle.UserIDs))
+	// fmt.Println("clapScheduler", uc.clapScheduler != nil)
+
+	// 投稿した画像数がユーザー数と同じか、拍手スケジューラが設定されている場合は拍手フェーズへ移行
+	if submittedCount >= len(battle.UserIDs) && uc.clapScheduler != nil {
+		if err := uc.clapScheduler.TriggerNow(ctx, battle.ID); err != nil {
+			fmt.Printf("Failed to start clap time: %v", err)
+			return errors.New("failed to start clap time")
+		}
 	}
 
 	return nil

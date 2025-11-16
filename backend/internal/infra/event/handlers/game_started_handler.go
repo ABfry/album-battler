@@ -30,7 +30,7 @@ func (h *GameStartedHandler) Handle(ctx context.Context, evt event.DomainEvent) 
 
 	// WebSocket通知を部屋のメンバーに送信
 	broadcastEvent := service.BroadcastEvent{
-		Type: "start_game",
+		Type: e.EventType(),
 		Payload: map[string]interface{}{
 			"room_id": e.RoomID.String(),
 		},
