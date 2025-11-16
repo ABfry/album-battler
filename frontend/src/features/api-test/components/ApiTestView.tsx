@@ -1,8 +1,9 @@
-import { RoomCreateForm } from "@/src/components/ApiTest/RoomCreateForm";
-import { RoomJoinForm } from "@/src/components/ApiTest/RoomJoinForm";
-import { RoomInfo } from "@/src/components/ApiTest/RoomInfo";
-import { RoomLeaveButton } from "@/src/components/ApiTest/RoomLeaveButton";
-import { GameStartButton } from "@/src/components/ApiTest/GameStartButton";
+import { RoomCreateForm } from "./RoomCreateForm";
+import { RoomJoinForm } from "./RoomJoinForm";
+import { RoomInfo } from "./RoomInfo";
+import { RoomLeaveButton } from "./RoomLeaveButton";
+import { GameStartButton } from "./GameStartButton";
+import { BattleIDInfo } from "./BattleIDInfo";
 import type { CreateRoomResponse, Room } from "@/src/lib/api/types";
 
 type ApiTestViewProps = {
@@ -15,6 +16,7 @@ type ApiTestViewProps = {
   joinSuccess: boolean;
   leaveSuccess: boolean;
   startSuccess: boolean;
+  battleID: string | null;
   onCreateRoom: (userId: string) => Promise<void>;
   onJoinRoom: (userId: string, roomNumber: number) => Promise<void>;
   onLeaveRoom: (roomId: string, userId: string) => Promise<void>;
@@ -36,6 +38,7 @@ export function ApiTestView({
   joinSuccess,
   leaveSuccess,
   startSuccess,
+  battleID,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
@@ -102,6 +105,9 @@ export function ApiTestView({
             error={error}
             success={startSuccess}
           />
+
+          {/* 6. バトルID表示 */}
+          <BattleIDInfo battleID={battleID} />
         </div>
 
         {/* デバッグ情報 */}

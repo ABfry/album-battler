@@ -19,8 +19,15 @@ import type {
  */
 export function ApiTestPage() {
   // 部屋作成・参加・退出・ゲーム開始の操作
-  const { createRoom, joinRoom, leaveRoom, startGame, loading, error } =
-    useRoom();
+  const {
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    startGame,
+    getBattleID,
+    loading,
+    error,
+  } = useRoom();
 
   // WebSocket接続
   const { connect, disconnect } = useWebSocket();
@@ -43,6 +50,7 @@ export function ApiTestPage() {
   const [joinSuccess, setJoinSuccess] = useState(false);
   const [leaveSuccess, setLeaveSuccess] = useState(false);
   const [startSuccess, setStartSuccess] = useState(false);
+  const [battleID, setBattleID] = useState<string | null>(null);
 
   // WebSocket接続の初期化
   useEffect(() => {
@@ -70,9 +78,14 @@ export function ApiTestPage() {
 
     const unsubscribeStart = subscribe(
       "start_game",
-      (payload: StartGamePayload) => {
+      async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
         refetch();
+        // Battle IDをREST APIで取得
+        if (createdRoom) {
+          const id = await getBattleID(createdRoom.room_id);
+          setBattleID(id);
+        }
       }
     );
 
@@ -81,7 +94,7 @@ export function ApiTestPage() {
       unsubscribeLeave();
       unsubscribeStart();
     };
-  }, [subscribe, refetch]);
+  }, [subscribe, refetch, createdRoom, getBattleID]);
 
   // 1. 部屋作成
   const handleCreateRoom = async (userId: string) => {
@@ -129,6 +142,7 @@ export function ApiTestPage() {
       joinSuccess={joinSuccess}
       leaveSuccess={leaveSuccess}
       startSuccess={startSuccess}
+      battleID={battleID}
       onCreateRoom={handleCreateRoom}
       onJoinRoom={handleJoinRoom}
       onLeaveRoom={handleLeaveRoom}
