@@ -8,7 +8,7 @@ type Props = {
  */
 export function BattleIDInfo({ battleID }: Props) {
   return (
-    <div className="rounded-lg border p-4 shadow-sm">
+    <div className="rounded-lg border bg-white p-4 shadow-sm">
       <h2 className="mb-4 text-xl font-bold">6. Get Battle ID</h2>
 
       <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">

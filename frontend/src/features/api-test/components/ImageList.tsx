@@ -13,7 +13,7 @@ type Props = {
  */
 export function ImageList({ images, loading, error, onRefetch }: Props) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border bg-white p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">10. Battle Images</h2>
         <button
