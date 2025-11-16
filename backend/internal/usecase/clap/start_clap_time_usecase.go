@@ -1,0 +1,163 @@
+package clap
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/ABfry/album-battler/backend/internal/domain/entity"
+	"github.com/ABfry/album-battler/backend/internal/domain/repository"
+	"github.com/ABfry/album-battler/backend/internal/domain/service"
+	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
+	"github.com/google/uuid"
+)
+
+type StartClapTimeInput struct {
+	BattleID uuid.UUID
+}
+
+type StartClapTimeUseCase struct {
+	battleRepo repository.BattleRepository
+	roomRepo   repository.RoomRepository
+	imageRepo  repository.ImageRepository
+	dispatcher service.EventDispatcher
+	llmClient  llm.LLMClient
+}
+
+func NewStartClapTimeUseCase(
+	battleRepo repository.BattleRepository,
+	roomRepo repository.RoomRepository,
+	imageRepo repository.ImageRepository,
+	dispatcher service.EventDispatcher,
+	llmClient llm.LLMClient,
+) *StartClapTimeUseCase {
+	return &StartClapTimeUseCase{
+		battleRepo: battleRepo,
+		roomRepo:   roomRepo,
+		imageRepo:  imageRepo,
+		dispatcher: dispatcher,
+		llmClient:  llmClient,
+	}
+}
+
+func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTimeInput) error {
+	// fmt.Println("StartClapTimeUseCase Execute", input.BattleID)
+	// battleを取得
+	battle, err := uc.battleRepo.FindByID(ctx, input.BattleID)
+	if err != nil {
+		fmt.Printf("Failed to find battle: %v", err)
+		return errors.New("failed to find battle")
+	}
+	if battle == nil {
+		fmt.Printf("Battle not found: %s", input.BattleID)
+		return errors.New("battle not found")
+	}
+
+	// roomを取得
+	room, err := uc.roomRepo.FindByID(ctx, battle.RoomID)
+	if err != nil {
+		fmt.Printf("Failed to find room: %v", err)
+		return errors.New("failed to find room")
+	}
+	if room == nil {
+		fmt.Printf("Room not found: %s", battle.RoomID)
+		return errors.New("room not found")
+	}
+
+	// roomのステータスを更新
+	if err := room.ChangeStatus(entity.ClapTime); err != nil {
+		fmt.Printf("Failed to change room status: %v", err)
+		return errors.New("failed to change room status")
+	}
+
+	// roomを保存
+	if err := uc.roomRepo.Save(ctx, room); err != nil {
+		fmt.Printf("Failed to save room: %v", err)
+		return errors.New("failed to save room")
+	}
+
+	// ドメインイベントを記録
+	battle.RecordClapTimeStarted()
+
+	// ドメインイベントを配信
+	events := battle.PopEvents()
+	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
+		fmt.Println("failed to dispatch domain events", "error", err)
+		return err
+	}
+
+	// 非同期で画像採点をする
+	go func(battleID uuid.UUID) {
+		// 親contextから独立
+		judgeCtx := context.Background()
+		if err := uc.JudgeImageAsync(judgeCtx, battleID); err != nil {
+			fmt.Printf("Failed to judge images asynchronously for battle %s: %v\n", battleID, err)
+		}
+	}(input.BattleID)
+
+	return nil
+}
+
+func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uuid.UUID) error {
+	fmt.Printf("Starting async image judging for battle: %s\n", battleID)
+
+	// バトル情報を取得（テーマ取得のため）
+	battle, err := uc.battleRepo.FindByID(ctx, battleID)
+	if err != nil {
+		return fmt.Errorf("failed to find battle: %w", err)
+	}
+	if battle == nil {
+		return fmt.Errorf("battle not found: %s", battleID)
+	}
+
+	// 提出された画像一覧を取得
+	images, err := uc.imageRepo.FindImagesByBattleID(ctx, battleID)
+	if err != nil {
+		return fmt.Errorf("failed to find images: %w", err)
+	}
+
+	if len(images) == 0 {
+		fmt.Printf("No images to judge for battle: %s\n", battleID)
+		return nil
+	}
+
+	// 画像URL一覧を抽出
+	imageURLs := make([]string, len(images))
+	for i, img := range images {
+		imageURLs[i] = img.ImageURL
+	}
+
+	// LLMクライアントで画像を評価（並列実行）
+	judgeReq := &llm.ImageJudgeRequest{
+		Theme:     battle.Theme,
+		ImageURLs: imageURLs,
+	}
+
+	judgeResp, err := uc.llmClient.JudgeImage(ctx, judgeReq)
+	if err != nil {
+		return fmt.Errorf("failed to judge images: %w", err)
+	}
+
+	// 各画像のAIScoreを更新してDB保存
+	for i, result := range judgeResp.Results {
+		img := images[i]
+
+		// スコアを設定
+		if err := img.SetScore(float64(result.Score), 0); err != nil {
+			fmt.Printf("Warning: failed to set score for image %s: %v\n", img.ID, err)
+			continue
+		}
+
+		// DBに保存
+		if err := uc.imageRepo.Save(ctx, img); err != nil {
+			fmt.Printf("Warning: failed to save image %s: %v\n", img.ID, err)
+			continue
+		}
+
+		// デバッグ
+		fmt.Printf("Image %s scored: %d (reason: %s)\n", img.ID, result.Score, result.Reason)
+	}
+
+	fmt.Printf("Completed judging %d images for battle: %s\n", len(images), battleID)
+	return nil
+}

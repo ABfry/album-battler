@@ -10,15 +10,20 @@ import (
 	"strings"
 	"time"
 
+	domainEvent "github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
 	"github.com/ABfry/album-battler/backend/internal/infra/ai"
+	clapinfra "github.com/ABfry/album-battler/backend/internal/infra/clap"
 	"github.com/ABfry/album-battler/backend/internal/infra/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
 	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
+	"github.com/ABfry/album-battler/backend/internal/infra/storage"
+	"github.com/ABfry/album-battler/backend/internal/infra/validator"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
+	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
 
@@ -45,6 +50,12 @@ type Dependencies struct {
 	// AI関連
 	LLMClient llm.LLMClient
 
+	// Image関連
+	ImageValidator service.ImageValidator
+	ImageStorage   service.ImageStorage
+
+	ClapScheduler service.ClapScheduler
+
 	// Usecase
 	CreateRoomUseCase *room.CreateRoomUseCase
 	JoinRoomUseCase   *room.JoinRoomUseCase
@@ -55,6 +66,10 @@ type Dependencies struct {
 	CreateBattleUseCase *battle.CreateBattleUseCase
 	GetBattleUseCase    *battle.GetBattleUseCase
 	GetBattleIDUseCase  *battle.GetBattleIDUseCase
+	GetImageUseCase     *battle.GetImageUseCase
+	ImageSendUseCase    *battle.ImageSendUseCase
+
+	StartClapTimeUseCase *clap.StartClapTimeUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -90,6 +105,12 @@ func NewDependencies() (*Dependencies, error) {
 	if err := initLLM(deps); err != nil {
 		_ = deps.Close()
 		return nil, fmt.Errorf("initialize llm client: %w", err)
+	}
+
+	// Image関連の初期化
+	if err := initImage(deps); err != nil {
+		_ = deps.Close()
+		return nil, fmt.Errorf("initialize image services: %w", err)
 	}
 
 	// Usecase関連の初期化
@@ -128,18 +149,28 @@ func initEvents(deps *Dependencies) error {
 		deps.RoomManager,
 		deps.EventPublisher,
 	)
-	dispatcherImpl.Register("user_joined_room", userJoinedHandler)
+	dispatcherImpl.Register(domainEvent.UserJoinedRoomEvent{}.EventType(), userJoinedHandler)
 
 	userLeftHandler := handlers.NewUserLeftRoomHandler(
 		deps.RoomManager,
 		deps.EventPublisher,
 	)
-	dispatcherImpl.Register("user_left_room", userLeftHandler)
+	dispatcherImpl.Register(domainEvent.UserLeftRoomEvent{}.EventType(), userLeftHandler)
 
 	gameStartedHandler := handlers.NewGameStartedHandler(
 		deps.EventPublisher,
 	)
-	dispatcherImpl.Register("game_started", gameStartedHandler)
+	dispatcherImpl.Register(domainEvent.GameStartedEvent{}.EventType(), gameStartedHandler)
+
+	imageSendHandler := handlers.NewImageSendHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.ImageSendEvent{}.EventType(), imageSendHandler)
+
+	clapTimeStartedHandler := handlers.NewClapTimeStartedHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.StartClapTimeEvent{}.EventType(), clapTimeStartedHandler)
 
 	return nil
 }
@@ -165,10 +196,49 @@ func initLLM(deps *Dependencies) error {
 	return nil
 }
 
+func initImage(deps *Dependencies) error {
+	// ImageValidator の初期化 (最大5MBまで許可)
+	const maxImageSize = 5 * 1024 * 1024 // 5MB
+	deps.ImageValidator = validator.NewImageValidator(maxImageSize)
+
+	// ImageStorage の初期化 (S3)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	bucket := strings.TrimSpace(os.Getenv("S3_BUCKET"))
+	if bucket == "" {
+		return errors.New("S3_BUCKET is not set")
+	}
+
+	region := strings.TrimSpace(os.Getenv("AWS_REGION"))
+	if region == "" {
+		region = "ap-northeast-1" // デフォルトリージョン
+	}
+
+	imageStorage, err := storage.NewS3ImageStorage(ctx, bucket, region)
+	if err != nil {
+		return fmt.Errorf("create s3 image storage: %w", err)
+	}
+
+	deps.ImageStorage = imageStorage
+	return nil
+}
+
 // UseCase関連の初期化
 func initUseCases(deps *Dependencies) error {
 	// Domain Services
 	roomNumberGenerator := service.NewRoomNumberGenerator()
+	deps.StartClapTimeUseCase = clap.NewStartClapTimeUseCase(
+		deps.BattleRepository,
+		deps.RoomRepository,
+		deps.ImageRepository,
+		deps.EventDispatcher,
+		deps.LLMClient,
+	)
+	deps.ClapScheduler = clapinfra.NewClapScheduler(
+		deps.StartClapTimeUseCase,
+		time.Minute,
+	)
 
 	// Room Usecases
 	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
@@ -187,6 +257,7 @@ func initUseCases(deps *Dependencies) error {
 		deps.BattleUserRepository,
 		deps.RoomRepository,
 		deps.LLMClient,
+		deps.ClapScheduler,
 	)
 
 	deps.GetBattleUseCase = battle.NewGetBattleUseCase(
@@ -211,6 +282,20 @@ func initUseCases(deps *Dependencies) error {
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
 		deps.RoomRepository,
 		deps.UserRepository,
+	)
+
+	deps.GetImageUseCase = battle.NewGetImageUseCase(
+		deps.BattleRepository,
+		deps.ImageRepository,
+	)
+
+	deps.ImageSendUseCase = battle.NewImageSendUseCase(
+		deps.BattleRepository,
+		deps.ImageRepository,
+		deps.ImageValidator,
+		deps.ImageStorage,
+		deps.EventDispatcher,
+		deps.ClapScheduler,
 	)
 
 	return nil
@@ -285,6 +370,10 @@ func initRepositories(deps *Dependencies) error {
 
 func (d *Dependencies) Close() error {
 	var err error
+
+	if d.ClapScheduler != nil {
+		d.ClapScheduler.Close()
+	}
 
 	if d.LLMClient != nil {
 		if closeErr := d.LLMClient.Close(); closeErr != nil && err == nil {

@@ -53,3 +53,102 @@ variable "public_subnet_cidrs" {
   type        = list(string)
   default     = ["10.0.1.0/24", "10.0.2.0/24"]
 }
+
+# RDS設定
+variable "db_name" {
+  description = "データベース名"
+  type        = string
+  default     = "album_battler"
+}
+
+variable "db_username" {
+  description = "データベースユーザー名"
+  type        = string
+  default     = "album_user"
+}
+
+variable "db_password" {
+  description = "データベースパスワード"
+  type        = string
+  sensitive   = true
+}
+
+variable "rds_instance_class" {
+  description = "RDSインスタンスクラス"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "rds_allocated_storage" {
+  description = "割り当てストレージ (GB)"
+  type        = number
+  default     = 20
+}
+
+variable "rds_multi_az" {
+  description = "Multi-AZ配置"
+  type        = bool
+  default     = false
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "削除時の最終スナップショットをスキップ"
+  type        = bool
+  default     = true
+}
+
+variable "rds_backup_retention_period" {
+  description = "バックアップ保持期間 (日)"
+  type        = number
+  default     = 7
+}
+
+# ECS設定
+variable "ecs_log_retention_days" {
+  description = "CloudWatch Logsの保持期間 (日)"
+  type        = number
+  default     = 7
+}
+
+variable "frontend_cpu" {
+  description = "Frontendタスクのvirtual CPU units"
+  type        = string
+  default     = "512"
+}
+
+variable "frontend_memory" {
+  description = "Frontendタスクのメモリ (MB)"
+  type        = string
+  default     = "1024"
+}
+
+variable "frontend_desired_count" {
+  description = "Frontendタスクの希望数"
+  type        = number
+  default     = 1
+}
+
+variable "backend_cpu" {
+  description = "Backendタスクのvirtual CPU units"
+  type        = string
+  default     = "1024"
+}
+
+variable "backend_memory" {
+  description = "Backendタスクのメモリ (MB)"
+  type        = string
+  default     = "2048"
+}
+
+variable "backend_desired_count" {
+  description = "Backendタスクの希望数"
+  type        = number
+  default     = 1
+}
+
+# API Keys
+variable "gemini_api_key" {
+  description = "Gemini API Key"
+  type        = string
+  sensitive   = true
+}

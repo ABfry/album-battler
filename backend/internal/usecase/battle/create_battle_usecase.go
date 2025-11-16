@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
+	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
 	"github.com/google/uuid"
 )
@@ -24,6 +26,7 @@ type CreateBattleUseCase struct {
 	battleUserRepo repository.BattleUserRepository
 	roomRepo       repository.RoomRepository
 	llmClient      llm.LLMClient
+	clapScheduler  service.ClapScheduler
 }
 
 func NewCreateBattleUseCase(
@@ -31,12 +34,14 @@ func NewCreateBattleUseCase(
 	battleUserRepo repository.BattleUserRepository,
 	roomRepo repository.RoomRepository,
 	llmClient llm.LLMClient,
+	clapScheduler service.ClapScheduler,
 ) *CreateBattleUseCase {
 	return &CreateBattleUseCase{
 		battleRepo:     battleRepo,
 		battleUserRepo: battleUserRepo,
 		roomRepo:       roomRepo,
 		llmClient:      llmClient,
+		clapScheduler:  clapScheduler,
 	}
 }
 
@@ -78,6 +83,12 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 	if err := uc.battleUserRepo.SaveBatch(ctx, battle.ID, userIDs); err != nil {
 		fmt.Println("failed to save battle users", err)
 		return nil, errors.New("failed to save battle users")
+	}
+
+	// 投稿受付締め切りをスケジュール (デフォルト1分)
+	const defaultClapDelay = time.Minute
+	if uc.clapScheduler != nil {
+		uc.clapScheduler.Schedule(battle.ID, defaultClapDelay)
 	}
 
 	return &CreateBattleOutput{BattleID: battle.ID}, nil

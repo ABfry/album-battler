@@ -4,10 +4,13 @@ import (
 	"errors"
 	"time"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/google/uuid"
 )
 
 type Battle struct {
+	event.AggregateRoot
+
 	ID        uuid.UUID
 	RoomID    uuid.UUID
 	StartedAt time.Time
@@ -42,4 +45,30 @@ func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string) (*Battle, er
 		Theme:     theme,
 		UserIDs:   userIDs,
 	}, nil
+}
+
+func (b *Battle) RecordImageSent(userID uuid.UUID, imageURL string) {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.ImageSendEvent{
+		RoomID:     b.RoomID,
+		BattleID:   b.ID,
+		UserID:     userID,
+		ImageURL:   imageURL,
+		OccurredOn: time.Now(),
+	})
+}
+
+func (b *Battle) RecordClapTimeStarted() {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.StartClapTimeEvent{
+		RoomID:     b.RoomID,
+		BattleID:   b.ID,
+		OccurredOn: time.Now(),
+	})
 }
