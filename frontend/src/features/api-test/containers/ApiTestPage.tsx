@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
@@ -52,17 +52,6 @@ export function ApiTestPage() {
   const [startSuccess, setStartSuccess] = useState(false);
   const [battleID, setBattleID] = useState<string | null>(null);
 
-  const createdRoomRef = useRef(createdRoom);
-  const getBattleIDRef = useRef(getBattleID);
-
-  useEffect(() => {
-    createdRoomRef.current = createdRoom;
-  }, [createdRoom]);
-
-  useEffect(() => {
-    getBattleIDRef.current = getBattleID;
-  }, [getBattleID]);
-
   // WebSocket接続の初期化
   useEffect(() => {
     connect();
@@ -92,9 +81,9 @@ export function ApiTestPage() {
       async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
         refetch();
-        // ゲーム開始時に自動でBattle IDを取得
-        if (createdRoomRef.current?.room_id === payload.room_id) {
-          const id = await getBattleIDRef.current(payload.room_id);
+        // Battle IDをREST APIで取得
+        if (createdRoom) {
+          const id = await getBattleID(createdRoom.room_id);
           setBattleID(id);
         }
       }
@@ -105,7 +94,7 @@ export function ApiTestPage() {
       unsubscribeLeave();
       unsubscribeStart();
     };
-  }, [subscribe, refetch]);
+  }, [subscribe, refetch, createdRoom, getBattleID]);
 
   // 1. 部屋作成
   const handleCreateRoom = async (userId: string) => {
