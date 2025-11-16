@@ -20,15 +20,19 @@ var upgrader = ws.Upgrader{
 }
 
 type WebSocketHandler struct {
-	hub *websocket.Hub
+	hub      *websocket.Hub
+	incoming chan *websocket.ClientInboundMessage
 }
 
 func NewWebSocketHandler(
 	hub *websocket.Hub,
 ) *WebSocketHandler {
-	return &WebSocketHandler{
-		hub: hub,
+	handler := &WebSocketHandler{
+		hub:      hub,
+		incoming: make(chan *websocket.ClientInboundMessage, 256),
 	}
+	go handler.consumeIncoming()
+	return handler
 }
 
 // クライアントから受信するメッセージ
@@ -65,11 +69,27 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 	}
 
 	// クライアントを作成してHubに登録
-	client := h.hub.NewClient(userID, conn)
+	client := h.hub.NewClient(userID, conn, h.incoming)
 
 	// goroutineでRead/Writeポンプを起動
 	go client.WritePump()
 	go client.ReadPump()
 
 	log.Printf("New WebSocket connection: userID=%s", userID)
+}
+
+func (h *WebSocketHandler) consumeIncoming() {
+	for msg := range h.incoming {
+		var incoming IncomingMessage
+		if err := json.Unmarshal(msg.Payload, &incoming); err != nil {
+			log.Printf("invalid incoming message from %s: %v", msg.UserID, err)
+			continue
+		}
+
+		// TODO: ここでClapなどのメッセージ種別に応じたUseCaseを呼び出す
+		switch incoming.Type {
+		default:
+			log.Printf("unhandled ws message type=%s from user=%s", incoming.Type, msg.UserID)
+		}
+	}
 }

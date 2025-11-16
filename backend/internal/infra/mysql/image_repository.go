@@ -60,6 +60,17 @@ func (r *mysqlImageRepository) FindImagesByBattleID(ctx context.Context, battleI
 	return r.findImagesBy(ctx, "battle_id", battleID.String())
 }
 
+func (r *mysqlImageRepository) CountDistinctUsersByBattleID(ctx context.Context, battleID uuid.UUID) (int, error) {
+	const query = `SELECT COUNT(DISTINCT user_id) FROM images WHERE battle_id = ?`
+	row := r.db.QueryRowContext(ctx, query, battleID.String())
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // --- private ---
 
 // findBy は単一レコード取得専用のヘルパー。

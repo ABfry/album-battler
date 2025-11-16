@@ -15,6 +15,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/ABfry/album-battler/backend/internal/domain/service/llm"
 	"github.com/ABfry/album-battler/backend/internal/infra/ai"
+	clapinfra "github.com/ABfry/album-battler/backend/internal/infra/clap"
 	"github.com/ABfry/album-battler/backend/internal/infra/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/event/handlers"
 	"github.com/ABfry/album-battler/backend/internal/infra/mysql"
@@ -22,6 +23,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/infra/validator"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
+	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
 )
 
@@ -52,6 +54,8 @@ type Dependencies struct {
 	ImageValidator service.ImageValidator
 	ImageStorage   service.ImageStorage
 
+	ClapScheduler service.ClapScheduler
+
 	// Usecase
 	CreateRoomUseCase *room.CreateRoomUseCase
 	JoinRoomUseCase   *room.JoinRoomUseCase
@@ -64,6 +68,8 @@ type Dependencies struct {
 	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 	GetImageUseCase     *battle.GetImageUseCase
 	ImageSendUseCase    *battle.ImageSendUseCase
+
+	StartClapTimeUseCase *clap.StartClapTimeUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -217,6 +223,15 @@ func initImage(deps *Dependencies) error {
 func initUseCases(deps *Dependencies) error {
 	// Domain Services
 	roomNumberGenerator := service.NewRoomNumberGenerator()
+	deps.StartClapTimeUseCase = clap.NewStartClapTimeUseCase(
+		deps.BattleRepository,
+		deps.RoomRepository,
+		deps.EventDispatcher,
+	)
+	deps.ClapScheduler = clapinfra.NewClapScheduler(
+		deps.StartClapTimeUseCase,
+		time.Minute,
+	)
 
 	// Room Usecases
 	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
@@ -235,6 +250,7 @@ func initUseCases(deps *Dependencies) error {
 		deps.BattleUserRepository,
 		deps.RoomRepository,
 		deps.LLMClient,
+		deps.ClapScheduler,
 	)
 
 	deps.GetBattleUseCase = battle.NewGetBattleUseCase(
@@ -272,6 +288,7 @@ func initUseCases(deps *Dependencies) error {
 		deps.ImageValidator,
 		deps.ImageStorage,
 		deps.EventDispatcher,
+		deps.ClapScheduler,
 	)
 
 	return nil
@@ -346,6 +363,10 @@ func initRepositories(deps *Dependencies) error {
 
 func (d *Dependencies) Close() error {
 	var err error
+
+	if d.ClapScheduler != nil {
+		d.ClapScheduler.Close()
+	}
 
 	if d.LLMClient != nil {
 		if closeErr := d.LLMClient.Close(); closeErr != nil && err == nil {

@@ -28,6 +28,13 @@ type UserMessage struct {
 	Message interface{}
 }
 
+// クライアントからアプリ層へ渡すメッセージ
+type ClientInboundMessage struct {
+	UserID  uuid.UUID
+	RoomID  uuid.UUID
+	Payload []byte
+}
+
 // アクティブなクライアントを管理
 type Hub struct {
 	// 登録されたクライアント (ユーザーID → Client)
@@ -301,12 +308,13 @@ func (h *Hub) broadcastToRoom(roomID uuid.UUID, message interface{}) {
 }
 
 // 新しいクライアントを作成してHubに登録
-func (h *Hub) NewClient(userID uuid.UUID, conn interface{}) *Client {
+func (h *Hub) NewClient(userID uuid.UUID, conn interface{}, inbound chan<- *ClientInboundMessage) *Client {
 	client := &Client{
-		UserID: userID,
-		Hub:    h,
-		Conn:   conn.(*websocket.Conn),
-		Send:   make(chan []byte, 256),
+		UserID:  userID,
+		Hub:     h,
+		Conn:    conn.(*websocket.Conn),
+		Send:    make(chan []byte, 256),
+		Inbound: inbound,
 	}
 
 	h.register <- client
