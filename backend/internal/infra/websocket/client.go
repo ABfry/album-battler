@@ -41,6 +41,9 @@ type Client struct {
 	// クライアントのルームID
 	RoomID uuid.UUID
 
+	// アプリケーション層へのメッセージ転送
+	Inbound chan<- *ClientInboundMessage
+
 	// close管理
 	closeDone sync.Once
 	closed    atomic.Bool // クライアントが閉じられたかどうか
@@ -76,7 +79,20 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		// Hubにメッセージを送信（ブロードキャスト用）
+		if c.Inbound != nil {
+			select {
+			case c.Inbound <- &ClientInboundMessage{
+				UserID:  c.UserID,
+				RoomID:  c.RoomID,
+				Payload: message,
+			}:
+			default:
+				log.Printf("inbound channel full for user %s", c.UserID)
+			}
+			continue
+		}
+
+		// フォールバック: Hubにメッセージを送信（ブロードキャスト用）
 		c.Hub.broadcast <- &BroadcastMessage{
 			SenderID: c.UserID,
 			Message:  message,
