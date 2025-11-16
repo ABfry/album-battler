@@ -16,6 +16,7 @@ import type {
   PlayerJoinRoomPayload,
   PlayerLeaveRoomPayload,
   StartGamePayload,
+  ImageSendPayload,
 } from "@/src/lib/websocket/types";
 import type { DebugMessage } from "@/src/lib/types";
 
@@ -149,12 +150,27 @@ export function ApiTestPage() {
       }
     );
 
+    const unsubscribeImageSend = subscribe(
+      "image_send",
+      (payload: ImageSendPayload) => {
+        console.log("Image sent:", payload);
+        setLatestWsMessage({
+          type: "image_send",
+          payload,
+          timestamp: new Date().toISOString(),
+        });
+        // 画像送信イベントを受信したら画像一覧を再取得
+        refetchImages();
+      }
+    );
+
     return () => {
       unsubscribeJoin();
       unsubscribeLeave();
       unsubscribeStart();
+      unsubscribeImageSend();
     };
-  }, [subscribe, refetch]);
+  }, [subscribe, refetch, refetchImages]);
 
   // 1. 部屋作成
   const handleCreateRoom = async (userId: string) => {
@@ -251,10 +267,6 @@ export function ApiTestPage() {
       response: { success },
       timestamp: new Date().toISOString(),
     });
-    if (success) {
-      // 画像送信成功後、画像一覧を再取得
-      setTimeout(() => refetchImages(), 500);
-    }
   };
 
   return (
