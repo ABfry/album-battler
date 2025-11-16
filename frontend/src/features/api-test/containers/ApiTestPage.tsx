@@ -131,13 +131,6 @@ export function ApiTestPage() {
     setStartSuccess(success);
   };
 
-  // 5. バトルID取得
-  const handleGetBattleID = async () => {
-    if (!createdRoom) return;
-    const id = await getBattleID(createdRoom.room_id);
-    setBattleID(id);
-  };
-
   return (
     <ApiTestView
       createdRoom={createdRoom}
@@ -154,7 +147,6 @@ export function ApiTestPage() {
       onJoinRoom={handleJoinRoom}
       onLeaveRoom={handleLeaveRoom}
       onStartGame={handleStartGame}
-      onGetBattleID={handleGetBattleID}
       onRefetch={refetch}
     />
   );
