@@ -48,6 +48,46 @@ export type LeaveRoomResponse = {
   message: string;
 };
 
+export type GetBattleIDResponse = {
+  BattleID: string;
+};
+
+// Battle リクエスト型
+export type CreateBattleRequest = {
+  room_id: string;
+};
+
+export type SendImageRequest = {
+  user_id: string;
+  image_base64: string;
+};
+
+// Battle レスポンス型
+export type CreateBattleResponse = {
+  BattleID: string;
+};
+
+export type GetBattleResponse = {
+  Battle: {
+    ID: string;
+    RoomID: string;
+    StartedAt: string;
+    Theme: string;
+    UserIDs: string[];
+  };
+};
+
+export type GetImageResponse = {
+  Images: Array<{
+    UserID: string;
+    ImageURL: string;
+  }>;
+};
+
+export type SendImageResponse = {
+  result: string;
+};
+
 // ドメイン型
 export type RoomStatusString =
   | "waiting"
@@ -71,6 +111,19 @@ export type Room = {
   users: UserInfo[];
   status: RoomStatus;
   isExpired: boolean;
+};
+
+export type Battle = {
+  id: string;
+  roomId: string;
+  startedAt: string;
+  theme: string;
+  userIds: string[];
+};
+
+export type BattleImage = {
+  userId: string;
+  imageUrl: string;
 };
 
 // WebSocketイベント型
