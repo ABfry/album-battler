@@ -2,6 +2,7 @@ import { fetchApi } from "./client";
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
+  GetBattleIDResponse,
   JoinRoomRequest,
   JoinRoomResponse,
   LeaveRoomRequest,
@@ -77,5 +78,13 @@ export const roomApi = {
       method: "POST",
       body: JSON.stringify({ user_id: userId } satisfies LeaveRoomRequest),
     });
+  },
+
+  /**
+   * 部屋のバトルIDを取得
+   * GET /room/{id}/battle-id
+   */
+  getBattleID: async (roomId: string): Promise<GetBattleIDResponse> => {
+    return fetchApi<GetBattleIDResponse>(`/room/${roomId}/battle-id`);
   },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
@@ -19,8 +19,15 @@ import type {
  */
 export function ApiTestPage() {
   // 部屋作成・参加・退出・ゲーム開始の操作
-  const { createRoom, joinRoom, leaveRoom, startGame, loading, error } =
-    useRoom();
+  const {
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    startGame,
+    getBattleID,
+    loading,
+    error,
+  } = useRoom();
 
   // WebSocket接続
   const { connect, disconnect } = useWebSocket();
@@ -43,6 +50,18 @@ export function ApiTestPage() {
   const [joinSuccess, setJoinSuccess] = useState(false);
   const [leaveSuccess, setLeaveSuccess] = useState(false);
   const [startSuccess, setStartSuccess] = useState(false);
+  const [battleID, setBattleID] = useState<string | null>(null);
+
+  const createdRoomRef = useRef(createdRoom);
+  const getBattleIDRef = useRef(getBattleID);
+
+  useEffect(() => {
+    createdRoomRef.current = createdRoom;
+  }, [createdRoom]);
+
+  useEffect(() => {
+    getBattleIDRef.current = getBattleID;
+  }, [getBattleID]);
 
   // WebSocket接続の初期化
   useEffect(() => {
@@ -70,9 +89,14 @@ export function ApiTestPage() {
 
     const unsubscribeStart = subscribe(
       "start_game",
-      (payload: StartGamePayload) => {
+      async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
         refetch();
+        // ゲーム開始時に自動でBattle IDを取得
+        if (createdRoomRef.current?.room_id === payload.room_id) {
+          const id = await getBattleIDRef.current(payload.room_id);
+          setBattleID(id);
+        }
       }
     );
 
@@ -118,6 +142,13 @@ export function ApiTestPage() {
     setStartSuccess(success);
   };
 
+  // 5. バトルID取得
+  const handleGetBattleID = async () => {
+    if (!createdRoom) return;
+    const id = await getBattleID(createdRoom.room_id);
+    setBattleID(id);
+  };
+
   return (
     <ApiTestView
       createdRoom={createdRoom}
@@ -129,10 +160,12 @@ export function ApiTestPage() {
       joinSuccess={joinSuccess}
       leaveSuccess={leaveSuccess}
       startSuccess={startSuccess}
+      battleID={battleID}
       onCreateRoom={handleCreateRoom}
       onJoinRoom={handleJoinRoom}
       onLeaveRoom={handleLeaveRoom}
       onStartGame={handleStartGame}
+      onGetBattleID={handleGetBattleID}
       onRefetch={refetch}
     />
   );

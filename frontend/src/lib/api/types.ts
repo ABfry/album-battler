@@ -48,6 +48,10 @@ export type LeaveRoomResponse = {
   message: string;
 };
 
+export type GetBattleIDResponse = {
+  BattleID: string;
+};
+
 // ドメイン型
 export type RoomStatusString =
   | "waiting"
