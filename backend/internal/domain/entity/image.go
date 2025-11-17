@@ -2,6 +2,7 @@ package entity
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,5 +48,19 @@ func (i *Image) SetScore(aiScore float64, userScore int) error {
 
 	i.AIScore = aiScore
 	i.UserScore = userScore
+	return nil
+}
+
+func (i *Image) AddUserScore(score int) error {
+	if score < 0 || score > 10 {
+		fmt.Printf("invalid score to add: %d", score)
+		return errors.New("score to add must be between 0 and 10")
+	}
+
+	if i.UserScore+score > 10 {
+		fmt.Printf("user score exceeds maximum after adding: current=%d, adding=%d", i.UserScore, score)
+		return nil
+	}
+	i.UserScore += score
 	return nil
 }

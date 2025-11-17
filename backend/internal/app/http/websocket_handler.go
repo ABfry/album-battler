@@ -38,7 +38,7 @@ func NewWebSocketHandler(
 		incoming:        make(chan *websocket.ClientInboundMessage, 256),
 		clapSendUseCase: clapSendUseCase,
 	}
-	go handler.consumeIncoming()
+	go handler.consumeIncoming(context.Background())
 	return handler
 }
 
@@ -54,6 +54,7 @@ type MessagePayload struct {
 }
 
 type ClapSendPayload struct {
+	UserID   string `json:"user_id"`
 	BattleID string `json:"battle_id"`
 	Count    int    `json:"count"`
 }
@@ -90,7 +91,7 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 	log.Printf("New WebSocket connection: userID=%s", userID)
 }
 
-func (h *WebSocketHandler) consumeIncoming() {
+func (h *WebSocketHandler) consumeIncoming(ctx context.Context) {
 	for msg := range h.incoming {
 		var incoming IncomingMessage
 		if err := json.Unmarshal(msg.Payload, &incoming); err != nil {
@@ -100,17 +101,23 @@ func (h *WebSocketHandler) consumeIncoming() {
 
 		switch incoming.Type {
 		case event.ClapSendEvent{}.EventType():
-			h.handleClapSend(msg, incoming)
+			h.handleClapSend(ctx, msg, incoming)
 		default:
 			log.Printf("unhandled ws message type=%s from user=%s", incoming.Type, msg.UserID)
 		}
 	}
 }
 
-func (h *WebSocketHandler) handleClapSend(msg *websocket.ClientInboundMessage, incoming IncomingMessage) {
+func (h *WebSocketHandler) handleClapSend(ctx context.Context, msg *websocket.ClientInboundMessage, incoming IncomingMessage) {
 	var payload ClapSendPayload
 	if err := json.Unmarshal(incoming.Payload, &payload); err != nil {
 		log.Printf("invalid clap_send payload from user=%s: %v", msg.UserID, err)
+		return
+	}
+
+	userID, err := uuid.Parse(payload.UserID)
+	if err != nil {
+		log.Printf("invalid user_id in clap_send from user=%s: %v", msg.UserID, err)
 		return
 	}
 
@@ -125,9 +132,9 @@ func (h *WebSocketHandler) handleClapSend(msg *websocket.ClientInboundMessage, i
 		return
 	}
 
-	if err := h.clapSendUseCase.Execute(context.Background(), clap.ClapSendInput{
+	if err := h.clapSendUseCase.Execute(ctx, clap.ClapSendInput{
 		BattleID: battleID,
-		UserID:   msg.UserID,
+		UserID:   userID,
 		Count:    payload.Count,
 	}); err != nil {
 		log.Printf("failed to execute ClapSendUseCase for user=%s: %v", msg.UserID, err)
