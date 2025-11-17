@@ -29,7 +29,7 @@ func (h *ClapSendHandler) Handle(ctx context.Context, evt event.DomainEvent) err
 	// WebSocket通知を部屋のメンバーに送信
 	broadcastEvent := service.BroadcastEvent{
 		Type:    e.EventType(),
-		Payload: map[string]interface{}{"user_id": e.UserID, "clap_count": e.ClapCount},
+		Payload: map[string]interface{}{},
 	}
 
 	if err := h.eventPublisher.PublishToRoom(ctx, e.RoomID, broadcastEvent); err != nil {

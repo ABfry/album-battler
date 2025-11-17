@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/google/uuid"
@@ -64,13 +62,7 @@ func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) err
 	uc.clapCounter.Add(input.BattleID, input.UserID, input.Count)
 
 	// ドメインイベントを記録
-	battle.RecordEvent(event.ClapSendEvent{
-		RoomID:     battle.RoomID,
-		BattleID:   input.BattleID,
-		UserID:     input.UserID,
-		ClapCount:  input.Count,
-		OccurredOn: time.Now(),
-	})
+	battle.RecordClapCounted(input.UserID, input.Count)
 
 	// イベントをディスパッチ
 	events := battle.PopEvents()
