@@ -1,4 +1,5 @@
 import type { UserInfo, BattleImage } from "@/src/lib/api/types";
+import type { BattlePhase } from "@/src/hooks/useBattlePhase";
 import { ImageFrame } from "./ImageFrame";
 import { PlayerList } from "./PlayerList";
 import {
@@ -12,17 +13,17 @@ import {
 } from "@/src/components/ui/alert-dialog";
 
 type BattleProps = {
-  theme: string | null;
-  isLoading: boolean;
-  error: string | null;
-  players: UserInfo[] | undefined;
-  images: BattleImage[];
+  // フェーズ情報
+  phase: BattlePhase;
+
+  // タイマー関連
+  timeLeft: number;
+  isWarning: boolean;
+
+  // 画像選択関連
   selectedImage: string | null;
   isDragging: boolean;
-  timeLeft: number;
   isImageSent: boolean;
-  showErrorDialog: boolean;
-  onCloseErrorDialog: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -32,23 +33,32 @@ type BattleProps = {
   onDragLeave: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+
+  // バトル情報
+  theme: string | null;
+  isLoading: boolean;
+  error: string | null;
+  players: UserInfo[] | undefined;
+  images: BattleImage[];
+
+  // エラーダイアログ
+  showErrorDialog: boolean;
+  onCloseErrorDialog: () => void;
 };
 
 /**
  * バトル画面のメインコンポーネント (Presentational)
  */
 export function Battle({
-  theme,
-  isLoading,
-  error,
-  players,
-  images,
+  // フェーズ情報
+  phase,
+  // タイマー関連
+  timeLeft,
+  isWarning,
+  // 画像選択関連
   selectedImage,
   isDragging,
-  timeLeft,
   isImageSent,
-  showErrorDialog,
-  onCloseErrorDialog,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -58,6 +68,15 @@ export function Battle({
   onDragLeave,
   onDragOver,
   onDrop,
+  // バトル情報
+  theme,
+  isLoading,
+  error,
+  players,
+  images,
+  // エラーダイアログ
+  showErrorDialog,
+  onCloseErrorDialog,
 }: BattleProps) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -66,9 +85,7 @@ export function Battle({
         <div className="absolute top-8 right-8">
           <div
             className={`rounded-lg px-6 py-3 text-4xl font-bold shadow-lg ${
-              timeLeft <= 10
-                ? "bg-red-500 text-white"
-                : "bg-white text-slate-800"
+              isWarning ? "bg-red-500 text-white" : "bg-white text-slate-800"
             }`}
           >
             {timeLeft}秒

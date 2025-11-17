@@ -31,10 +31,13 @@ export type ImageSendPayload = {
   image_url: string;
 };
 
+export type StartClapTimePayload = Record<string, never>; // バックエンドは空のペイロードを送信
+
 // イベントマップ（型安全）
 export type EventMap = {
   player_join_room: PlayerJoinRoomPayload;
   player_leave_room: PlayerLeaveRoomPayload;
   start_game: StartGamePayload;
   image_send: ImageSendPayload;
+  start_clap_time: StartClapTimePayload;
 };
