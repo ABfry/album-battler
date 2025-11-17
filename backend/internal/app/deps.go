@@ -25,6 +25,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
+	"github.com/ABfry/album-battler/backend/internal/usecase/user"
 )
 
 // -- 依存関係の定義 --
@@ -70,7 +71,7 @@ type Dependencies struct {
 	ImageSendUseCase    *battle.ImageSendUseCase
 
 	StartClapTimeUseCase *clap.StartClapTimeUseCase
-	ClapSendUseCase      *clap.ClapSendUseCase
+	CreateUserUseCase    *user.CreateUserUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -305,6 +306,10 @@ func initUseCases(deps *Dependencies) error {
 		deps.ImageStorage,
 		deps.EventDispatcher,
 		deps.ClapScheduler,
+	)
+
+	deps.CreateUserUseCase = user.NewCreateUserUseCase(
+		deps.UserRepository,
 	)
 
 	return nil

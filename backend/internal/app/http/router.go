@@ -35,6 +35,10 @@ func (s *APIServer) registerRoutes() {
 		s.deps.ImageSendUseCase,
 	)
 
+	// Userハンドラ
+	userHandler := NewUserHandler(s.deps.CreateUserUseCase)
+	s.mux.HandleFunc("POST /user", userHandler.CreateUser)
+
 	s.mux.HandleFunc("POST /battle", battleHandler.CreateBattle) // デバッグ用
 	s.mux.HandleFunc("GET /battle/{id}", battleHandler.GetBattle)
 	s.mux.HandleFunc("GET /room/{id}/battle-id", battleHandler.GetBattleIDByRoom)
