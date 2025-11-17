@@ -1,7 +1,7 @@
 // app/room/[roomId]/page.tsx
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type { PlayerJoinRoomPayload } from "@/src/lib/websocket/types";
@@ -10,7 +10,6 @@ import Link from "next/link";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
-  const router = useRouter();
 
   // 部屋情報の取得（作成後に自動取得）
   const { room, refetch } = useRoomInfo(roomID);
