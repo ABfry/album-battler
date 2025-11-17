@@ -4,10 +4,12 @@ import { Button } from "@/src/components/ui/button";
 type ImageFrameProps = {
   selectedImage: string | null;
   isDragging: boolean;
+  isImageSent: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
   onCancel: () => void;
+  onConfirmImage: () => void;
   onDragEnter: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -20,10 +22,12 @@ type ImageFrameProps = {
 export function ImageFrame({
   selectedImage,
   isDragging,
+  isImageSent,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
   onCancel,
+  onConfirmImage,
   onDragEnter,
   onDragLeave,
   onDragOver,
@@ -39,6 +43,7 @@ export function ImageFrame({
           accept="image/*"
           onChange={onImageSelect}
           className="hidden"
+          disabled={isImageSent}
         />
 
         {/* 額縁の外枠 */}
@@ -48,27 +53,32 @@ export function ImageFrame({
             {/* 白いマット（正方形の固定サイズ） */}
             <div
               className={`relative aspect-square w-full overflow-hidden rounded-sm border-2 bg-white p-6 shadow-md transition-colors ${
-                isDragging ? "border-blue-400 bg-blue-50" : "border-amber-100"
+                isDragging && !isImageSent
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-amber-100"
               }`}
-              onDragEnter={onDragEnter}
-              onDragLeave={onDragLeave}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
+              onDragEnter={isImageSent ? undefined : onDragEnter}
+              onDragLeave={isImageSent ? undefined : onDragLeave}
+              onDragOver={isImageSent ? undefined : onDragOver}
+              onDrop={isImageSent ? undefined : onDrop}
             >
-              {selectedImage ? (
-                <Image
-                  src={selectedImage}
-                  alt="選択した画像"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 400px"
-                  className="object-contain"
-                  unoptimized
-                />
-              ) : (
-                <button
-                  onClick={onOpenAlbum}
-                  className="flex h-full w-full items-center justify-center transition-colors hover:bg-gray-50"
-                >
+              <button
+                onClick={isImageSent ? undefined : onOpenAlbum}
+                disabled={isImageSent}
+                className={`flex h-full w-full items-center justify-center transition-colors ${
+                  isImageSent ? "cursor-not-allowed" : "hover:bg-gray-50"
+                }`}
+              >
+                {selectedImage ? (
+                  <Image
+                    src={selectedImage}
+                    alt="選択した画像"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 400px"
+                    className="object-contain"
+                    unoptimized
+                  />
+                ) : (
                   <div className="text-center">
                     <div className="mb-2 text-6xl">
                       {isDragging ? "📥" : "📂"}
@@ -82,21 +92,35 @@ export function ImageFrame({
                       </p>
                     )}
                   </div>
-                </button>
-              )}
+                )}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 選びなおすボタン */}
-      {selectedImage && (
+      {/* ボタン */}
+      {selectedImage && !isImageSent && (
         <div className="flex gap-3">
-          <Button variant="primary" size="lg" onClick={onOpenAlbum}>
-            選びなおす
-          </Button>
-          <Button variant="secondary" size="lg" onClick={onCancel}>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => {
+              console.log("Cancel button clicked");
+              onCancel();
+            }}
+          >
             取り消す
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => {
+              console.log("Confirm button clicked");
+              onConfirmImage();
+            }}
+          >
+            これで決定
           </Button>
         </div>
       )}

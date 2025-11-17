@@ -11,10 +11,12 @@ type BattleProps = {
   selectedImage: string | null;
   isDragging: boolean;
   timeLeft: number;
+  isImageSent: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
   onCancel: () => void;
+  onConfirmImage: () => void;
   onDragEnter: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -33,10 +35,12 @@ export function Battle({
   selectedImage,
   isDragging,
   timeLeft,
+  isImageSent,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
   onCancel,
+  onConfirmImage,
   onDragEnter,
   onDragLeave,
   onDragOver,
@@ -77,10 +81,12 @@ export function Battle({
         <ImageFrame
           selectedImage={selectedImage}
           isDragging={isDragging}
+          isImageSent={isImageSent}
           fileInputRef={fileInputRef}
           onImageSelect={onImageSelect}
           onOpenAlbum={onOpenAlbum}
           onCancel={onCancel}
+          onConfirmImage={onConfirmImage}
           onDragEnter={onDragEnter}
           onDragLeave={onDragLeave}
           onDragOver={onDragOver}
