@@ -65,6 +65,7 @@ func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) err
 
 	// ドメインイベントを記録
 	battle.RecordEvent(event.ClapSendEvent{
+		RoomID:     battle.RoomID,
 		BattleID:   input.BattleID,
 		UserID:     input.UserID,
 		ClapCount:  input.Count,
