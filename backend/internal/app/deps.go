@@ -70,6 +70,7 @@ type Dependencies struct {
 	ImageSendUseCase    *battle.ImageSendUseCase
 
 	StartClapTimeUseCase *clap.StartClapTimeUseCase
+	ClapSendUseCase      *clap.ClapSendUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -238,6 +239,14 @@ func initUseCases(deps *Dependencies) error {
 	deps.ClapScheduler = clapinfra.NewClapScheduler(
 		deps.StartClapTimeUseCase,
 		time.Minute,
+	)
+
+	clapCounter := clapinfra.NewMemoryClapCounter()
+	deps.ClapSendUseCase = clap.NewClapSendUseCase(
+		deps.RoomRepository,
+		deps.BattleRepository,
+		clapCounter,
+		deps.EventDispatcher,
 	)
 
 	// Room Usecases

@@ -12,21 +12,21 @@ import (
 	"github.com/google/uuid"
 )
 
-type ClapInput struct {
+type ClapSendInput struct {
 	BattleID uuid.UUID
 	UserID   uuid.UUID
 	Count    int
 }
 
-type ClapUseCase struct {
+type ClapSendUseCase struct {
 	roomRepo    repository.RoomRepository
 	battleRepo  repository.BattleRepository
 	clapCounter service.ClapCounter
 	dispatcher  service.EventDispatcher
 }
 
-func NewClapUseCase(roomRepo repository.RoomRepository, battleRepo repository.BattleRepository, clapCounter service.ClapCounter, dispatcher service.EventDispatcher) *ClapUseCase {
-	return &ClapUseCase{
+func NewClapSendUseCase(roomRepo repository.RoomRepository, battleRepo repository.BattleRepository, clapCounter service.ClapCounter, dispatcher service.EventDispatcher) *ClapSendUseCase {
+	return &ClapSendUseCase{
 		roomRepo:    roomRepo,
 		battleRepo:  battleRepo,
 		clapCounter: clapCounter,
@@ -34,7 +34,7 @@ func NewClapUseCase(roomRepo repository.RoomRepository, battleRepo repository.Ba
 	}
 }
 
-func (uc *ClapUseCase) Execute(ctx context.Context, input ClapInput) error {
+func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) error {
 	// 拍手数が不正なら弾く
 	if input.Count <= 0 {
 		return errors.New("count must be greater than zero")
