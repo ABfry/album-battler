@@ -35,13 +35,13 @@ export function NeedLoginButton({
   }, []);
 
   const handleButtonClick = () => {
+    onClick?.();
     if (userId) {
       loggedInOnClick?.();
     } else {
       notLoggedInOnClick?.();
       setIsDialogOpen(true);
     }
-    onClick?.();
   };
 
   const handleSubmit = async () => {
