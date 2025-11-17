@@ -1,6 +1,15 @@
 import type { UserInfo, BattleImage } from "@/src/lib/api/types";
 import { ImageFrame } from "./ImageFrame";
 import { PlayerList } from "./PlayerList";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
 
 type BattleProps = {
   theme: string | null;
@@ -12,6 +21,8 @@ type BattleProps = {
   isDragging: boolean;
   timeLeft: number;
   isImageSent: boolean;
+  showErrorDialog: boolean;
+  onCloseErrorDialog: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -36,6 +47,8 @@ export function Battle({
   isDragging,
   timeLeft,
   isImageSent,
+  showErrorDialog,
+  onCloseErrorDialog,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -96,6 +109,23 @@ export function Battle({
         {/* プレイヤー情報（最下部） */}
         <PlayerList players={players} images={images} />
       </div>
+
+      {/* エラーダイアログ */}
+      <AlertDialog open={showErrorDialog} onOpenChange={onCloseErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>送信エラー</AlertDialogTitle>
+            <AlertDialogDescription>
+              画像の送信に失敗しました。もう一度お試しください。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={onCloseErrorDialog}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

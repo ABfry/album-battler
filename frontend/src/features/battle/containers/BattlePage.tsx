@@ -26,6 +26,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
   const [timeLeft, setTimeLeft] = useState(30);
   const [sendImageSuccess, setSendImageSuccess] = useState(false);
   const [isImageSent, setIsImageSent] = useState(false); // 画像送信済みフラグ
+  const [showErrorDialog, setShowErrorDialog] = useState(false); // エラーダイアログ表示フラグ
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { subscribe } = useWebSocketEvents();
 
@@ -148,6 +149,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       setSendImageSuccess(true);
     } else {
       console.error("Failed to send image");
+      // 送信失敗時はエラーダイアログを表示
+      setShowErrorDialog(true);
     }
   };
 
@@ -234,6 +237,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       isDragging={isDragging}
       timeLeft={timeLeft}
       isImageSent={isImageSent}
+      showErrorDialog={showErrorDialog}
+      onCloseErrorDialog={() => setShowErrorDialog(false)}
       fileInputRef={fileInputRef}
       onImageSelect={handleImageSelect}
       onOpenAlbum={handleOpenAlbum}
