@@ -70,6 +70,7 @@ type Dependencies struct {
 	GetImageUseCase     *battle.GetImageUseCase
 	ImageSendUseCase    *battle.ImageSendUseCase
 
+	ClapSendUseCase      *clap.ClapSendUseCase
 	StartClapTimeUseCase *clap.StartClapTimeUseCase
 	CreateUserUseCase    *user.CreateUserUseCase
 }
