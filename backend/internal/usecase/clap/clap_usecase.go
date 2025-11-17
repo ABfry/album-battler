@@ -59,7 +59,10 @@ func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) err
 	}
 
 	// 拍手数を追加
-	uc.clapCounter.Add(input.BattleID, input.UserID, input.Count)
+	if _, err := uc.clapCounter.Add(input.BattleID, input.UserID, input.Count); err != nil {
+		fmt.Printf("Failed to add clap count: %v", err)
+		return errors.New("failed to add clap count")
+	}
 
 	// ドメインイベントを記録
 	battle.RecordClapCounted(input.UserID, input.Count)

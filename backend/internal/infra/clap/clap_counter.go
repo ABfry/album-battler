@@ -19,7 +19,7 @@ func NewMemoryClapCounter() *MemoryClapCounter {
 	return &MemoryClapCounter{counts: make(map[uuid.UUID]map[uuid.UUID]entity.Image)}
 }
 
-func (c *MemoryClapCounter) Add(battleID, userID uuid.UUID, n int) entity.Image {
+func (c *MemoryClapCounter) Add(battleID, userID uuid.UUID, n int) (entity.Image, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -28,9 +28,12 @@ func (c *MemoryClapCounter) Add(battleID, userID uuid.UUID, n int) entity.Image 
 	}
 
 	img := c.counts[battleID][userID]
-	img.AddUserScore(n)
+	if err := img.AddUserScore(n); err != nil {
+		return entity.Image{}, err
+	}
+
 	c.counts[battleID][userID] = img
-	return img
+	return img, nil
 }
 
 func (c *MemoryClapCounter) Snapshot(battleID uuid.UUID) map[uuid.UUID]entity.Image {
