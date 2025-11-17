@@ -27,10 +27,14 @@ export function NeedLoginButton({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ローカルストレージからuserIDを取得
+  // クッキーからuserIDを取得
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setUserId(localStorage.getItem("userId"));
+      const cookieUserId = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("userId="))
+        ?.split("=")[1];
+      setUserId(cookieUserId || null);
     }
   }, []);
 
@@ -56,7 +60,10 @@ export function NeedLoginButton({
     try {
       const newUserId = await createUser(userName);
       if (typeof window !== "undefined") {
-        localStorage.setItem("userId", newUserId);
+        // クッキーに保存（10年間有効 = 実質無期限）
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 10);
+        document.cookie = `userId=${newUserId}; expires=${expires.toUTCString()}; path=/`;
       }
       setUserId(newUserId);
       setIsDialogOpen(false);
