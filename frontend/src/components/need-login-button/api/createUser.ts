@@ -7,7 +7,11 @@ type CreateUserResponse = {
 };
 
 export async function createUser(userName: string): Promise<string> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user`, {
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    throw new Error("API URLが設定されていません");
+  }
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/user`;
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
