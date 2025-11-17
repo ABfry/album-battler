@@ -3,36 +3,17 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type { PlayerJoinRoomPayload } from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
-
-type Player = {
-  id: number;
-  name: string;
-  joined: boolean;
-};
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
   const router = useRouter();
 
   // 部屋情報の取得（作成後に自動取得）
-  const {
-    room,
-    loading: roomLoading,
-    error: roomError,
-    refetch,
-  } = useRoomInfo(roomID);
-  // 仮のプレイヤー情報（joined=false が「待機中..」枠）
-  const [players] = useState<Player[]>([
-    { id: 1, name: "岩崎", joined: true },
-    { id: 2, name: "井上", joined: true },
-    { id: 3, name: "シバタ", joined: true },
-    { id: 4, name: "なかむら", joined: true },
-    { id: 5, name: "待機中・・", joined: false },
-  ]);
+  const { room, refetch } = useRoomInfo(roomID);
 
   const { subscribe } = useWebSocketEvents();
   useEffect(() => {
