@@ -8,6 +8,7 @@ import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents
 import type {
   ImageSendPayload,
   PlayerJoinRoomPayload,
+  PlayerLeaveRoomPayload,
 } from "@/src/lib/websocket/types";
 import { Battle } from "../components/Battle";
 
@@ -58,6 +59,15 @@ export function BattlePage({ battleID }: BattlePageProps) {
       (payload: PlayerJoinRoomPayload) => {
         console.log("Player joined room:", payload.room_id);
         refetch();
+        refetchBattle();
+      }
+    );
+    const unsubscribeLeave = subscribe(
+      "player_leave_room",
+      (payload: PlayerLeaveRoomPayload) => {
+        console.log("Player left room:", payload.room_id);
+        refetch();
+        refetchBattle();
       }
     );
     const unsubscribeImageSend = subscribe(
@@ -65,15 +75,17 @@ export function BattlePage({ battleID }: BattlePageProps) {
       (payload: ImageSendPayload) => {
         console.log("Image sent:", payload);
         // 画像送信イベントを受信したら画像一覧を再取得
+        refetchBattle();
         refetchImages();
       }
     );
 
     return () => {
       unsubscribeJoin();
+      unsubscribeLeave();
       unsubscribeImageSend();
     };
-  }, [subscribe, refetchImages, refetch]);
+  }, [subscribe, refetchBattle, refetchImages, refetch]);
 
   // 画像選択ハンドラ
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
