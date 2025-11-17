@@ -13,7 +13,6 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // 👇 ここをあなたが指定した UI に変更
         default: defaultButtonStyles,
         primary: cn(
           defaultButtonStyles,

@@ -1,5 +1,4 @@
-// app/ro
-// om/[roomId]/page.tsx
+// app/room/[roomId]/page.tsx
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -7,6 +6,7 @@ import { useEffect } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type { PlayerJoinRoomPayload } from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
+import Link from "next/link";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
@@ -36,12 +36,12 @@ export default function RoomPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
       {/* 戻るボタン */}
-      <button
-        onClick={() => router.push("/title")}
+      <Link
+        href="/title"
         className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
       >
         ◀
-      </button>
+      </Link>
 
       {/* ルーム全体コンテナ（縦長スマホ想定） */}
       <div className="flex h-[640px] w-[360px] flex-col items-center">
