@@ -104,7 +104,7 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.joinRoomUC.Execute(r.Context(), room.JoinRoomInput{
+	roomID, err := h.joinRoomUC.Execute(r.Context(), room.JoinRoomInput{
 		UserID:     userID,
 		RoomNumber: req.RoomNumber,
 	})
@@ -114,12 +114,11 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: room_idを取得する(usecaseから返すようにする)
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "joined successfully",
+		"room_id": roomID.String(),
 	}); err != nil {
 		log.Printf("Failed to encode response: %v", err)
 	}
