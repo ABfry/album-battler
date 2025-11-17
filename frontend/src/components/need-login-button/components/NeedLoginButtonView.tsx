@@ -66,7 +66,7 @@ export function NeedLoginButtonView({
               type="submit"
               onClick={onSubmit}
               disabled={isLoading}
-              className="w-full"
+              className="bg-button-accent hover:bg-button-accent/80 w-full"
             >
               {isLoading ? "作成中..." : "作成"}
             </Button>
