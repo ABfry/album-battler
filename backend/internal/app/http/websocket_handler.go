@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/google/uuid"
@@ -98,7 +99,7 @@ func (h *WebSocketHandler) consumeIncoming() {
 		}
 
 		switch incoming.Type {
-		case "clap_send":
+		case event.ClapSendEvent{}.EventType():
 			h.handleClapSend(msg, incoming)
 		default:
 			log.Printf("unhandled ws message type=%s from user=%s", incoming.Type, msg.UserID)

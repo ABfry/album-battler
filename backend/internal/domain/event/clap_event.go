@@ -7,6 +7,7 @@ import (
 )
 
 type ClapSendEvent struct {
+	RoomID     uuid.UUID
 	BattleID   uuid.UUID
 	UserID     uuid.UUID
 	ClapCount  int
