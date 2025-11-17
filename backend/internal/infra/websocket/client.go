@@ -93,10 +93,10 @@ func (c *Client) ReadPump() {
 		}
 
 		// フォールバック: Hubにメッセージを送信（ブロードキャスト用）
-		c.Hub.broadcast <- &BroadcastMessage{
-			SenderID: c.UserID,
-			Message:  message,
-		}
+		// c.Hub.broadcast <- &BroadcastMessage{
+		// 	SenderID: c.UserID,
+		// 	Message:  message,
+		// }
 	}
 }
 
