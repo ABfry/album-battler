@@ -90,7 +90,6 @@ export function ApiTestPage() {
   // WebSocket接続の初期化
   useEffect(() => {
     connect();
-    return () => disconnect();
   }, [connect, disconnect]);
 
   // WebSocketイベントの購読
