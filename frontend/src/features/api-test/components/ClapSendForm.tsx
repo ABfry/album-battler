@@ -67,30 +67,14 @@ export function ClapSendForm({
           />
         </div>
         <div>
-          <p className="mb-1 text-sm text-gray-600">Clap Count (1-10):</p>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              className="flex-1"
-            />
-            <input
-              type="number"
-              min="1"
-              max="10"
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              className="w-16 rounded border bg-white px-2 py-1 text-center font-mono text-sm"
-            />
-          </div>
-          <div className="mt-1 flex justify-center">
-            <span className="text-2xl">
-              {"👏".repeat(Math.max(1, Math.min(count, 10)))}
-            </span>
-          </div>
+          <p className="mb-1 text-sm text-gray-600">Clap Count (1以上):</p>
+          <input
+            type="number"
+            min="1"
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="w-full rounded border bg-white px-2 py-1 font-mono text-sm"
+          />
         </div>
       </div>
 

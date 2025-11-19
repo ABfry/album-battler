@@ -17,14 +17,14 @@ export function useWebSocketClap() {
 
   /**
    * 拍手を送信
-   * @param params - userId, targetUserId, battleId, count (1-10)
-   * @throws Error - countが1-10の範囲外、またはWebSocket未接続の場合
+   * @param params - userId, targetUserId, battleId, count (1以上)
+   * @throws Error - countが1未満、またはWebSocket未接続の場合
    */
   const sendClap = useCallback(
     ({ userId, targetUserId, battleId, count }: SendClapParams) => {
       // バリデーション
-      if (count < 1 || count > 10) {
-        throw new Error("Clap count must be between 1 and 10");
+      if (count < 1) {
+        throw new Error("Clap count must be at least 1");
       }
 
       if (status !== "connected") {
