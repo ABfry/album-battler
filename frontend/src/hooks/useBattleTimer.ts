@@ -17,23 +17,28 @@ export function useBattleTimer(options: UseBattleTimerOptions = {}) {
   const [isRunning, setIsRunning] = useState(options.autoStart ?? false);
   const [isWarning, setIsWarning] = useState(false);
 
+  const { onWarning, onTimeUp } = options;
+
   // カウントダウン処理
   useEffect(() => {
-    if (!isRunning || timeLeft <= 0) return;
+    if (!isRunning) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
+        // すでに0なら処理しない
+        if (prev <= 0) return 0;
+
         const next = Math.max(0, prev - 1);
 
         // 警告チェック（残り10秒以下）
-        if (next <= 10 && !isWarning) {
+        if (next <= 10 && next > 0) {
           setIsWarning(true);
-          options.onWarning?.(next);
+          onWarning?.(next);
         }
 
         // タイムアップ
         if (next === 0) {
-          options.onTimeUp?.();
+          onTimeUp?.();
           setIsRunning(false);
         }
 
@@ -42,7 +47,7 @@ export function useBattleTimer(options: UseBattleTimerOptions = {}) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isRunning, timeLeft, isWarning, options]);
+  }, [isRunning, onWarning, onTimeUp]);
 
   const startTimer = useCallback(() => {
     setIsRunning(true);

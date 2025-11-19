@@ -40,13 +40,14 @@ export function useBattlePhase(initialPhase: BattlePhase = "waiting") {
   const config = PHASE_CONFIGS[phase];
 
   // フェーズ遷移
-  const transitionTo = useCallback(
-    (newPhase: BattlePhase) => {
-      console.log(`[useBattlePhase] Phase transition: ${phase} -> ${newPhase}`);
-      setPhase(newPhase);
-    },
-    [phase]
-  );
+  const transitionTo = useCallback((newPhase: BattlePhase) => {
+    setPhase((prevPhase) => {
+      console.log(
+        `[useBattlePhase] Phase transition: ${prevPhase} -> ${newPhase}`
+      );
+      return newPhase;
+    });
+  }, []);
 
   return {
     phase,

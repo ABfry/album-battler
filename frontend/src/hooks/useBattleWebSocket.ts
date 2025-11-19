@@ -23,51 +23,60 @@ type UseBattleWebSocketOptions = {
  */
 export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
   const { subscribe } = useWebSocketEvents();
+  const { battleId, roomId, onPhaseTransition, onPlayerChange, onImageUpdate } =
+    options;
 
   useEffect(() => {
-    if (!options.roomId) return;
+    if (!roomId) return;
 
     console.log(
-      `[useBattleWebSocket] Subscribing to WebSocket events for room: ${options.roomId}`
+      `[useBattleWebSocket] Subscribing to WebSocket events for room: ${roomId}`
     );
 
     const unsubscribers = [
       // ゲーム開始 → 選択フェーズ
       subscribe("start_game", (payload: StartGamePayload) => {
         console.log("[useBattleWebSocket] Game started:", payload);
-        options.onPhaseTransition("selecting");
+        onPhaseTransition("selecting");
       }),
 
       // 拍手タイム開始 → 拍手フェーズ
       subscribe("start_clap_time", (payload: StartClapTimePayload) => {
         console.log("[useBattleWebSocket] Clap time started:", payload);
-        options.onPhaseTransition("clap_time");
+        onPhaseTransition("clap_time");
       }),
 
       // プレイヤー参加
       subscribe("player_join_room", (payload: PlayerJoinRoomPayload) => {
         console.log("[useBattleWebSocket] Player joined:", payload);
-        options.onPlayerChange();
+        onPlayerChange();
       }),
 
       // プレイヤー退出
       subscribe("player_leave_room", (payload: PlayerLeaveRoomPayload) => {
         console.log("[useBattleWebSocket] Player left:", payload);
-        options.onPlayerChange();
+        onPlayerChange();
       }),
 
       // 画像送信
       subscribe("image_send", (payload: ImageSendPayload) => {
         console.log("[useBattleWebSocket] Image sent:", payload);
-        options.onImageUpdate();
+        onImageUpdate();
       }),
     ];
 
     return () => {
       console.log(
-        `[useBattleWebSocket] Unsubscribing from WebSocket events for room: ${options.roomId}`
+        `[useBattleWebSocket] Unsubscribing from WebSocket events for room: ${roomId}`
       );
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [options.roomId, subscribe, options]);
+  }, [
+    roomId,
+    subscribe,
+    onPhaseTransition,
+    onPlayerChange,
+    onImageUpdate,
+    battleId,
+  ]);
 }

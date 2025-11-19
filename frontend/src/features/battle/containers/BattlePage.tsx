@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import { useBattlePhase, PHASE_CONFIGS } from "@/src/hooks/useBattlePhase";
@@ -43,19 +43,19 @@ export function BattlePage({ battleID }: BattlePageProps) {
   const timer = useBattleTimer({
     initialTime: battlePhase.config.duration,
     autoStart: false,
-    onWarning: (secondsLeft) => {
+    onWarning: useCallback((secondsLeft: number) => {
       console.log(`[BattlePage] Warning: ${secondsLeft} seconds left`);
-    },
-    onTimeUp: () => {
+    }, []),
+    onTimeUp: useCallback(() => {
       console.log("[BattlePage] Time is up!");
-    },
+    }, []),
   });
 
-  // 5. WebSocketイベント処理（フェーズ遷移をトリガー）
-  useBattleWebSocket({
-    battleId: battleID,
-    roomId: battle?.roomId || null,
-    onPhaseTransition: (newPhase) => {
+  // 5. WebSocketイベント処理のコールバックをメモ化
+  const handlePhaseTransition = useCallback(
+    (
+      newPhase: "waiting" | "selecting" | "clap_time" | "result" | "finished"
+    ) => {
       console.log(`[BattlePage] Transitioning to phase: ${newPhase}`);
       battlePhase.transitionTo(newPhase);
       // フェーズ遷移時にタイマーをリセット
@@ -63,19 +63,31 @@ export function BattlePage({ battleID }: BattlePageProps) {
       timer.resetTimer(config.duration);
       timer.startTimer();
     },
-    onPlayerChange: () => {
-      console.log("[BattlePage] Player change detected");
-      refetchRoom();
-      refetchBattle();
-    },
-    onImageUpdate: () => {
-      console.log("[BattlePage] Image update detected");
-      refetchBattle();
-      refetchImages();
-    },
+    [battlePhase.transitionTo, timer.resetTimer, timer.startTimer]
+  );
+
+  const handlePlayerChange = useCallback(() => {
+    console.log("[BattlePage] Player change detected");
+    refetchRoom();
+    refetchBattle();
+  }, [refetchRoom, refetchBattle]);
+
+  const handleImageUpdate = useCallback(() => {
+    console.log("[BattlePage] Image update detected");
+    refetchBattle();
+    refetchImages();
+  }, [refetchBattle, refetchImages]);
+
+  // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
+  useBattleWebSocket({
+    battleId: battleID,
+    roomId: battle?.roomId || null,
+    onPhaseTransition: handlePhaseTransition,
+    onPlayerChange: handlePlayerChange,
+    onImageUpdate: handleImageUpdate,
   });
 
-  // 6. バトル情報取得後、途中参加を考慮してselectingフェーズに自動遷移
+  // 7. バトル情報取得後、途中参加を考慮してselectingフェーズに自動遷移
   // battle存在 = ゲーム開始済みと判定
   // 将来的に「全員揃うまで待機」が必要な場合は、バックエンドにバトル状態を追加して対応
   useEffect(() => {
@@ -89,18 +101,22 @@ export function BattlePage({ battleID }: BattlePageProps) {
     }
   }, [battle, battlePhase, timer]);
 
-  // 7. 画像選択ロジック（フェーズに依存）
+  // 8. 画像選択ロジック（フェーズに依存）
+  const handleSendSuccess = useCallback(() => {
+    console.log("[BattlePage] Image sent successfully");
+  }, []);
+
+  const handleSendError = useCallback(() => {
+    console.log("[BattlePage] Failed to send image");
+    setShowErrorDialog(true);
+  }, []);
+
   const imageSelection = useImageSelection({
     battleId: battleID,
     userId: MOCK_USER_ID,
     canSelect: battlePhase.canSelectImage,
-    onSendSuccess: () => {
-      console.log("[BattlePage] Image sent successfully");
-    },
-    onSendError: () => {
-      console.log("[BattlePage] Failed to send image");
-      setShowErrorDialog(true);
-    },
+    onSendSuccess: handleSendSuccess,
+    onSendError: handleSendError,
   });
 
   return (
