@@ -70,6 +70,7 @@ type Dependencies struct {
 	GetImageUseCase     *battle.GetImageUseCase
 	ImageSendUseCase    *battle.ImageSendUseCase
 
+	ClapSendUseCase      *clap.ClapSendUseCase
 	StartClapTimeUseCase *clap.StartClapTimeUseCase
 	CreateUserUseCase    *user.CreateUserUseCase
 }
@@ -174,6 +175,11 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register(domainEvent.StartClapTimeEvent{}.EventType(), clapTimeStartedHandler)
 
+	clapSendHandler := handlers.NewClapSendHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.ClapSendEvent{}.EventType(), clapSendHandler)
+
 	return nil
 }
 
@@ -240,6 +246,14 @@ func initUseCases(deps *Dependencies) error {
 	deps.ClapScheduler = clapinfra.NewClapScheduler(
 		deps.StartClapTimeUseCase,
 		time.Minute,
+	)
+
+	clapCounter := clapinfra.NewMemoryClapCounter()
+	deps.ClapSendUseCase = clap.NewClapSendUseCase(
+		deps.RoomRepository,
+		deps.BattleRepository,
+		clapCounter,
+		deps.EventDispatcher,
 	)
 
 	// Room Usecases

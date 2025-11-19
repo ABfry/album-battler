@@ -8,9 +8,3 @@ type Message struct {
 	Payload   interface{} `json:"payload,omitempty"`
 	Timestamp time.Time   `json:"timestamp"`
 }
-
-// ユーザーメッセージのペイロード
-type UserMessagePayload struct {
-	UserID  string `json:"user_id"`
-	Message string `json:"message"`
-}
