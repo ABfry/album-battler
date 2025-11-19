@@ -5,7 +5,9 @@ package httpapi
 func (s *APIServer) registerRoutes() {
 	// WebSocketハンドラ
 	wsHandler := NewWebSocketHandler(
-		s.deps.WebSocketHub)
+		s.deps.WebSocketHub,
+		s.deps.ClapSendUseCase,
+	)
 	s.mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
 	// Roomハンドラ
@@ -32,6 +34,10 @@ func (s *APIServer) registerRoutes() {
 		s.deps.GetImageUseCase,
 		s.deps.ImageSendUseCase,
 	)
+
+	// Userハンドラ
+	userHandler := NewUserHandler(s.deps.CreateUserUseCase)
+	s.mux.HandleFunc("POST /user", userHandler.CreateUser)
 
 	s.mux.HandleFunc("POST /battle", battleHandler.CreateBattle) // デバッグ用
 	s.mux.HandleFunc("GET /battle/{id}", battleHandler.GetBattle)

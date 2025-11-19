@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Room } from "@/src/lib/api/types";
 
 type Props = {
@@ -16,13 +17,23 @@ export function RoomInfo({ room, loading, error, onRefetch }: Props) {
     <div className="rounded-lg border bg-white p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">3. Room Info</h2>
-        <button
-          onClick={onRefetch}
-          disabled={loading}
-          className="rounded bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600 disabled:bg-gray-300"
-        >
-          {loading ? "Refreshing..." : "Refresh"}
-        </button>
+        <div className="flex gap-2">
+          {room && (
+            <Link
+              href={`/room/${room.id}`}
+              className="rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600"
+            >
+              Open Room
+            </Link>
+          )}
+          <button
+            onClick={onRefetch}
+            disabled={loading}
+            className="rounded bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600 disabled:bg-gray-300"
+          >
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {error && (

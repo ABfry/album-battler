@@ -83,21 +83,21 @@ INSERT INTO users (id, name, icon_url, hashed_password, created_at) VALUES
     (
         '550e8400-e29b-41d4-a716-446655440001',
         'テストユーザー1',
-        'https://api.dicebear.com/7.x/avataaars/svg?seed=test1',
+        'https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon_gorilla.png',
         '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
         '2025-01-01 10:00:00'
     ),
     (
         '550e8400-e29b-41d4-a716-446655440002',
         'テストユーザー2',
-        'https://api.dicebear.com/7.x/avataaars/svg?seed=test2',
+        'https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon_rabbit.png',
         '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
         '2025-01-02 11:30:00'
     ),
     (
         '550e8400-e29b-41d4-a716-446655440003',
         'テストユーザー3',
-        'https://api.dicebear.com/7.x/avataaars/svg?seed=test3',
+        'https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon.png',
         '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
         '2025-01-03 14:45:00'
     );

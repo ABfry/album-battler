@@ -25,6 +25,7 @@ import (
 	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/ABfry/album-battler/backend/internal/usecase/room"
+	"github.com/ABfry/album-battler/backend/internal/usecase/user"
 )
 
 // -- 依存関係の定義 --
@@ -69,7 +70,9 @@ type Dependencies struct {
 	GetImageUseCase     *battle.GetImageUseCase
 	ImageSendUseCase    *battle.ImageSendUseCase
 
+	ClapSendUseCase      *clap.ClapSendUseCase
 	StartClapTimeUseCase *clap.StartClapTimeUseCase
+	CreateUserUseCase    *user.CreateUserUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -172,6 +175,11 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register(domainEvent.StartClapTimeEvent{}.EventType(), clapTimeStartedHandler)
 
+	clapSendHandler := handlers.NewClapSendHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.ClapSendEvent{}.EventType(), clapSendHandler)
+
 	return nil
 }
 
@@ -240,6 +248,14 @@ func initUseCases(deps *Dependencies) error {
 		time.Minute,
 	)
 
+	clapCounter := clapinfra.NewMemoryClapCounter()
+	deps.ClapSendUseCase = clap.NewClapSendUseCase(
+		deps.RoomRepository,
+		deps.BattleRepository,
+		clapCounter,
+		deps.EventDispatcher,
+	)
+
 	// Room Usecases
 	deps.CreateRoomUseCase = room.NewCreateRoomUseCase(
 		deps.RoomRepository,
@@ -296,6 +312,10 @@ func initUseCases(deps *Dependencies) error {
 		deps.ImageStorage,
 		deps.EventDispatcher,
 		deps.ClapScheduler,
+	)
+
+	deps.CreateUserUseCase = user.NewCreateUserUseCase(
+		deps.UserRepository,
 	)
 
 	return nil
