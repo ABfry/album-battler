@@ -23,12 +23,12 @@ type ImageSendInput struct {
 }
 
 type ImageSendUseCase struct {
-	battleRepo     repository.BattleRepository
-	imageRepo      repository.ImageRepository
-	imageValidator service.ImageValidator
-	imageStorage   service.ImageStorage
-	dispatcher     service.EventDispatcher
-	clapScheduler  service.ClapScheduler
+	battleRepo               repository.BattleRepository
+	imageRepo                repository.ImageRepository
+	imageValidator           service.ImageValidator
+	imageStorage             service.ImageStorage
+	dispatcher               service.EventDispatcher
+	imageSubmissionScheduler service.ImageSubmissionScheduler
 }
 
 func NewImageSendUseCase(
@@ -37,15 +37,15 @@ func NewImageSendUseCase(
 	imageValidator service.ImageValidator,
 	imageStorage service.ImageStorage,
 	dispatcher service.EventDispatcher,
-	clapScheduler service.ClapScheduler,
+	imageSubmissionScheduler service.ImageSubmissionScheduler,
 ) *ImageSendUseCase {
 	return &ImageSendUseCase{
-		battleRepo:     battleRepo,
-		imageRepo:      imageRepo,
-		imageValidator: imageValidator,
-		imageStorage:   imageStorage,
-		dispatcher:     dispatcher,
-		clapScheduler:  clapScheduler,
+		battleRepo:               battleRepo,
+		imageRepo:                imageRepo,
+		imageValidator:           imageValidator,
+		imageStorage:             imageStorage,
+		dispatcher:               dispatcher,
+		imageSubmissionScheduler: imageSubmissionScheduler,
 	}
 }
 
@@ -115,14 +115,9 @@ func (uc *ImageSendUseCase) Execute(ctx context.Context, input ImageSendInput) e
 		return errors.New("failed to count submissions")
 	}
 
-	// デバッグ
-	// fmt.Println("submittedCount", submittedCount)
-	// fmt.Println("battle.UserIDs", len(battle.UserIDs))
-	// fmt.Println("clapScheduler", uc.clapScheduler != nil)
-
-	// 投稿した画像数がユーザー数と同じか、拍手スケジューラが設定されている場合は拍手フェーズへ移行
-	if submittedCount >= len(battle.UserIDs) && uc.clapScheduler != nil {
-		if err := uc.clapScheduler.TriggerNow(ctx, battle.ID); err != nil {
+	// 全員が画像を投稿完了したら、即座に投稿期限を締め切り拍手フェーズへ移行
+	if submittedCount >= len(battle.UserIDs) && uc.imageSubmissionScheduler != nil {
+		if err := uc.imageSubmissionScheduler.TriggerNow(ctx, battle.ID); err != nil {
 			fmt.Printf("Failed to start clap time: %v", err)
 			return errors.New("failed to start clap time")
 		}
