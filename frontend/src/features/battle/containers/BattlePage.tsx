@@ -63,6 +63,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       timer.resetTimer(config.duration);
       timer.startTimer();
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [battlePhase.transitionTo, timer.resetTimer, timer.startTimer]
   );
 

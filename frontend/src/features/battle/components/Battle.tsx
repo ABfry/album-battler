@@ -50,7 +50,8 @@ type BattleProps = {
  * バトル画面のメインコンポーネント (Presentational)
  */
 export function Battle({
-  // フェーズ情報
+  // phase は将来的に使用予定のため型定義のみ保持
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   phase,
   // タイマー関連
   timeLeft,
