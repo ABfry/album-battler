@@ -1,0 +1,141 @@
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # 手動実行
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get AWS Account ID and ECR info
+        id: ecs-info
+        run: |
+          # AWS Account IDを自動取得
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+
+          # Terraformから情報取得
+          cd terraform
+          terraform init -backend=false
+          CLUSTER_NAME=$(terraform output -raw ecs_cluster_name 2>/dev/null || echo "album-battler-cluster")
+
+          # GitHub Outputに設定
+          echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
+          echo "frontend_service=album-battler-frontend" >> $GITHUB_OUTPUT
+          echo "backend_service=album-battler-backend" >> $GITHUB_OUTPUT
+          echo "frontend_ecr=${ECR_REGISTRY}/album-battler/frontend" >> $GITHUB_OUTPUT
+          echo "backend_ecr=${ECR_REGISTRY}/album-battler/backend" >> $GITHUB_OUTPUT
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ steps.ecs-info.outputs.frontend_ecr }}:latest
+            ${{ steps.ecs-info.outputs.frontend_ecr }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ steps.ecs-info.outputs.backend_ecr }}:latest
+            ${{ steps.ecs-info.outputs.backend_ecr }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update ECS Frontend Service
+        run: |
+          aws ecs update-service \
+            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+            --service ${{ steps.ecs-info.outputs.frontend_service }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Update ECS Backend Service
+        run: |
+          aws ecs update-service \
+            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+            --service ${{ steps.ecs-info.outputs.backend_service }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for Frontend deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+            --services ${{ steps.ecs-info.outputs.frontend_service }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for Backend deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+            --services ${{ steps.ecs-info.outputs.backend_service }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Get ALB URL
+        id: alb-url
+        run: |
+          cd terraform
+          ALB_URL=$(terraform output -raw alb_url 2>/dev/null || echo "ECS deployment completed")
+          echo "url=${ALB_URL}" >> $GITHUB_OUTPUT
+
+      - name: Notify Discord on success
+        if: success()
+        run: |
+          chmod +x .github/scripts/discord-notify.sh
+          .github/scripts/discord-notify.sh \
+            "${{ secrets.DISCORD_GITCI_WEBHOOK_URL }}" \
+            "デプロイ成功" \
+            "mainブランチへのpushによりECSへ自動デプロイされました" \
+            "3066993" \
+            "デプロイURL" \
+            "${{ steps.alb-url.outputs.url }}" \
+            "コミット" \
+            "${{ github.sha }}"
+
+      - name: Notify Discord on failure
+        if: failure()
+        run: |
+          chmod +x .github/scripts/discord-notify.sh
+          .github/scripts/discord-notify.sh \
+            "${{ secrets.DISCORD_GITCI_WEBHOOK_URL }}" \
+            "デプロイ失敗" \
+            "mainブランチへのデプロイ中にエラーが発生しました" \
+            "15158332" \
+            "コミット" \
+            "${{ github.sha }}" \
+            "ワークフロー" \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
