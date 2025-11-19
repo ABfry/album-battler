@@ -37,6 +37,6 @@ func (h *ClapSendHandler) Handle(ctx context.Context, evt event.DomainEvent) err
 		// WebSocket送信エラーは処理を止めない
 	}
 
-	log.Printf("Clap sent by user %s in battle %s", e.UserID, e.BattleID)
+	log.Printf("Clap sent by user %s to target %s in battle %s", e.UserID, e.TargetUserID, e.BattleID)
 	return nil
 }
