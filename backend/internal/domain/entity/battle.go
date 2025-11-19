@@ -79,6 +79,7 @@ func (b *Battle) RecordClapCounted(userID uuid.UUID, count int) {
 	}
 
 	b.RecordEvent(event.ClapSendEvent{
+		RoomID:     b.RoomID,
 		BattleID:   b.ID,
 		UserID:     userID,
 		ClapCount:  count,
