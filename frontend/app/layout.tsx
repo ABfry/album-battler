@@ -6,7 +6,8 @@ import {
   M_PLUS_Rounded_1c,
 } from "next/font/google";
 import "./globals.css";
-import { WebSocketProvider } from "@/src/lib/websocket/providers/WebSocketProvider";
+import { ClientLayout } from "./ClientLayout";
+import { getUserId } from "@/src/lib/auth/getUserId";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,15 +36,14 @@ export const metadata: Metadata = {
   description: "アルバムで対戦するゲーム",
 };
 
-// TODO: 本来はログインユーザーIDを使うべき（現在はハードコード）
-const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440001";
-const wsUrl = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080/ws"}?user_id=${TEST_USER_ID}`;
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // サーバーサイドでCookieからユーザーIDを取得
+  const userId = await getUserId();
+
   return (
     <html lang="ja">
       <body
@@ -54,7 +54,7 @@ export default function RootLayout({
           backgroundSize: "auto",
         }}
       >
-        <WebSocketProvider url={wsUrl}>{children}</WebSocketProvider>
+        <ClientLayout userId={userId}>{children}</ClientLayout>
       </body>
     </html>
   );
