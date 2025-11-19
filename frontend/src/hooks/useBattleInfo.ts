@@ -95,7 +95,8 @@ export function useBattleInfo(battleId: string | null): UseBattleInfoResult {
 
   useEffect(() => {
     fetchBattleInfo();
-  }, [fetchBattleInfo]);
+    fetchImages(); // 画像一覧も初回に取得
+  }, [fetchBattleInfo, fetchImages]);
 
   return {
     battle,
