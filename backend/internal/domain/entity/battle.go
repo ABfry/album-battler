@@ -73,16 +73,17 @@ func (b *Battle) RecordClapTimeStarted() {
 	})
 }
 
-func (b *Battle) RecordClapCounted(userID uuid.UUID, count int) {
+func (b *Battle) RecordClapCounted(userID uuid.UUID, targetUserID uuid.UUID, count int) {
 	if b == nil {
 		return
 	}
 
 	b.RecordEvent(event.ClapSendEvent{
-		RoomID:     b.RoomID,
-		BattleID:   b.ID,
-		UserID:     userID,
-		ClapCount:  count,
-		OccurredOn: time.Now(),
+		RoomID:       b.RoomID,
+		BattleID:     b.ID,
+		UserID:       userID,
+		TargetUserID: targetUserID,
+		ClapCount:    count,
+		OccurredOn:   time.Now(),
 	})
 }
