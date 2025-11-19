@@ -54,9 +54,10 @@ type MessagePayload struct {
 }
 
 type ClapSendPayload struct {
-	UserID   string `json:"user_id"`
-	BattleID string `json:"battle_id"`
-	Count    int    `json:"count"`
+	UserID       string `json:"user_id"`
+	TargetUserID string `json:"target_user_id"`
+	BattleID     string `json:"battle_id"`
+	Count        int    `json:"count"`
 }
 
 // WebSocket接続を処理
@@ -121,6 +122,12 @@ func (h *WebSocketHandler) handleClapSend(ctx context.Context, msg *websocket.Cl
 		return
 	}
 
+	targetUserID, err := uuid.Parse(payload.TargetUserID)
+	if err != nil {
+		log.Printf("invalid target_user_id in clap_send from user=%s: %v", msg.UserID, err)
+		return
+	}
+
 	battleID, err := uuid.Parse(payload.BattleID)
 	if err != nil {
 		log.Printf("invalid battle_id in clap_send from user=%s: %v", msg.UserID, err)
@@ -133,9 +140,10 @@ func (h *WebSocketHandler) handleClapSend(ctx context.Context, msg *websocket.Cl
 	}
 
 	if err := h.clapSendUseCase.Execute(ctx, clap.ClapSendInput{
-		BattleID: battleID,
-		UserID:   userID,
-		Count:    payload.Count,
+		BattleID:     battleID,
+		UserID:       userID,
+		TargetUserID: targetUserID,
+		Count:        payload.Count,
 	}); err != nil {
 		log.Printf("failed to execute ClapSendUseCase for user=%s: %v", msg.UserID, err)
 	}
