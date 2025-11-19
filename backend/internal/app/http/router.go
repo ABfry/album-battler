@@ -5,7 +5,9 @@ package httpapi
 func (s *APIServer) registerRoutes() {
 	// WebSocketハンドラ
 	wsHandler := NewWebSocketHandler(
-		s.deps.WebSocketHub)
+		s.deps.WebSocketHub,
+		s.deps.ClapSendUseCase,
+	)
 	s.mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
 	// Roomハンドラ

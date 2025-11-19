@@ -54,6 +54,25 @@ func (r *mysqlImageRepository) FindImagesByUserID(ctx context.Context, userID uu
 	return r.findImagesBy(ctx, "user_id", userID.String())
 }
 
+func (r *mysqlImageRepository) FindImagesByBattleAndUserID(ctx context.Context, battleID, userID uuid.UUID) (*entity.Image, error) {
+	const query = `SELECT id, user_id, battle_id, image_url, uploaded_at, ai_score, user_score FROM images WHERE battle_id = ? AND user_id = ?`
+
+	rows, err := r.db.QueryContext(ctx, query, battleID.String(), userID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Failed to close rows: %v", err)
+		}
+	}()
+
+	if rows.Next() {
+		return r.createImage(rows)
+	}
+	return nil, sql.ErrNoRows
+}
+
 // FindImagesByBattleID は指定バトルに紐づく画像一覧を返す。
 // why: バトル集計時に一括で読み込む必要があるため。
 func (r *mysqlImageRepository) FindImagesByBattleID(ctx context.Context, battleID uuid.UUID) ([]*entity.Image, error) {

@@ -1,11 +1,14 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
+	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 )
@@ -22,16 +25,20 @@ var upgrader = ws.Upgrader{
 type WebSocketHandler struct {
 	hub      *websocket.Hub
 	incoming chan *websocket.ClientInboundMessage
+
+	clapSendUseCase *clap.ClapSendUseCase
 }
 
 func NewWebSocketHandler(
 	hub *websocket.Hub,
+	clapSendUseCase *clap.ClapSendUseCase,
 ) *WebSocketHandler {
 	handler := &WebSocketHandler{
-		hub:      hub,
-		incoming: make(chan *websocket.ClientInboundMessage, 256),
+		hub:             hub,
+		incoming:        make(chan *websocket.ClientInboundMessage, 256),
+		clapSendUseCase: clapSendUseCase,
 	}
-	go handler.consumeIncoming()
+	go handler.consumeIncoming(context.Background())
 	return handler
 }
 
@@ -44,6 +51,12 @@ type IncomingMessage struct {
 // メッセージペイロード
 type MessagePayload struct {
 	Message string `json:"message"`
+}
+
+type ClapSendPayload struct {
+	UserID   string `json:"user_id"`
+	BattleID string `json:"battle_id"`
+	Count    int    `json:"count"`
 }
 
 // WebSocket接続を処理
@@ -78,7 +91,7 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 	log.Printf("New WebSocket connection: userID=%s", userID)
 }
 
-func (h *WebSocketHandler) consumeIncoming() {
+func (h *WebSocketHandler) consumeIncoming(ctx context.Context) {
 	for msg := range h.incoming {
 		var incoming IncomingMessage
 		if err := json.Unmarshal(msg.Payload, &incoming); err != nil {
@@ -86,10 +99,44 @@ func (h *WebSocketHandler) consumeIncoming() {
 			continue
 		}
 
-		// TODO: ここでClapなどのメッセージ種別に応じたUseCaseを呼び出す
 		switch incoming.Type {
+		case event.ClapSendEvent{}.EventType():
+			h.handleClapSend(ctx, msg, incoming)
 		default:
 			log.Printf("unhandled ws message type=%s from user=%s", incoming.Type, msg.UserID)
 		}
+	}
+}
+
+func (h *WebSocketHandler) handleClapSend(ctx context.Context, msg *websocket.ClientInboundMessage, incoming IncomingMessage) {
+	var payload ClapSendPayload
+	if err := json.Unmarshal(incoming.Payload, &payload); err != nil {
+		log.Printf("invalid clap_send payload from user=%s: %v", msg.UserID, err)
+		return
+	}
+
+	userID, err := uuid.Parse(payload.UserID)
+	if err != nil {
+		log.Printf("invalid user_id in clap_send from user=%s: %v", msg.UserID, err)
+		return
+	}
+
+	battleID, err := uuid.Parse(payload.BattleID)
+	if err != nil {
+		log.Printf("invalid battle_id in clap_send from user=%s: %v", msg.UserID, err)
+		return
+	}
+
+	if h.clapSendUseCase == nil {
+		log.Printf("ClapSendUseCase is not initialized")
+		return
+	}
+
+	if err := h.clapSendUseCase.Execute(ctx, clap.ClapSendInput{
+		BattleID: battleID,
+		UserID:   userID,
+		Count:    payload.Count,
+	}); err != nil {
+		log.Printf("failed to execute ClapSendUseCase for user=%s: %v", msg.UserID, err)
 	}
 }
