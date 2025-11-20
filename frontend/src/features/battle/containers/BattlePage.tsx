@@ -59,7 +59,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     onTimeUp: battlePhase.onTimeUp,
   });
 
-  const phaseHandlers: PhaseHandlersMap = useMemo(() => {
+  useEffect(() => {
     const handlers: PhaseHandlersMap = {
       waiting: {
         onPhaseStart: () => console.log("ゲーム開始待ち"),
@@ -117,12 +117,45 @@ export function BattlePage({ battleID }: BattlePageProps) {
       };
     });
 
-    return handlers;
-  }, [players, battlePhase.transitionTo, timer.resetTimer, timer.startTimer]);
+    battlePhase.setHandlers(handlers);
+  }, [battlePhase, players, timer.resetTimer, timer.startTimer]);
+
+  const phaseMessage = useMemo(() => {
+    if (battlePhase.phase === "selecting") {
+      return timer.timeLeft === 0 ? "タイムアップ！" : "画像を探せ！";
+    }
+
+    const clapIndex = CLAP_PHASES.indexOf(battlePhase.phase);
+    if (clapIndex !== -1) {
+      const player = players[clapIndex];
+      return player ? `${player.name}の画像` : "拍手タイム";
+    }
+
+    if (battlePhase.phase === "result") {
+      return "結果発表";
+    }
+
+    return "";
+  }, [battlePhase.phase, players, timer.timeLeft]);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    battlePhase.setHandlers(phaseHandlers);
-  }, [battlePhase.setHandlers, phaseHandlers]);
+    if (!phaseMessage) {
+      setShowToast(false);
+      return;
+    }
+
+    setToastMessage(phaseMessage);
+    setShowToast(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setShowToast(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [phaseMessage]);
 
   // 5. WebSocketイベント処理のコールバックをメモ化
   const handlePhaseTransition = useCallback(
@@ -134,7 +167,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
         battlePhase.transitionTo(newPhase as BattlePhase);
       }
     },
-    [battlePhase.transitionTo]
+    [battlePhase]
   );
 
   const handlePlayerChange = useCallback(() => {
@@ -207,6 +240,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
     <Battle
       // フェーズ情報
       phase={battlePhase.phase}
+      phaseMessage={toastMessage}
+      showPhaseMessage={showToast}
       // タイマー関連
       timeLeft={timer.timeLeft}
       isWarning={timer.isWarning}
@@ -227,7 +262,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       theme={battle?.theme || null}
       isLoading={battleInfoLoading}
       error={battleInfoError}
-      players={room?.users}
+      players={players}
       images={images}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
