@@ -70,6 +70,7 @@ type Dependencies struct {
 	GetBattleIDUseCase  *battle.GetBattleIDUseCase
 	GetImageUseCase     *battle.GetImageUseCase
 	ImageSendUseCase    *battle.ImageSendUseCase
+	GetResultUseCase    *battle.GetResultUseCase
 
 	ClapSendUseCase      *clap.ClapSendUseCase
 	StartClapTimeUseCase *clap.StartClapTimeUseCase
@@ -318,6 +319,12 @@ func initUseCases(deps *Dependencies) error {
 		deps.ImageStorage,
 		deps.EventDispatcher,
 		deps.ImageSubmissionScheduler,
+	)
+
+	deps.GetResultUseCase = battle.NewGetResultUseCase(
+		deps.BattleRepository,
+		deps.RoomRepository,
+		deps.ImageRepository,
 	)
 
 	deps.CreateUserUseCase = user.NewCreateUserUseCase(
