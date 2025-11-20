@@ -22,11 +22,11 @@ type CreateBattleOutput struct {
 }
 
 type CreateBattleUseCase struct {
-	battleRepo     repository.BattleRepository
-	battleUserRepo repository.BattleUserRepository
-	roomRepo       repository.RoomRepository
-	llmClient      llm.LLMClient
-	clapScheduler  service.ClapScheduler
+	battleRepo                repository.BattleRepository
+	battleUserRepo            repository.BattleUserRepository
+	roomRepo                  repository.RoomRepository
+	llmClient                 llm.LLMClient
+	imageSubmissionScheduler  service.ImageSubmissionScheduler
 }
 
 func NewCreateBattleUseCase(
@@ -34,14 +34,14 @@ func NewCreateBattleUseCase(
 	battleUserRepo repository.BattleUserRepository,
 	roomRepo repository.RoomRepository,
 	llmClient llm.LLMClient,
-	clapScheduler service.ClapScheduler,
+	imageSubmissionScheduler service.ImageSubmissionScheduler,
 ) *CreateBattleUseCase {
 	return &CreateBattleUseCase{
-		battleRepo:     battleRepo,
-		battleUserRepo: battleUserRepo,
-		roomRepo:       roomRepo,
-		llmClient:      llmClient,
-		clapScheduler:  clapScheduler,
+		battleRepo:               battleRepo,
+		battleUserRepo:           battleUserRepo,
+		roomRepo:                 roomRepo,
+		llmClient:                llmClient,
+		imageSubmissionScheduler: imageSubmissionScheduler,
 	}
 }
 
@@ -85,10 +85,10 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 		return nil, errors.New("failed to save battle users")
 	}
 
-	// 投稿受付締め切りをスケジュール (デフォルト1分)
-	const defaultClapDelay = time.Minute
-	if uc.clapScheduler != nil {
-		uc.clapScheduler.Schedule(battle.ID, defaultClapDelay)
+	// 画像投稿期限をスケジュール (デフォルト1分)
+	const defaultSubmissionDeadline = time.Minute
+	if uc.imageSubmissionScheduler != nil {
+		uc.imageSubmissionScheduler.Schedule(battle.ID, defaultSubmissionDeadline)
 	}
 
 	return &CreateBattleOutput{BattleID: battle.ID}, nil
