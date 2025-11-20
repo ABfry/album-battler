@@ -15,6 +15,7 @@ type BattleHandler struct {
 	getBattleIDUseUC *battle.GetBattleIDUseCase
 	getImageUC       *battle.GetImageUseCase
 	imageSendUC      *battle.ImageSendUseCase
+	getResultUC      *battle.GetResultUseCase
 }
 
 func NewBattleHandler(
@@ -23,6 +24,7 @@ func NewBattleHandler(
 	getBattleIDUC *battle.GetBattleIDUseCase,
 	getImageUC *battle.GetImageUseCase,
 	imageSendUC *battle.ImageSendUseCase,
+	getResultUC *battle.GetResultUseCase,
 ) *BattleHandler {
 	return &BattleHandler{
 		createBattleUC:   createBattleUC,
@@ -30,6 +32,7 @@ func NewBattleHandler(
 		getBattleIDUseUC: getBattleIDUC,
 		getImageUC:       getImageUC,
 		imageSendUC:      imageSendUC,
+		getResultUC:      getResultUC,
 	}
 }
 
@@ -212,6 +215,37 @@ func (h *BattleHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"result": "ok",
 	}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// GET /battle/{id}/result
+func (h *BattleHandler) GetResult(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	battleIDStr := r.PathValue("id")
+	battleID, err := uuid.Parse(battleIDStr)
+	if err != nil {
+		http.Error(w, "Invalid battle_id format", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.getResultUC.Execute(r.Context(), battle.GetResultInput{
+		BattleID: battleID,
+	})
+	if err != nil {
+		fmt.Println("failed to get result", err)
+		http.Error(w, "Failed to get result", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}

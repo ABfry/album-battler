@@ -33,6 +33,7 @@ func (s *APIServer) registerRoutes() {
 		s.deps.GetBattleIDUseCase,
 		s.deps.GetImageUseCase,
 		s.deps.ImageSendUseCase,
+		s.deps.GetResultUseCase,
 	)
 
 	// Userハンドラ
@@ -44,6 +45,7 @@ func (s *APIServer) registerRoutes() {
 	s.mux.HandleFunc("GET /room/{id}/battle-id", battleHandler.GetBattleIDByRoom)
 	s.mux.HandleFunc("GET /battle/{id}/image", battleHandler.GetImage)
 	s.mux.HandleFunc("POST /battle/{id}/send-image", battleHandler.SendImage)
+	s.mux.HandleFunc("GET /battle/{id}/result", battleHandler.GetResult)
 
 	// ヘルスチェック
 	// s.mux.HandleFunc("/healthz", s.handleHealthz)
