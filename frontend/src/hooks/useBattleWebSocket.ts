@@ -6,6 +6,7 @@ import type {
   PlayerLeaveRoomPayload,
   StartGamePayload,
   StartClapTimePayload,
+  ClapSendPayload,
 } from "@/src/lib/websocket/types";
 import type { BattlePhase } from "./useBattlePhase";
 
@@ -15,6 +16,7 @@ type UseBattleWebSocketOptions = {
   onPhaseTransition: (phase: BattlePhase) => void;
   onPlayerChange: () => void;
   onImageUpdate: () => void;
+  onClapUpdate?: () => void;
 };
 
 /**
@@ -23,8 +25,14 @@ type UseBattleWebSocketOptions = {
  */
 export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
   const { subscribe } = useWebSocketEvents();
-  const { battleId, roomId, onPhaseTransition, onPlayerChange, onImageUpdate } =
-    options;
+  const {
+    battleId,
+    roomId,
+    onPhaseTransition,
+    onPlayerChange,
+    onImageUpdate,
+    onClapUpdate,
+  } = options;
 
   useEffect(() => {
     if (!roomId) return;
@@ -63,6 +71,12 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
         console.log("[useBattleWebSocket] Image sent:", payload);
         onImageUpdate();
       }),
+
+      // 拍手送信
+      subscribe("clap_send", (payload: ClapSendPayload) => {
+        console.log("[useBattleWebSocket] Clap sent:", payload);
+        onClapUpdate?.();
+      }),
     ];
 
     return () => {
@@ -77,6 +91,7 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
     onPhaseTransition,
     onPlayerChange,
     onImageUpdate,
+    onClapUpdate,
     battleId,
   ]);
 }
