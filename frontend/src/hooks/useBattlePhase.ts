@@ -70,24 +70,19 @@ export function useBattlePhase(options: UseBattlePhaseOptions = {}) {
   const [phase, setPhase] = useState<BattlePhase>(initialPhase);
   const config = PHASE_CONFIGS[phase];
 
-  const [handlersState, setHandlersState] = useState<PhaseHandlersMap>(
-    handlers ?? {}
-  );
-
   // handlersをRefで保持（常に最新のハンドラーを使用）
-  const handlersRef = useRef(handlersState);
-  useEffect(() => {
-    handlersRef.current = handlersState;
-  }, [handlersState]);
+  const handlersRef = useRef<PhaseHandlersMap>(handlers ?? {});
 
+  // handlersが変更されたらRefを更新
   useEffect(() => {
     if (handlers) {
-      setHandlersState(handlers);
+      handlersRef.current = handlers;
     }
   }, [handlers]);
 
+  // 外部からハンドラーを設定するための関数
   const setHandlers = useCallback((nextHandlers: PhaseHandlersMap) => {
-    setHandlersState(nextHandlers);
+    handlersRef.current = nextHandlers;
   }, []);
 
   // フェーズ遷移
