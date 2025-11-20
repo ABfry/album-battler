@@ -8,6 +8,7 @@ import (
 
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
+	"github.com/ABfry/album-battler/backend/internal/usecase/battle"
 	"github.com/google/uuid"
 )
 
@@ -16,23 +17,26 @@ type ClapTimeManageInput struct {
 }
 
 type ClapTimeManageUseCase struct {
-	battleRepo repository.BattleRepository
-	dispatcher service.EventDispatcher
+	battleRepo    repository.BattleRepository
+	dispatcher    service.EventDispatcher
+	startResultUC *battle.StartResultUseCase
 }
 
 func NewClapTimeManageUseCase(
 	battleRepo repository.BattleRepository,
 	dispatcher service.EventDispatcher,
+	startResultUC *battle.StartResultUseCase,
 ) *ClapTimeManageUseCase {
 	return &ClapTimeManageUseCase{
-		battleRepo: battleRepo,
-		dispatcher: dispatcher,
+		battleRepo:    battleRepo,
+		dispatcher:    dispatcher,
+		startResultUC: startResultUC,
 	}
 }
 
 func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeManageInput) error {
 	// バトルを取得
-	battle, err := uc.battleRepo.FindByID(ctx, input.BattleID)
+	b, err := uc.battleRepo.FindByID(ctx, input.BattleID)
 	if err != nil {
 		fmt.Printf("Failed to find battle: %v", err)
 		return errors.New("failed to find battle")
@@ -71,8 +75,13 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 			}
 		}
 
-	}(battle.ID, battle.UserIDs)
-	// TODO: StartResultUseCaseを呼ぶ
+		resultCtx := context.Background()
+		if err := uc.startResultUC.Execute(resultCtx, battle.StartResultInput{
+			BattleID: battleID,
+		}); err != nil {
+			fmt.Printf("Failed to start result phase: %v\n", err)
+		}
+	}(b.ID, b.UserIDs)
 
 	return nil
 }
