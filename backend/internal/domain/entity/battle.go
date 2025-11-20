@@ -100,3 +100,16 @@ func (b *Battle) RecordClapCounted(userID uuid.UUID, targetUserID uuid.UUID, cou
 		OccurredOn:   time.Now(),
 	})
 }
+
+func (b *Battle) RecordResultPhaseStarted(winnerUserID uuid.UUID) {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.StartResultPhaseEvent{
+		RoomID:       b.RoomID,
+		BattleID:     b.ID,
+		WinnerUserID: winnerUserID,
+		OccurredOn:   time.Now(),
+	})
+}
