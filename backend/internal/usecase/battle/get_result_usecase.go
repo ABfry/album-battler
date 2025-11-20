@@ -17,12 +17,13 @@ type GetResultInput struct {
 }
 
 type UserResult struct {
-	UserID     uuid.UUID `json:"user_id"`
-	AIScore    float64   `json:"ai_score"`
-	UserScore  int       `json:"user_score"`
-	FinalScore float64   `json:"final_score"`
-	Rank       int       `json:"rank"`
-	ImageURL   string    `json:"image_url"`
+	UserID        uuid.UUID `json:"user_id"`
+	AIScore       float64   `json:"ai_score"`
+	UserScore     int       `json:"user_score"`
+	FinalScore    float64   `json:"final_score"`
+	Rank          int       `json:"rank"`
+	ImageURL      string    `json:"image_url"`
+	AIExplanation string    `json:"ai_explanation"`
 }
 
 type GetResultOutput struct {
@@ -87,24 +88,26 @@ func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (
 
 	// スコア計算とソート用の構造体
 	type scoreData struct {
-		UserID     uuid.UUID
-		AIScore    float64
-		UserScore  int
-		FinalScore float64
-		UploadedAt time.Time
-		ImageURL   string
+		UserID        uuid.UUID
+		AIScore       float64
+		UserScore     int
+		FinalScore    float64
+		UploadedAt    time.Time
+		ImageURL      string
+		AIExplanation string
 	}
 
 	scores := make([]scoreData, 0, len(images))
 	for _, img := range images {
 		finalScore := img.AIScore + float64(img.UserScore)
 		scores = append(scores, scoreData{
-			UserID:     img.UserID,
-			AIScore:    img.AIScore,
-			UserScore:  img.UserScore,
-			FinalScore: finalScore,
-			UploadedAt: img.UploadedAt,
-			ImageURL:   img.ImageURL,
+			UserID:        img.UserID,
+			AIScore:       img.AIScore,
+			UserScore:     img.UserScore,
+			FinalScore:    finalScore,
+			UploadedAt:    img.UploadedAt,
+			ImageURL:      img.ImageURL,
+			AIExplanation: img.AIExplanation,
 		})
 	}
 

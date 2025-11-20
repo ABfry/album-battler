@@ -147,6 +147,8 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 			fmt.Printf("Warning: failed to set score for image %s: %v\n", img.ID, err)
 			continue
 		}
+		// AIの評価説明文を設定
+		img.SetAIExplanation(result.Reason)
 
 		// DBに保存
 		if err := uc.imageRepo.Save(ctx, img); err != nil {

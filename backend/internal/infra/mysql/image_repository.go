@@ -39,6 +39,7 @@ func (r *mysqlImageRepository) Save(ctx context.Context, image *entity.Image) er
 		image.UploadedAt,
 		image.AIScore,
 		image.UserScore,
+		image.AIExplanation,
 	)
 }
 
@@ -55,7 +56,7 @@ func (r *mysqlImageRepository) FindImagesByUserID(ctx context.Context, userID uu
 }
 
 func (r *mysqlImageRepository) FindImagesByBattleAndUserID(ctx context.Context, battleID, userID uuid.UUID) (*entity.Image, error) {
-	const query = `SELECT id, user_id, battle_id, image_url, uploaded_at, ai_score, user_score FROM images WHERE battle_id = ? AND user_id = ?`
+	const query = `SELECT id, user_id, battle_id, image_url, uploaded_at, ai_score, user_score, ai_explanation FROM images WHERE battle_id = ? AND user_id = ?`
 
 	rows, err := r.db.QueryContext(ctx, query, battleID.String(), userID.String())
 	if err != nil {
@@ -139,9 +140,10 @@ func (r *mysqlImageRepository) createImage(scanner rowScanner) (*entity.Image, e
 		uploadedAt                    time.Time
 		aiScore                       sql.NullFloat64
 		userScore                     sql.NullInt64
+		AIExplanation                 sql.NullString
 	)
 
-	if err := scanner.Scan(&idStr, &userIDStr, &battleIDStr, &imageURL, &uploadedAt, &aiScore, &userScore); err != nil {
+	if err := scanner.Scan(&idStr, &userIDStr, &battleIDStr, &imageURL, &uploadedAt, &aiScore, &userScore, &AIExplanation); err != nil {
 		return nil, err
 	}
 
@@ -171,5 +173,9 @@ func (r *mysqlImageRepository) createImage(scanner rowScanner) (*entity.Image, e
 	if userScore.Valid {
 		img.UserScore = int(userScore.Int64)
 	}
+	if AIExplanation.Valid {
+		img.AIExplanation = AIExplanation.String
+	}
+
 	return img, nil
 }
