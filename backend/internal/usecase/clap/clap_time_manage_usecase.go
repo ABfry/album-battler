@@ -68,7 +68,7 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 			events := b.PopEvents()
 
 			// タイムアウト付きコンテキストでDispatch実行
-			dispatchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			dispatchCtx, cancel := context.WithTimeout(context.Background(), defaultClapDelay)
 			defer cancel()
 			if err := uc.dispatcher.Dispatch(dispatchCtx, events); err != nil {
 				fmt.Printf("failed to dispatch domain events: %v\n", err)
