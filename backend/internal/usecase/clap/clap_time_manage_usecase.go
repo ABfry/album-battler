@@ -41,28 +41,38 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 	// デフォルト5秒
 	const defaultClapDelay = time.Second * 5
 
-	// 各ユーザーのフェーズを順番に実行
-	for i, userID := range battle.UserIDs {
-		// 拍手時間待機
-		time.Sleep(defaultClapDelay)
+	// goroutineで非同期実行（HTTPレスポンスはすぐ返る）
+	go func(battleID uuid.UUID, userIDs []uuid.UUID) {
+		for i, userID := range userIDs {
+			// 拍手時間待機
+			<-time.After(defaultClapDelay)
 
-		if i == len(battle.UserIDs)-1 {
-			// 最後の場合はイベント通知しない
-			break
+			// 最後のユーザーはイベント通知不要
+			if i >= len(userIDs)-1 {
+				continue
+			}
+
+			// バトルを再取得してイベント記録
+			b, err := uc.battleRepo.FindByID(context.Background(), battleID)
+			if err != nil {
+				fmt.Printf("Failed to find battle in goroutine: %v\n", err)
+				continue
+			}
+
+			// ドメインイベントを記録
+			b.RecordClapUserChanged(userID)
+			events := b.PopEvents()
+
+			// タイムアウト付きコンテキストでDispatch実行
+			dispatchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := uc.dispatcher.Dispatch(dispatchCtx, events); err != nil {
+				fmt.Printf("failed to dispatch domain events: %v\n", err)
+			}
 		}
 
-		// ドメインイベントを記録
-		battle.RecordClapUserChanged(userID)
-
-		// ドメインイベントを配信
-		events := battle.PopEvents()
-		if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
-			fmt.Println("failed to dispatch domain events", "error", err)
-			return err
-		}
-	}
-
-	// todo : resultUsecase呼び出す
+	}(battle.ID, battle.UserIDs)
+	// TODO: StartResultUseCaseを呼ぶ
 
 	return nil
 }
