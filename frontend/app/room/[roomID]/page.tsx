@@ -50,7 +50,9 @@ export default function RoomPage() {
         </h1>
 
         {/* 部屋番号（必要なら表示） */}
-        <p className="mb-4 text-xs text-gray-700">部屋番号: {roomID}</p>
+        <p className="mb-4 text-xs text-gray-700">
+          部屋番号: {room?.roomNumber}
+        </p>
 
         {/* プレイヤー一覧カード */}
         <div className="w-full max-w-xs rounded-xl border border-[#3551b8] bg-white px-6 py-6 shadow-[0_8px_0_rgba(0,0,0,0.15)]">
