@@ -88,6 +88,12 @@ export type SendImageResponse = {
   result: string;
 };
 
+export type GetBattleResultResponse = {
+  battle_id: string;
+  winner_user_id: string;
+  scores: Record<string, number>;
+};
+
 // ドメイン型
 export type RoomStatusString =
   | "waiting"
