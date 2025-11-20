@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 除外するパス
-  const excludedPaths = ["/", "/api-test", "/ui-demo"];
+  const excludedPaths = ["/", "/api-test", "/ui-demo", "/title"];
 
   // 静的ファイルとNext.js内部パスを除外
   if (
