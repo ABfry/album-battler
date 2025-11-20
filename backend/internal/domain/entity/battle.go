@@ -73,6 +73,19 @@ func (b *Battle) RecordClapTimeStarted() {
 	})
 }
 
+func (b *Battle) RecordClapUserChanged(userID uuid.UUID) {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.ChangeClapUserEvent{
+		RoomID:     b.RoomID,
+		BattleID:   b.ID,
+		UserID:     userID,
+		OccurredOn: time.Now(),
+	})
+}
+
 func (b *Battle) RecordClapCounted(userID uuid.UUID, targetUserID uuid.UUID, count int) {
 	if b == nil {
 		return

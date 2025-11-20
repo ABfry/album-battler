@@ -176,6 +176,11 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register(domainEvent.StartClapTimeEvent{}.EventType(), clapTimeStartedHandler)
 
+	changeClapUserHandler := handlers.NewClapChangeUserHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.ChangeClapUserEvent{}.EventType(), changeClapUserHandler)
+
 	clapSendHandler := handlers.NewClapSendHandler(
 		deps.EventPublisher,
 	)

@@ -36,3 +36,18 @@ func (e StartClapTimeEvent) EventType() string {
 func (e StartClapTimeEvent) OccurredAt() time.Time {
 	return e.OccurredOn
 }
+
+type ChangeClapUserEvent struct {
+	RoomID     uuid.UUID
+	BattleID   uuid.UUID
+	UserID     uuid.UUID
+	OccurredOn time.Time
+}
+
+func (e ChangeClapUserEvent) EventType() string {
+	return "change_clap_user"
+}
+
+func (e ChangeClapUserEvent) OccurredAt() time.Time {
+	return e.OccurredOn
+}
