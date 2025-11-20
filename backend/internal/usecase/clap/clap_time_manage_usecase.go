@@ -16,20 +16,17 @@ type ClapTimeManageInput struct {
 }
 
 type ClapTimeManageUseCase struct {
-	battleRepo     repository.BattleRepository
-	clapsScheduler service.ClapWaitScheduler
-	dispatcher     service.EventDispatcher
+	battleRepo repository.BattleRepository
+	dispatcher service.EventDispatcher
 }
 
 func NewClapTimeManageUseCase(
 	battleRepo repository.BattleRepository,
-	clapScheduler service.ClapWaitScheduler,
 	dispatcher service.EventDispatcher,
 ) *ClapTimeManageUseCase {
 	return &ClapTimeManageUseCase{
-		battleRepo:     battleRepo,
-		clapsScheduler: clapScheduler,
-		dispatcher:     dispatcher,
+		battleRepo: battleRepo,
+		dispatcher: dispatcher,
 	}
 }
 
@@ -41,18 +38,18 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 		return errors.New("failed to find battle")
 	}
 
-	if uc.clapsScheduler == nil {
-		fmt.Printf("Clap scheduler is not configured")
-		return errors.New("clap scheduler is not configured")
-	}
-
-	// 拍手時間をスケジュール(デフォルト5秒)
+	// デフォルト5秒
 	const defaultClapDelay = time.Second * 5
-	for _, userID := range battle.UserIDs {
-		isEnd := make(chan bool)
-		uc.clapsScheduler.Schedule(battle.ID, userID, defaultClapDelay, isEnd)
 
-		<-isEnd
+	// 各ユーザーのフェーズを順番に実行
+	for i, userID := range battle.UserIDs {
+		// 拍手時間待機
+		time.Sleep(defaultClapDelay)
+
+		if i == len(battle.UserIDs)-1 {
+			// 最後の場合はイベント通知しない
+			break
+		}
 
 		// ドメインイベントを記録
 		battle.RecordClapUserChanged(userID)
@@ -63,9 +60,9 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 			fmt.Println("failed to dispatch domain events", "error", err)
 			return err
 		}
-
-		close(isEnd)
 	}
+
+	// todo : resultUsecase呼び出す
 
 	return nil
 }
