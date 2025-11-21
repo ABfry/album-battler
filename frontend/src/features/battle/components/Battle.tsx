@@ -23,6 +23,7 @@ type BattleProps = {
 
   // 画像選択関連
   selectedImage: string | null;
+  displayedImage: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -59,6 +60,7 @@ export function Battle({
   isWarning,
   // 画像選択関連
   selectedImage,
+  displayedImage,
   isDragging,
   isImageSent,
   fileInputRef,
@@ -113,7 +115,7 @@ export function Battle({
 
         {phaseMessage && showPhaseMessage && (
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-            <div className="rounded-3xl bg-black/70 px-8 py-6 text-4xl font-black text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-4 ring-white/30 animate-in fade-in zoom-in duration-300">
+            <div className="animate-in fade-in zoom-in rounded-3xl bg-black/70 px-8 py-6 text-4xl font-black text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-4 ring-white/30 duration-300">
               {phaseMessage}
             </div>
           </div>
@@ -122,6 +124,7 @@ export function Battle({
         {/* バトル画像（中央） */}
         <ImageFrame
           selectedImage={selectedImage}
+          displayedImage={displayedImage}
           isDragging={isDragging}
           isImageSent={isImageSent}
           fileInputRef={fileInputRef}
