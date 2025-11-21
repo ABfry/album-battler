@@ -396,6 +396,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       onClap={handleClap}
       // 結果情報
       battleResult={battleResult}
+      battleId={battleID}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
       onCloseErrorDialog={() => setShowErrorDialog(false)}
