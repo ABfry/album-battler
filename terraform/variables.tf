@@ -152,3 +152,16 @@ variable "gemini_api_key" {
   type        = string
   sensitive   = true
 }
+
+# Route 53 & Domain
+variable "domain_name" {
+  description = "ドメイン名"
+  type        = string
+  default     = ""
+}
+
+variable "enable_route53" {
+  description = "Route 53とカスタムドメインを有効化"
+  type        = bool
+  default     = false
+}
