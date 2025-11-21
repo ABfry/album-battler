@@ -48,5 +48,5 @@ func (s *APIServer) registerRoutes() {
 	s.mux.HandleFunc("GET /battle/{id}/result", battleHandler.GetResult)
 
 	// ヘルスチェック
-	// s.mux.HandleFunc("/healthz", s.handleHealthz)
+	s.mux.HandleFunc("GET /health", s.handleHealth)
 }

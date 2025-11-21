@@ -25,5 +25,15 @@ export function middleware(request: NextRequest) {
 // Matcher: 静的リソースを完全除外 (API, _next, 画像ファイル)
 // Middleware: 認証が必要なページの動的制御
 export const config = {
-  matcher: ["/((?!api/|_next/|.*\\.(svg|png|jpg|jpeg|gif|webp|ico|json)$).*)"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - Static files (svg, png, jpg, jpeg, gif, webp, ico, json)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json)$).*)",
+  ],
 };

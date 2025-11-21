@@ -84,6 +84,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "images" {
     id     = "expire-old-images"
     status = "Enabled"
 
+    filter {}  # 空のfilterを追加（全オブジェクトに適用）
+
     expiration {
       days = var.expiration_days
     }

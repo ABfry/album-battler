@@ -103,10 +103,11 @@ module "s3_storage" {
 module "rds" {
   source = "./modules/rds"
 
-  project_name       = var.project_name
-  environment        = var.environment
-  subnet_ids         = aws_subnet.public[*].id
-  security_group_ids = [module.ecs.ecs_tasks_security_group_id]
+  project_name                = var.project_name
+  environment                 = var.environment
+  vpc_id                      = aws_vpc.main.id
+  subnet_ids                  = aws_subnet.public[*].id
+  ecs_tasks_security_group_id = module.ecs.ecs_tasks_security_group_id
 
   db_name     = var.db_name
   db_username = var.db_username
@@ -146,10 +147,29 @@ module "ecs" {
   backend_memory        = var.backend_memory
   backend_desired_count = var.backend_desired_count
 
+  frontend_environment_variables = [
+    {
+      name  = "NEXT_PUBLIC_API_URL"
+      value = "http://${module.ecs.alb_dns_name}"
+    },
+    {
+      name  = "NEXT_PUBLIC_WEBSOCKET_URL"
+      value = "ws://${module.ecs.alb_dns_name}/ws"
+    }
+  ]
+
   backend_environment_variables = [
+    {
+      name  = "PORT"
+      value = "8080"
+    },
     {
       name  = "DB_DRIVER"
       value = "mysql"
+    },
+    {
+      name  = "DB_ENV"
+      value = "production"
     },
     {
       name  = "DB_HOST"
@@ -172,11 +192,31 @@ module "ecs" {
       value = var.db_password
     },
     {
+      name  = "DB_PARAMS"
+      value = "charset=utf8mb4&parseTime=true&loc=Local"
+    },
+    {
+      name  = "DB_MAX_OPEN_CONNS"
+      value = "32"
+    },
+    {
+      name  = "DB_MAX_IDLE_CONNS"
+      value = "16"
+    },
+    {
+      name  = "DB_CONN_MAX_LIFETIME"
+      value = "5400"
+    },
+    {
+      name  = "DB_CONN_MAX_IDLE_TIME"
+      value = "900"
+    },
+    {
       name  = "AWS_REGION"
       value = var.aws_region
     },
     {
-      name  = "S3_BUCKET_NAME"
+      name  = "S3_BUCKET"
       value = var.s3_bucket_name
     },
     {
