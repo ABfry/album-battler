@@ -48,8 +48,11 @@ func (uc *GetActiveBattleUseCase) Execute(ctx context.Context, input GetActiveBa
 
 		// バトルを取得
 		battle, err := uc.battleRepo.FindByRoomID(ctx, room.ID)
-		if err != nil || battle == nil {
+		if err != nil {
 			return nil, errors.New("failed to find battle by room ID")
+		}
+		if battle == nil {
+			continue
 		}
 
 		return &GetActiveBattleOutput{RoomID: room.ID, BattleID: battle.ID}, nil
