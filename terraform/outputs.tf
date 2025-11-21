@@ -79,29 +79,3 @@ output "backend_ecr_repository_url" {
   description = "Backend ECRリポジトリURL"
   value       = module.ecs.backend_ecr_repository_url
 }
-
-# Route 53 & Domain Outputs
-output "route53_zone_id" {
-  description = "Route 53 ホストゾーンID"
-  value       = var.enable_route53 ? aws_route53_zone.main[0].zone_id : null
-}
-
-output "route53_name_servers" {
-  description = "Route 53 ネームサーバー"
-  value       = var.enable_route53 ? aws_route53_zone.main[0].name_servers : null
-}
-
-output "domain_name" {
-  description = "設定されたドメイン名"
-  value       = var.enable_route53 ? var.domain_name : null
-}
-
-output "certificate_arn" {
-  description = "ACM証明書ARN"
-  value       = var.enable_route53 ? aws_acm_certificate.main[0].arn : null
-}
-
-output "application_url" {
-  description = "アプリケーションURL（ドメイン設定時はHTTPS）"
-  value       = var.enable_route53 ? "https://${var.domain_name}" : "http://${module.ecs.alb_dns_name}"
-}
