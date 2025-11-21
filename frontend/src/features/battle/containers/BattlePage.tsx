@@ -79,6 +79,12 @@ export function BattlePage({ battleID }: BattlePageProps) {
     refetchImages();
   }, [refetchBattle, refetchImages]);
 
+  const handleClapUpdate = useCallback(() => {
+    console.log("[BattlePage] Clap update detected");
+    // TODO: 拍手を受け取ったら演出や音を鳴らす？
+    // スコアのフェッチは最後で良さげ
+  }, []);
+
   // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
   useBattleWebSocket({
     battleId: battleID,
@@ -86,6 +92,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     onPhaseTransition: handlePhaseTransition,
     onPlayerChange: handlePlayerChange,
     onImageUpdate: handleImageUpdate,
+    onClapUpdate: handleClapUpdate,
   });
 
   // 7. バトル情報取得後、途中参加を考慮してselectingフェーズに自動遷移
