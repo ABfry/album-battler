@@ -88,10 +88,20 @@ export type SendImageResponse = {
   result: string;
 };
 
+export type UserResult = {
+  user_id: string;
+  ai_score: number;
+  user_score: number;
+  final_score: number;
+  rank: number;
+  image_url: string;
+  ai_explanation: string;
+};
+
 export type GetBattleResultResponse = {
   battle_id: string;
   winner_user_id: string;
-  scores: Record<string, number>;
+  results: UserResult[];
 };
 
 // ドメイン型

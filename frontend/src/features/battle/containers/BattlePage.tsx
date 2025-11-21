@@ -103,17 +103,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
         },
       },
       result: {
-        onPhaseStart: async () => {
+        onPhaseStart: () => {
           console.log("結果発表");
-          // 結果データを取得
-          console.log("[BattlePage] Fetching battle result...");
-          const result = await getResult(battleID);
-          if (result) {
-            setBattleResult(result);
-            console.log("[BattlePage] Battle result fetched:", result);
-          } else {
-            console.error("[BattlePage] Failed to fetch battle result");
-          }
+          // WebSocketイベント駆動で結果取得するため、ここでは何もしない
         },
       },
     };
@@ -253,14 +245,49 @@ export function BattlePage({ battleID }: BattlePageProps) {
   }, []);
 
   const handleResultStart = useCallback(async () => {
-    console.log("[BattlePage] Fetching battle result...");
-    const result = await getResult(battleID);
-    if (result) {
-      setBattleResult(result);
-      console.log("[BattlePage] Battle result fetched:", result);
-    } else {
-      console.error("[BattlePage] Failed to fetch battle result");
+    console.log("[BattlePage] Result phase started, fetching battle result...");
+
+    // AI採点が完了していない可能性があるため、リトライロジックを実装
+    const maxRetries = 5;
+    const retryDelay = 2000; // 2秒
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(
+        `[BattlePage] Attempt ${attempt}/${maxRetries} to fetch result`
+      );
+
+      const result = await getResult(battleID);
+      if (result) {
+        // AI採点が完了しているかチェック（ai_explanationが空でないこと）
+        const isAIJudgingComplete = result.results.every(
+          (r) => r.ai_explanation && r.ai_explanation.trim() !== ""
+        );
+
+        if (isAIJudgingComplete) {
+          setBattleResult(result);
+          console.log(
+            "[BattlePage] Battle result fetched successfully:",
+            result
+          );
+          return;
+        } else {
+          console.log(
+            "[BattlePage] AI judging not complete yet, will retry..."
+          );
+        }
+      }
+
+      if (attempt < maxRetries) {
+        console.log(
+          `[BattlePage] Result not ready, waiting ${retryDelay}ms before retry...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
     }
+
+    console.error(
+      "[BattlePage] Failed to fetch battle result after all retries"
+    );
   }, [battleID, getResult]);
 
   // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
