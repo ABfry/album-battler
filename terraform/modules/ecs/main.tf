@@ -156,7 +156,7 @@ resource "aws_lb_listener" "https" {
 }
 
 # ALB Listener Rules - Backend API (HTTP)
-resource "aws_lb_listener_rule" "backend_room" {
+resource "aws_lb_listener_rule" "backend_api" {
   count        = var.enable_route53 ? 0 : 1
   listener_arn = aws_lb_listener.http_forward[0].arn
   priority     = 100
@@ -168,7 +168,7 @@ resource "aws_lb_listener_rule" "backend_room" {
 
   condition {
     path_pattern {
-      values = ["/room", "/room/*"]
+      values = ["/api/*"]
     }
   }
 
@@ -176,7 +176,7 @@ resource "aws_lb_listener_rule" "backend_room" {
 }
 
 # ALB Listener Rules - Backend API (HTTPS)
-resource "aws_lb_listener_rule" "backend_room_https" {
+resource "aws_lb_listener_rule" "backend_api_https" {
   count        = var.enable_route53 ? 1 : 0
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 100
@@ -188,93 +188,18 @@ resource "aws_lb_listener_rule" "backend_room_https" {
 
   condition {
     path_pattern {
-      values = ["/room", "/room/*"]
+      values = ["/api/*"]
     }
   }
 
   tags = var.tags
 }
 
-resource "aws_lb_listener_rule" "backend_battle" {
-  count        = var.enable_route53 ? 0 : 1
-  listener_arn = aws_lb_listener.http_forward[0].arn
-  priority     = 101
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/battle", "/battle/*"]
-    }
-  }
-
-  tags = var.tags
-}
-
-resource "aws_lb_listener_rule" "backend_battle_https" {
-  count        = var.enable_route53 ? 1 : 0
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 101
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/battle", "/battle/*"]
-    }
-  }
-
-  tags = var.tags
-}
-
-resource "aws_lb_listener_rule" "backend_user" {
-  count        = var.enable_route53 ? 0 : 1
-  listener_arn = aws_lb_listener.http_forward[0].arn
-  priority     = 102
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/user", "/user/*"]
-    }
-  }
-
-  tags = var.tags
-}
-
-resource "aws_lb_listener_rule" "backend_user_https" {
-  count        = var.enable_route53 ? 1 : 0
-  listener_arn = aws_lb_listener.https[0].arn
-  priority     = 102
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/user", "/user/*"]
-    }
-  }
-
-  tags = var.tags
-}
-
+# WebSocket Listener Rules (HTTP)
 resource "aws_lb_listener_rule" "backend_ws" {
   count        = var.enable_route53 ? 0 : 1
   listener_arn = aws_lb_listener.http_forward[0].arn
-  priority     = 103
+  priority     = 101
 
   action {
     type             = "forward"
@@ -290,10 +215,11 @@ resource "aws_lb_listener_rule" "backend_ws" {
   tags = var.tags
 }
 
+# WebSocket Listener Rules (HTTPS)
 resource "aws_lb_listener_rule" "backend_ws_https" {
   count        = var.enable_route53 ? 1 : 0
   listener_arn = aws_lb_listener.https[0].arn
-  priority     = 103
+  priority     = 101
 
   action {
     type             = "forward"
