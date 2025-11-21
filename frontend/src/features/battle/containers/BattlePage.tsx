@@ -14,6 +14,7 @@ import {
 import { useBattleTimer } from "@/src/hooks/useBattleTimer";
 import { useBattleWebSocket } from "@/src/hooks/useBattleWebSocket";
 import { useImageSelection } from "@/src/hooks/useImageSelection";
+import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { Battle } from "../components/Battle";
 
 type BattlePageProps = {
@@ -277,6 +278,35 @@ export function BattlePage({ battleID }: BattlePageProps) {
     onSendError: handleSendError,
   });
 
+  // 9. 拍手機能
+  const { sendClap, isConnected: isClapConnected } = useWebSocketClap();
+
+  // 現在の拍手ターゲットユーザーを計算
+  const currentClapTarget = useMemo(() => {
+    const clapIndex = CLAP_PHASES.indexOf(battlePhase.phase);
+    if (clapIndex === -1) return null; // 拍手フェーズでない
+
+    const targetPlayer = players[clapIndex];
+    return targetPlayer || null;
+  }, [battlePhase.phase, players]);
+
+  // 拍手ハンドラー
+  const handleClap = useCallback(() => {
+    if (!currentClapTarget || !isClapConnected) return;
+
+    try {
+      sendClap({
+        userId: userId,
+        targetUserId: currentClapTarget.id,
+        battleId: battleID,
+        count: 1,
+      });
+      console.log(`[BattlePage] Clap sent to ${currentClapTarget.name}`);
+    } catch (error) {
+      console.error("[BattlePage] Failed to send clap:", error);
+    }
+  }, [currentClapTarget, isClapConnected, sendClap, userId, battleID]);
+
   return (
     <Battle
       // フェーズ情報
@@ -307,6 +337,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
       error={battleInfoError}
       players={players}
       images={images}
+      // 拍手機能
+      canClap={battlePhase.canClap}
+      onClap={handleClap}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
       onCloseErrorDialog={() => setShowErrorDialog(false)}
