@@ -1,3 +1,5 @@
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { UserInfo, BattleImage } from "@/src/lib/api/types";
 import type { BattlePhase } from "@/src/hooks/useBattlePhase";
 import { ImageFrame } from "./ImageFrame";
@@ -11,6 +13,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
+
+type ClapEffect = {
+  id: string;
+  timestamp: number;
+  offsetX: number; // ランダムな横移動量
+};
 
 type BattleProps = {
   // フェーズ情報
@@ -91,6 +99,28 @@ export function Battle({
   showErrorDialog,
   onCloseErrorDialog,
 }: BattleProps) {
+  // 拍手エフェクトの管理
+  const [clapEffects, setClapEffects] = useState<ClapEffect[]>([]);
+
+  // 拍手ボタンクリック時のハンドラー
+  const handleClapClick = useCallback(() => {
+    // 元の拍手処理を実行
+    onClap();
+
+    // 拍手エフェクトを追加（ランダム値はここで計算）
+    const newEffect: ClapEffect = {
+      id: `clap-${Date.now()}-${Math.random()}`,
+      timestamp: Date.now(),
+      offsetX: Math.random() * 60 - 30, // -30px ~ +30px のランダムな横移動
+    };
+    setClapEffects((prev) => [...prev, newEffect]);
+
+    // 2秒後にエフェクトを削除
+    setTimeout(() => {
+      setClapEffects((prev) => prev.filter((e) => e.id !== newEffect.id));
+    }, 2000);
+  }, [onClap]);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="relative flex h-screen w-full max-w-4xl flex-col items-center justify-between py-8">
@@ -150,12 +180,43 @@ export function Battle({
 
         {/* 拍手ボタン（右下） */}
         {canClap && (
-          <button
-            onClick={onClap}
-            className="absolute right-8 bottom-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-5xl shadow-2xl transition-transform hover:scale-110 active:scale-95"
-          >
-            👏
-          </button>
+          <div className="absolute right-8 bottom-8">
+            {/* 拍手エフェクト */}
+            <AnimatePresence>
+              {clapEffects.map((effect) => (
+                <motion.div
+                  key={effect.id}
+                  initial={{ y: 0, opacity: 1, scale: 1 }}
+                  animate={{
+                    y: -300, // 150 → 300: 距離を2倍に
+                    opacity: 0,
+                    x: effect.offsetX, // 事前に計算されたランダムな横移動量
+                  }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    duration: 2.0, // 1.5 → 2.0: より長く、よりダイナミックに
+                    ease: "easeOut",
+                  }}
+                  className="pointer-events-none absolute text-6xl"
+                  style={{
+                    left: "15%",
+                    bottom: "100%",
+                    transform: "translateX(-50%)",
+                  }}
+                >
+                  👏
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* 拍手ボタン */}
+            <button
+              onClick={handleClapClick}
+              className="relative flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br from-yellow-400 to-orange-500 text-5xl shadow-2xl transition-transform hover:scale-110 active:scale-95"
+            >
+              👏
+            </button>
+          </div>
         )}
       </div>
 
