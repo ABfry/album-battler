@@ -80,7 +80,8 @@ func (r *mysqlRoomRepository) FindByRoomNumber(ctx context.Context, roomNumber i
 }
 
 func (r *mysqlRoomRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Room, error) {
-	rows, err := findRowsByKey(ctx, r.db, RoomUsersTable, "user_id", userID.String())
+	query := "SELECT room_id FROM room_users WHERE user_id = ?"
+	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -92,12 +93,18 @@ func (r *mysqlRoomRepository) FindByUserID(ctx context.Context, userID uuid.UUID
 
 	var rooms []*entity.Room
 	for rows.Next() {
-		room, err := r.createRoom(rows)
+		var roomIDStr string
+		if err := rows.Scan(&roomIDStr); err != nil {
+			return nil, err
+		}
+
+		roomRow, err := findRowByKey(ctx, r.db, RoomsTable, "id", roomIDStr)
 		if err != nil {
 			return nil, err
 		}
-		// room_users から UserIDs を読み込む
-		if err := r.loadUserIDs(ctx, room); err != nil {
+
+		room, err := r.createRoom(roomRow)
+		if err != nil {
 			return nil, err
 		}
 		rooms = append(rooms, room)

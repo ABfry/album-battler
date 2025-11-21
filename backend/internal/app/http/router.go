@@ -44,6 +44,7 @@ func (s *APIServer) registerRoutes() {
 	s.mux.HandleFunc("POST /battle", battleHandler.CreateBattle) // デバッグ用
 	s.mux.HandleFunc("GET /battle/{id}", battleHandler.GetBattle)
 	s.mux.HandleFunc("GET /room/{id}/battle-id", battleHandler.GetBattleIDByRoom)
+	s.mux.HandleFunc("GET /user/{id}/active-battle", battleHandler.GetActiveBattleByUser)
 	s.mux.HandleFunc("GET /battle/{id}/image", battleHandler.GetImage)
 	s.mux.HandleFunc("POST /battle/{id}/send-image", battleHandler.SendImage)
 	s.mux.HandleFunc("GET /battle/{id}/result", battleHandler.GetResult)
