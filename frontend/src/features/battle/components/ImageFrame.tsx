@@ -3,6 +3,7 @@ import { Button } from "@/src/components/ui/button";
 
 type ImageFrameProps = {
   selectedImage: string | null;
+  displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -21,6 +22,7 @@ type ImageFrameProps = {
  */
 export function ImageFrame({
   selectedImage,
+  displayedImage,
   isDragging,
   isImageSent,
   fileInputRef,
@@ -33,6 +35,8 @@ export function ImageFrame({
   onDragOver,
   onDrop,
 }: ImageFrameProps) {
+  // 表示する画像を決定: displayedImage > selectedImage
+  const imageToShow = displayedImage || selectedImage;
   return (
     <div className="flex w-full flex-1 flex-col items-center justify-center gap-4">
       <div className="relative w-2/3 max-w-md">
@@ -63,15 +67,19 @@ export function ImageFrame({
               onDrop={isImageSent ? undefined : onDrop}
             >
               <button
-                onClick={isImageSent ? undefined : onOpenAlbum}
-                disabled={isImageSent}
+                onClick={
+                  isImageSent || displayedImage ? undefined : onOpenAlbum
+                }
+                disabled={isImageSent || !!displayedImage}
                 className={`flex h-full w-full items-center justify-center transition-colors ${
-                  isImageSent ? "cursor-not-allowed" : "hover:bg-gray-50"
+                  isImageSent || displayedImage
+                    ? "cursor-not-allowed"
+                    : "hover:bg-gray-50"
                 }`}
               >
-                {selectedImage ? (
+                {imageToShow ? (
                   <Image
-                    src={selectedImage}
+                    src={imageToShow}
                     alt="選択した画像"
                     fill
                     sizes="(max-width: 768px) 100vw, 400px"

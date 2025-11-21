@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import { useBattle } from "@/src/hooks/useBattle";
@@ -27,6 +28,15 @@ import type { DebugMessage } from "@/src/lib/types";
  * ロジック・状態管理を担当
  */
 export function ApiTestPage() {
+  // CookieからユーザーIDを取得（フォールバックは固定値）
+  const [userId, setUserId] = useState("550e8400-e29b-41d4-a716-446655440001");
+
+  useEffect(() => {
+    const cookieUserId = getUserIdClient();
+    if (cookieUserId) {
+      setUserId(cookieUserId);
+    }
+  }, []);
   // 部屋作成・参加・退出・ゲーム開始の操作
   const {
     createRoom,
@@ -230,7 +240,7 @@ export function ApiTestPage() {
     if (!createdRoom) return;
     const success = await startGame(
       createdRoom.room_id,
-      "550e8400-e29b-41d4-a716-446655440001"
+      userId
     );
     setStartSuccess(success);
     setLatestApiResponse({
@@ -296,6 +306,7 @@ export function ApiTestPage() {
 
   return (
     <ApiTestView
+      userId={userId}
       createdRoom={createdRoom}
       room={room}
       loading={loading}

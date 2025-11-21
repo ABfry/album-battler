@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import {
@@ -19,15 +20,23 @@ type BattlePageProps = {
   battleID: string;
 };
 
-// TODO: 実際のユーザーIDを取得する仕組みが必要
-const MOCK_USER_ID = "550e8400-e29b-41d4-a716-446655440001";
-
 /**
  * バトル画面のコンテナコンポーネント (Container)
  * ロジック・状態管理を担当
  */
 export function BattlePage({ battleID }: BattlePageProps) {
+  // CookieからユーザーIDを取得（フォールバックは固定値）
+  const [userId, setUserId] = useState("550e8400-e29b-41d4-a716-446655440001");
+
+  useEffect(() => {
+    const cookieUserId = getUserIdClient();
+    if (cookieUserId) {
+      setUserId(cookieUserId);
+    }
+  }, []);
+
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [displayedImage, setDisplayedImage] = useState<string | null>(null);
 
   // 1. バトル情報取得
   const {
@@ -60,9 +69,15 @@ export function BattlePage({ battleID }: BattlePageProps) {
   });
 
   const playersRef = useRef(players);
+  const imagesRef = useRef(images);
+
   useEffect(() => {
     playersRef.current = players;
   }, [players]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
 
   useEffect(() => {
     // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
@@ -97,12 +112,25 @@ export function BattlePage({ battleID }: BattlePageProps) {
       handlers[clapPhase] = {
         onPhaseStart: () => {
           const currentPlayers = playersRef.current;
+          const currentImages = imagesRef.current;
           const player = currentPlayers[index];
 
           if (!player) {
             console.log(`${clapPhase}: プレイヤーがいないのでスキップ`);
             battlePhase.transitionTo(nextPhase as BattlePhase);
             return;
+          }
+
+          // プレイヤーの画像を表示
+          const playerImage = currentImages.find(
+            (img) => img.userId === player.id
+          );
+          if (playerImage) {
+            setDisplayedImage(playerImage.imageUrl);
+            console.log(`${player.name}の画像を表示: ${playerImage.imageUrl}`);
+          } else {
+            setDisplayedImage(null);
+            console.log(`${player.name}の画像が見つかりません`);
           }
 
           console.log(
@@ -200,10 +228,13 @@ export function BattlePage({ battleID }: BattlePageProps) {
     refetchBattleRef.current();
   }, []);
 
-  const handleImageUpdate = useCallback(() => {
+  const handleImageUpdate = useCallback(async () => {
     console.log("[BattlePage] Image update detected");
-    refetchBattleRef.current();
-    refetchImagesRef.current();
+    await Promise.all([
+      refetchBattleRef.current(),
+      refetchImagesRef.current(),
+    ]);
+    console.log("[BattlePage] Images and battle info refetched");
   }, []);
 
   const handleClapUpdate = useCallback(() => {
@@ -248,7 +279,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const imageSelection = useImageSelection({
     battleId: battleID,
-    userId: MOCK_USER_ID,
+    userId: userId,
     canSelect: battlePhase.canSelectImage,
     onSendSuccess: handleSendSuccess,
     onSendError: handleSendError,
@@ -265,6 +296,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       isWarning={timer.isWarning}
       // 画像選択関連
       selectedImage={imageSelection.selectedImage}
+      displayedImage={displayedImage}
       isDragging={imageSelection.isDragging}
       isImageSent={imageSelection.isImageSent}
       fileInputRef={imageSelection.fileInputRef}

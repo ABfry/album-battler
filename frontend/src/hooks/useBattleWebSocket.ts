@@ -15,7 +15,7 @@ type UseBattleWebSocketOptions = {
   roomId: string | null;
   onPhaseTransition: (phase: BattlePhase) => void;
   onPlayerChange: () => void;
-  onImageUpdate: () => void;
+  onImageUpdate: () => void | Promise<void>;
   onClapUpdate?: () => void;
 };
 
@@ -62,8 +62,11 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
       }),
 
       // 拍手タイム開始 → 拍手フェーズ
-      subscribe("start_clap_time", (payload: StartClapTimePayload) => {
+      subscribe("start_clap_time", async (payload: StartClapTimePayload) => {
         console.log("[useBattleWebSocket] Clap time started:", payload);
+        console.log("[useBattleWebSocket] Fetching latest images before transition...");
+        await onImageUpdateRef.current();
+        console.log("[useBattleWebSocket] Images fetched, transitioning to clap_time_1");
         onPhaseTransitionRef.current("clap_time_1");
       }),
 
