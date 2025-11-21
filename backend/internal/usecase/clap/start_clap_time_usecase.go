@@ -86,6 +86,12 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 		return err
 	}
 
+	// go func() {
+	// 	for _, userID := range battle.UserIDs {
+	// 		fmt.Printf("Clap time started for user %s in battle %s\n", userID, battle.ID)
+	// 	}
+	// }
+
 	// 非同期で画像採点をする
 	go func(battleID uuid.UUID) {
 		// 親contextから独立
@@ -147,6 +153,8 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 			fmt.Printf("Warning: failed to set score for image %s: %v\n", img.ID, err)
 			continue
 		}
+		// AIの評価説明文を設定
+		img.SetAIExplanation(result.Reason)
 
 		// DBに保存
 		if err := uc.imageRepo.Save(ctx, img); err != nil {

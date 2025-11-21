@@ -9,13 +9,14 @@ import (
 )
 
 type Image struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	BattleID   uuid.UUID
-	ImageURL   string
-	UploadedAt time.Time
-	AIScore    float64 // 0.0 ~ 100.0
-	UserScore  int     // 0 ~ N
+	ID            uuid.UUID
+	UserID        uuid.UUID
+	BattleID      uuid.UUID
+	ImageURL      string
+	UploadedAt    time.Time
+	AIScore       float64 // 0.0 ~ 100.0
+	UserScore     int     // 0 ~ N
+	AIExplanation string  // AIによる評価の説明文
 }
 
 func NewImage(userID, battleID uuid.UUID, imageURL string) (*Image, error) {
@@ -63,4 +64,8 @@ func (i *Image) AddUserScore(score int) error {
 	}
 	i.UserScore += score
 	return nil
+}
+
+func (i *Image) SetAIExplanation(explanation string) {
+	i.AIExplanation = explanation
 }
