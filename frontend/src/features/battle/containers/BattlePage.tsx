@@ -226,10 +226,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const handleImageUpdate = useCallback(async () => {
     console.log("[BattlePage] Image update detected");
-    await Promise.all([
-      refetchBattleRef.current(),
-      refetchImagesRef.current(),
-    ]);
+    await Promise.all([refetchBattleRef.current(), refetchImagesRef.current()]);
     console.log("[BattlePage] Images and battle info refetched");
   }, []);
 

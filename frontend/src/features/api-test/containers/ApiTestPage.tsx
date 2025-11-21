@@ -233,10 +233,7 @@ export function ApiTestPage() {
   // 4. ゲーム開始
   const handleStartGame = async () => {
     if (!createdRoom) return;
-    const success = await startGame(
-      createdRoom.room_id,
-      userId
-    );
+    const success = await startGame(createdRoom.room_id, userId);
     setStartSuccess(success);
     setLatestApiResponse({
       api: "startGame",
