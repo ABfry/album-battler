@@ -88,3 +88,22 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# Route 53 & ACM
+variable "enable_route53" {
+  description = "Route 53とカスタムドメインを有効化"
+  type        = bool
+  default     = false
+}
+
+variable "domain_name" {
+  description = "ドメイン名"
+  type        = string
+  default     = ""
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM証明書ARN"
+  type        = string
+  default     = ""
+}
