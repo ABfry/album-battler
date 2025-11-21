@@ -10,29 +10,32 @@ import (
 )
 
 type BattleHandler struct {
-	createBattleUC   *battle.CreateBattleUseCase
-	getBattleUC      *battle.GetBattleUseCase
-	getBattleIDUseUC *battle.GetBattleIDUseCase
-	getImageUC       *battle.GetImageUseCase
-	imageSendUC      *battle.ImageSendUseCase
-	getResultUC      *battle.GetResultUseCase
+	createBattleUC    *battle.CreateBattleUseCase
+	getBattleUC       *battle.GetBattleUseCase
+	getBattleIDUseUC  *battle.GetBattleIDUseCase
+	getActiveBattleUC *battle.GetActiveBattleUseCase
+	getImageUC        *battle.GetImageUseCase
+	imageSendUC       *battle.ImageSendUseCase
+	getResultUC       *battle.GetResultUseCase
 }
 
 func NewBattleHandler(
 	createBattleUC *battle.CreateBattleUseCase,
 	getBattleUC *battle.GetBattleUseCase,
 	getBattleIDUC *battle.GetBattleIDUseCase,
+	getActiveBattleUC *battle.GetActiveBattleUseCase,
 	getImageUC *battle.GetImageUseCase,
 	imageSendUC *battle.ImageSendUseCase,
 	getResultUC *battle.GetResultUseCase,
 ) *BattleHandler {
 	return &BattleHandler{
-		createBattleUC:   createBattleUC,
-		getBattleUC:      getBattleUC,
-		getBattleIDUseUC: getBattleIDUC,
-		getImageUC:       getImageUC,
-		imageSendUC:      imageSendUC,
-		getResultUC:      getResultUC,
+		createBattleUC:    createBattleUC,
+		getBattleUC:       getBattleUC,
+		getBattleIDUseUC:  getBattleIDUC,
+		getActiveBattleUC: getActiveBattleUC,
+		getImageUC:        getImageUC,
+		imageSendUC:       imageSendUC,
+		getResultUC:       getResultUC,
 	}
 }
 
@@ -125,6 +128,36 @@ func (h *BattleHandler) GetBattleIDByRoom(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		http.Error(w, "Failed to get battle id", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// GET /user/{id}/active-battle
+func (h *BattleHandler) GetActiveBattleByUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userIDStr := r.PathValue("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.getActiveBattleUC.Execute(r.Context(), battle.GetActiveBattleInput{
+		UserID: userID,
+	})
+	if err != nil {
+		http.Error(w, "Failed to get active battle", http.StatusInternalServerError)
 		return
 	}
 

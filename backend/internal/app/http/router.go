@@ -31,6 +31,7 @@ func (s *APIServer) registerRoutes() {
 		s.deps.CreateBattleUseCase,
 		s.deps.GetBattleUseCase,
 		s.deps.GetBattleIDUseCase,
+		s.deps.GetActiveBattleUseCase,
 		s.deps.GetImageUseCase,
 		s.deps.ImageSendUseCase,
 		s.deps.GetResultUseCase,
