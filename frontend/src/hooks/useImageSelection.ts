@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useBattle } from "./useBattle";
-import { compressImage } from "@/src/lib/utils/imageCompression";
+import { compressImage } from "@/src/lib/utils";
 
 type UseImageSelectionOptions = {
   battleId: string;
