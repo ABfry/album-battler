@@ -33,8 +33,17 @@ if [ "$DESTROY_CONFIRM" != "yes" ]; then
 fi
 
 echo ""
-echo -e "${YELLOW}Step 1: Delete ECR Images${NC}"
+echo -e "${YELLOW}Step 1: Terraform Destroy${NC}"
 echo "========================================"
+echo "Destroying ECS Services, RDS, ALB, and other resources..."
+cd $TERRAFORM_DIR
+terraform destroy -auto-approve
+
+echo ""
+echo -e "${YELLOW}Step 2: Delete ECR Images${NC}"
+echo "========================================"
+echo "ECS services are now stopped. Safe to delete ECR images."
+cd ..
 
 # ECR リポジトリの画像を削除
 echo "Deleting Frontend ECR images..."
@@ -48,12 +57,6 @@ aws ecr batch-delete-image \
   --repository-name $PROJECT_NAME/backend \
   --image-ids "$(aws ecr list-images --repository-name $PROJECT_NAME/backend --query 'imageIds[*]' --output json)" \
   --region $AWS_REGION 2>/dev/null || echo "No images to delete or repository doesn't exist"
-
-echo ""
-echo -e "${YELLOW}Step 2: Terraform Destroy${NC}"
-echo "========================================"
-cd $TERRAFORM_DIR
-terraform destroy -auto-approve
 
 echo ""
 echo -e "${GREEN}Teardown Complete!${NC}"
