@@ -5,20 +5,9 @@ export function middleware(request: NextRequest) {
   const userId = request.cookies.get("userId")?.value;
   const { pathname } = request.nextUrl;
 
-  // 除外するパス
+  // 認証不要なパス (動的な除外リスト)
   const excludedPaths = ["/", "/api-test", "/ui-demo", "/title"];
 
-  // 静的ファイルとNext.js内部パスを除外
-  if (
-    pathname.startsWith("/api/") ||
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/favicon.ico") ||
-    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)
-  ) {
-    return NextResponse.next();
-  }
-
-  // 除外パスのチェック
   if (excludedPaths.includes(pathname)) {
     return NextResponse.next();
   }
@@ -33,6 +22,8 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Matcher: 静的リソースを完全除外 (API, _next, 画像ファイル)
+// Middleware: 認証が必要なページの動的制御
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/|_next/|.*\\.(svg|png|jpg|jpeg|gif|webp|ico|json)$).*)"],
 };
