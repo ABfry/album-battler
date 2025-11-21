@@ -41,7 +41,7 @@ export default function RoomPage() {
       console.error("ユーザーIDがありません");
       return;
     }
-    const success = await startGame(roomID, userId);
+    await startGame(roomID, userId);
 
     const battleId = await getBattleID(roomID);
 
