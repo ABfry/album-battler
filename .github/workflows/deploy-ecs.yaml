@@ -39,10 +39,22 @@ jobs:
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
 
-          # Terraformから情報取得
-          cd terraform
-          terraform init -backend=false
-          CLUSTER_NAME=$(terraform output -raw ecs_cluster_name 2>/dev/null || echo "album-battler-cluster")
+          # Terraformから情報取得（エラーハンドリング付き）
+          CLUSTER_NAME="album-battler-cluster"
+          if [ -d "terraform" ] && [ -f "terraform/main.tf" ]; then
+            echo "📂 Terraformディレクトリが見つかりました。クラスター情報を取得します..."
+            cd terraform
+            if terraform init -backend=false 2>/dev/null; then
+              echo "Terraform初期化に成功"
+              CLUSTER_NAME=$(terraform output -raw ecs_cluster_name 2>/dev/null || echo "album-battler-cluster")
+              echo "Terraformから取得したクラスター名: ${CLUSTER_NAME}"
+            else
+              echo "Terraform初期化に失敗。デフォルトのクラスター名を使用"
+            fi
+            cd ..
+          else
+            echo "Terraformディレクトリが見つかりません。デフォルトのクラスター名を使用"
+          fi
 
           # GitHub Outputに設定
           echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
@@ -52,6 +64,7 @@ jobs:
           echo "backend_ecr=${ECR_REGISTRY}/album-battler/backend" >> $GITHUB_OUTPUT
 
       - name: Build and push Frontend Docker image
+        id: build-frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
@@ -64,6 +77,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push Backend Docker image
+        id: build-backend
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -76,34 +90,86 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Update ECS Frontend Service
+        if: success() && steps.build-frontend.outcome == 'success'
         run: |
-          aws ecs update-service \
-            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
-            --service ${{ steps.ecs-info.outputs.frontend_service }} \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }}
+          # サービス存在確認
+          if aws ecs describe-services \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --services ${{ steps.ecs-info.outputs.frontend_service }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].status' \
+              --output text 2>/dev/null | grep -q "ACTIVE"; then
+            echo "Frontendサービスが見つかりました。更新を開始します..."
+            aws ecs update-service \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --service ${{ steps.ecs-info.outputs.frontend_service }} \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }}
+          else
+            echo "Frontendサービスが見つからないか、アクティブではありません。更新をスキップします"
+            echo "まずTerraformでECSサービスを作成してください"
+          fi
 
       - name: Update ECS Backend Service
+        if: success() && steps.build-backend.outcome == 'success'
         run: |
-          aws ecs update-service \
-            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
-            --service ${{ steps.ecs-info.outputs.backend_service }} \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }}
+          # サービス存在確認
+          if aws ecs describe-services \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --services ${{ steps.ecs-info.outputs.backend_service }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].status' \
+              --output text 2>/dev/null | grep -q "ACTIVE"; then
+            echo "Backendサービスが見つかりました。更新を開始します..."
+            aws ecs update-service \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --service ${{ steps.ecs-info.outputs.backend_service }} \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }}
+          else
+            echo "Backendサービスが見つからないか、アクティブではありません。更新をスキップします"
+            echo "まずTerraformでECSサービスを作成してください"
+          fi
 
       - name: Wait for Frontend deployment
+        if: success() && steps.build-frontend.outcome == 'success'
         run: |
-          aws ecs wait services-stable \
-            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
-            --services ${{ steps.ecs-info.outputs.frontend_service }} \
-            --region ${{ env.AWS_REGION }}
+          # サービスが存在する場合のみ待機
+          if aws ecs describe-services \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --services ${{ steps.ecs-info.outputs.frontend_service }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].status' \
+              --output text 2>/dev/null | grep -q "ACTIVE"; then
+            echo "⏳ Frontendデプロイの安定化を待機しています..."
+            aws ecs wait services-stable \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --services ${{ steps.ecs-info.outputs.frontend_service }} \
+              --region ${{ env.AWS_REGION }}
+            echo "Frontendデプロイが完了しました"
+          else
+            echo "Frontendサービスがアクティブではありません。待機をスキップします"
+          fi
 
       - name: Wait for Backend deployment
+        if: success() && steps.build-backend.outcome == 'success'
         run: |
-          aws ecs wait services-stable \
-            --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
-            --services ${{ steps.ecs-info.outputs.backend_service }} \
-            --region ${{ env.AWS_REGION }}
+          # サービスが存在する場合のみ待機
+          if aws ecs describe-services \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --services ${{ steps.ecs-info.outputs.backend_service }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].status' \
+              --output text 2>/dev/null | grep -q "ACTIVE"; then
+            echo "⏳ Backendデプロイの安定化を待機しています..."
+            aws ecs wait services-stable \
+              --cluster ${{ steps.ecs-info.outputs.cluster_name }} \
+              --services ${{ steps.ecs-info.outputs.backend_service }} \
+              --region ${{ env.AWS_REGION }}
+            echo "Backendデプロイが完了しました"
+          else
+            echo "Backendサービスがアクティブではありません。待機をスキップします"
+          fi
 
       - name: Get ALB URL
         id: alb-url
