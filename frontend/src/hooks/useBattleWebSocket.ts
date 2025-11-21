@@ -7,6 +7,7 @@ import type {
   StartGamePayload,
   StartClapTimePayload,
   ClapSendPayload,
+  StartResultPhasePayload,
 } from "@/src/lib/websocket/types";
 import type { BattlePhase } from "./useBattlePhase";
 
@@ -17,6 +18,7 @@ type UseBattleWebSocketOptions = {
   onPlayerChange: () => void;
   onImageUpdate: () => void | Promise<void>;
   onClapUpdate?: () => void;
+  onResultStart?: () => void | Promise<void>;
 };
 
 /**
@@ -32,6 +34,7 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
     onPlayerChange,
     onImageUpdate,
     onClapUpdate,
+    onResultStart,
   } = options;
 
   // コールバックをRefで保持（依存配列から除外するため）
@@ -39,13 +42,21 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
   const onPlayerChangeRef = useRef(onPlayerChange);
   const onImageUpdateRef = useRef(onImageUpdate);
   const onClapUpdateRef = useRef(onClapUpdate);
+  const onResultStartRef = useRef(onResultStart);
 
   useEffect(() => {
     onPhaseTransitionRef.current = onPhaseTransition;
     onPlayerChangeRef.current = onPlayerChange;
     onImageUpdateRef.current = onImageUpdate;
     onClapUpdateRef.current = onClapUpdate;
-  }, [onPhaseTransition, onPlayerChange, onImageUpdate, onClapUpdate]);
+    onResultStartRef.current = onResultStart;
+  }, [
+    onPhaseTransition,
+    onPlayerChange,
+    onImageUpdate,
+    onClapUpdate,
+    onResultStart,
+  ]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -64,9 +75,13 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
       // 拍手タイム開始 → 拍手フェーズ
       subscribe("start_clap_time", async (payload: StartClapTimePayload) => {
         console.log("[useBattleWebSocket] Clap time started:", payload);
-        console.log("[useBattleWebSocket] Fetching latest images before transition...");
+        console.log(
+          "[useBattleWebSocket] Fetching latest images before transition..."
+        );
         await onImageUpdateRef.current();
-        console.log("[useBattleWebSocket] Images fetched, transitioning to clap_time_1");
+        console.log(
+          "[useBattleWebSocket] Images fetched, transitioning to clap_time_1"
+        );
         onPhaseTransitionRef.current("clap_time_1");
       }),
 
@@ -93,6 +108,17 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
         console.log("[useBattleWebSocket] Clap sent:", payload);
         onClapUpdateRef.current?.();
       }),
+
+      // 結果フェーズ開始
+      subscribe(
+        "start_result_phase",
+        async (payload: StartResultPhasePayload) => {
+          console.log("[useBattleWebSocket] Result phase started:", payload);
+          // 結果データを取得してから結果フェーズへ遷移
+          await onResultStartRef.current?.();
+          onPhaseTransitionRef.current("result");
+        }
+      ),
     ];
 
     return () => {

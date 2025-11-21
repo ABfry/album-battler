@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
+import { useResult } from "@/src/hooks/useResult";
 import {
   useBattlePhase,
   PHASE_CONFIGS,
@@ -16,6 +17,7 @@ import { useBattleWebSocket } from "@/src/hooks/useBattleWebSocket";
 import { useImageSelection } from "@/src/hooks/useImageSelection";
 import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { Battle } from "../components/Battle";
+import type { GetBattleResultResponse } from "@/src/lib/api/types";
 
 type BattlePageProps = {
   battleID: string;
@@ -33,6 +35,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [displayedImage, setDisplayedImage] = useState<string | null>(null);
+  const [battleResult, setBattleResult] =
+    useState<GetBattleResultResponse | null>(null);
 
   // 1. バトル情報取得
   const {
@@ -48,6 +52,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
   const { room, refetch: refetchRoom } = useRoomInfo(battle?.roomId || null);
 
   const players = useMemo(() => room?.users ?? [], [room?.users]);
+
+  // 3. 結果取得
+  const { getResult } = useResult();
 
   // 3. フェーズ管理
   const battlePhase = useBattlePhase({
@@ -96,8 +103,17 @@ export function BattlePage({ battleID }: BattlePageProps) {
         },
       },
       result: {
-        onPhaseStart: () => {
+        onPhaseStart: async () => {
           console.log("結果発表");
+          // 結果データを取得
+          console.log("[BattlePage] Fetching battle result...");
+          const result = await getResult(battleID);
+          if (result) {
+            setBattleResult(result);
+            console.log("[BattlePage] Battle result fetched:", result);
+          } else {
+            console.error("[BattlePage] Failed to fetch battle result");
+          }
         },
       },
     };
@@ -236,6 +252,17 @@ export function BattlePage({ battleID }: BattlePageProps) {
     // スコアのフェッチは最後で良さげ
   }, []);
 
+  const handleResultStart = useCallback(async () => {
+    console.log("[BattlePage] Fetching battle result...");
+    const result = await getResult(battleID);
+    if (result) {
+      setBattleResult(result);
+      console.log("[BattlePage] Battle result fetched:", result);
+    } else {
+      console.error("[BattlePage] Failed to fetch battle result");
+    }
+  }, [battleID, getResult]);
+
   // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
   useBattleWebSocket({
     battleId: battleID,
@@ -244,6 +271,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     onPlayerChange: handlePlayerChange,
     onImageUpdate: handleImageUpdate,
     onClapUpdate: handleClapUpdate,
+    onResultStart: handleResultStart,
   });
 
   // 7. バトル情報取得後、途中参加を考慮してselectingフェーズに自動遷移
@@ -339,6 +367,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       // 拍手機能
       canClap={battlePhase.canClap}
       onClap={handleClap}
+      // 結果情報
+      battleResult={battleResult}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
       onCloseErrorDialog={() => setShowErrorDialog(false)}
