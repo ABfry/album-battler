@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { UserInfo, BattleImage } from "@/src/lib/api/types";
 import type { BattlePhase } from "@/src/hooks/useBattlePhase";
@@ -102,6 +102,20 @@ export function Battle({
   // 拍手エフェクトの管理
   const [clapEffects, setClapEffects] = useState<ClapEffect[]>([]);
 
+  // 全てのエフェクトに対するタイマーをセットアップ＆クリーンアップ
+  useEffect(() => {
+    const timers = clapEffects.map((effect) => {
+      return setTimeout(() => {
+        setClapEffects((prev) => prev.filter((e) => e.id !== effect.id));
+      }, 2000);
+    });
+
+    // クリーンアップ: コンポーネントのアンマウント時または clapEffects 変更時にタイマーをクリア
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [clapEffects]);
+
   // 拍手ボタンクリック時のハンドラー
   const handleClapClick = useCallback(() => {
     // 元の拍手処理を実行
@@ -114,11 +128,6 @@ export function Battle({
       offsetX: Math.random() * 60 - 30, // -30px ~ +30px のランダムな横移動
     };
     setClapEffects((prev) => [...prev, newEffect]);
-
-    // 2秒後にエフェクトを削除
-    setTimeout(() => {
-      setClapEffects((prev) => prev.filter((e) => e.id !== newEffect.id));
-    }, 2000);
   }, [onClap]);
 
   return (
