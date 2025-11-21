@@ -248,7 +248,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     console.log("[BattlePage] Result phase started, fetching battle result...");
 
     // AI採点が完了していない可能性があるため、リトライロジックを実装
-    const maxRetries = 5;
+    const maxRetries = 7;
     const retryDelay = 3000; // 3秒
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -397,6 +397,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       onClap={handleClap}
       // 結果情報
       battleResult={battleResult}
+      battleId={battleID}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
       onCloseErrorDialog={() => setShowErrorDialog(false)}

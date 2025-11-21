@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   UserInfo,
@@ -63,6 +64,7 @@ type BattleProps = {
 
   // 結果情報
   battleResult: GetBattleResultResponse | null;
+  battleId: string;
 
   // エラーダイアログ
   showErrorDialog: boolean;
@@ -106,6 +108,7 @@ export function Battle({
   onClap,
   // 結果情報
   battleResult,
+  battleId,
   // エラーダイアログ
   showErrorDialog,
   onCloseErrorDialog,
@@ -140,6 +143,19 @@ export function Battle({
     };
     setClapEffects((prev) => [...prev, newEffect]);
   }, [onClap]);
+
+  const router = useRouter();
+
+  // 結果フェーズの表示 + 10秒後に詳細ページへ遷移
+  useEffect(() => {
+    if (phase === "result" && battleResult) {
+      const timer = setTimeout(() => {
+        router.push(`/result/${battleId}`);
+      }, 10000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [phase, battleResult, battleId, router]);
 
   // 結果フェーズの表示
   if (phase === "result" && battleResult) {
