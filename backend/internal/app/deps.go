@@ -335,6 +335,11 @@ func initUseCases(deps *Dependencies) error {
 		deps.UserRepository,
 	)
 
+	deps.GetActiveBattleUseCase = battle.NewGetActiveBattleUseCase(
+		deps.RoomRepository,
+		deps.BattleRepository,
+	)
+
 	deps.GetImageUseCase = battle.NewGetImageUseCase(
 		deps.BattleRepository,
 		deps.ImageRepository,
