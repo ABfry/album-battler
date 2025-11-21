@@ -54,3 +54,9 @@ backend_desired_count  = 1      # タスク数
 # API Keys
 # ========================================
 gemini_api_key = "YOUR_GEMINI_API_KEY_HERE"  # 必ず設定してください！
+
+# ========================================
+# Route 53 & カスタムドメイン設定
+# ========================================
+enable_route53 = true
+domain_name    = "albumbattler.com"
