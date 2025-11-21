@@ -208,7 +208,7 @@ export function ApiTestPage() {
   // 2. 部屋参加
   const handleJoinRoom = async (userId: string, roomNumber: number) => {
     const success = await joinRoom(userId, roomNumber);
-    setJoinSuccess(success);
+    setJoinSuccess(!success);
     setLatestApiResponse({
       api: "joinRoom",
       response: { success },

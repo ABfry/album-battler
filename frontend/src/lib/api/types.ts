@@ -23,7 +23,7 @@ export type CreateRoomResponse = {
 };
 
 export type JoinRoomResponse = {
-  message: string;
+  room_id: string;
 };
 
 export type UserInfo = {

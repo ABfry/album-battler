@@ -44,7 +44,7 @@ export function ResultPage({ battleId }: ResultPageProps) {
   }, [battleId]);
 
   const handleBackToTitle = () => {
-    router.push("/title");
+    router.push("/");
   };
 
   const players = room?.users || [];

@@ -14,14 +14,11 @@ type ClientLayoutProps = {
  */
 export function ClientLayout({ children, userId }: ClientLayoutProps) {
   // ユーザーIDが存在する場合のみWebSocket URLを構築
+  // userIdがない場合は空文字列（接続しない）
   const wsUrl = userId
     ? `${process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080/ws"}?user_id=${userId}`
-    : null;
+    : "";
 
-  // ユーザーIDがない場合はWebSocket接続なしで子要素をレンダリング
-  if (!wsUrl) {
-    return <>{children}</>;
-  }
-
+  // 常にWebSocketProviderで囲む（urlが空文字列の場合は接続しない）
   return <WebSocketProvider url={wsUrl}>{children}</WebSocketProvider>;
 }

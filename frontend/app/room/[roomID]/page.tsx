@@ -4,7 +4,10 @@
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
-import type { PlayerJoinRoomPayload } from "@/src/lib/websocket/types";
+import type {
+  PlayerJoinRoomPayload,
+  StartGamePayload,
+} from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 import Link from "next/link";
 import { useRoom } from "@/src/hooks/useRoom";
@@ -30,10 +33,21 @@ export default function RoomPage() {
         refetch();
       }
     );
+
+    const unsubscribeStart = subscribe(
+      "start_game",
+      async (payload: StartGamePayload) => {
+        console.log("Game started:", payload.room_id);
+        refetch();
+        const id = await getBattleID(roomID);
+        router.push(`/battle/${id}`);
+      }
+    );
     return () => {
       unsubscribeJoin();
+      unsubscribeStart();
     };
-  }, [subscribe, refetch]);
+  }, [subscribe, refetch, getBattleID, roomID, router]);
 
   const handleBattle = async () => {
     const userId = getUserIdClient() || "";
