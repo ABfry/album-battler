@@ -72,9 +72,11 @@ type Dependencies struct {
 	ImageSendUseCase    *battle.ImageSendUseCase
 	GetResultUseCase    *battle.GetResultUseCase
 
-	ClapSendUseCase      *clap.ClapSendUseCase
-	StartClapTimeUseCase *clap.StartClapTimeUseCase
-	CreateUserUseCase    *user.CreateUserUseCase
+	ClapSendUseCase       *clap.ClapSendUseCase
+	StartClapTimeUseCase  *clap.StartClapTimeUseCase
+	ClapTimeManageUseCase *clap.ClapTimeManageUseCase
+	StartResultUseCase    *battle.StartResultUseCase
+	CreateUserUseCase     *user.CreateUserUseCase
 }
 
 // NewDependencies は依存関係を初期化する
@@ -248,19 +250,39 @@ func initImage(deps *Dependencies) error {
 func initUseCases(deps *Dependencies) error {
 	// Domain Services
 	roomNumberGenerator := service.NewRoomNumberGenerator()
+	clapCounter := clapinfra.NewMemoryClapCounter()
+
+	// StartResultUseCaseを先に初期化（依存が少ない）
+	deps.StartResultUseCase = battle.NewStartResultUseCase(
+		deps.BattleRepository,
+		deps.RoomRepository,
+		deps.ImageRepository,
+		clapCounter,
+		deps.EventDispatcher,
+	)
+
+	// ClapTimeManageUseCaseを初期化（StartResultUseCaseに依存）
+	deps.ClapTimeManageUseCase = clap.NewClapTimeManageUseCase(
+		deps.BattleRepository,
+		deps.EventDispatcher,
+		deps.StartResultUseCase,
+	)
+
+	// StartClapTimeUseCaseを初期化（ClapTimeManageUseCaseに依存）
 	deps.StartClapTimeUseCase = clap.NewStartClapTimeUseCase(
 		deps.BattleRepository,
 		deps.RoomRepository,
 		deps.ImageRepository,
 		deps.EventDispatcher,
 		deps.LLMClient,
+		deps.ClapTimeManageUseCase,
 	)
+
 	deps.ImageSubmissionScheduler = battleinfra.NewImageSubmissionScheduler(
 		deps.StartClapTimeUseCase,
 		time.Minute,
 	)
 
-	clapCounter := clapinfra.NewMemoryClapCounter()
 	deps.ClapSendUseCase = clap.NewClapSendUseCase(
 		deps.RoomRepository,
 		deps.BattleRepository,
