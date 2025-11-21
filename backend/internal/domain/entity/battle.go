@@ -73,16 +73,43 @@ func (b *Battle) RecordClapTimeStarted() {
 	})
 }
 
-func (b *Battle) RecordClapCounted(userID uuid.UUID, count int) {
+func (b *Battle) RecordClapUserChanged(userID uuid.UUID) {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.ChangeClapUserEvent{
+		RoomID:     b.RoomID,
+		BattleID:   b.ID,
+		UserID:     userID,
+		OccurredOn: time.Now(),
+	})
+}
+
+func (b *Battle) RecordClapCounted(userID uuid.UUID, targetUserID uuid.UUID, count int) {
 	if b == nil {
 		return
 	}
 
 	b.RecordEvent(event.ClapSendEvent{
-		RoomID:     b.RoomID,
-		BattleID:   b.ID,
-		UserID:     userID,
-		ClapCount:  count,
-		OccurredOn: time.Now(),
+		RoomID:       b.RoomID,
+		BattleID:     b.ID,
+		UserID:       userID,
+		TargetUserID: targetUserID,
+		ClapCount:    count,
+		OccurredOn:   time.Now(),
+	})
+}
+
+func (b *Battle) RecordResultPhaseStarted(winnerUserID uuid.UUID) {
+	if b == nil {
+		return
+	}
+
+	b.RecordEvent(event.StartResultPhaseEvent{
+		RoomID:       b.RoomID,
+		BattleID:     b.ID,
+		WinnerUserID: winnerUserID,
+		OccurredOn:   time.Now(),
 	})
 }

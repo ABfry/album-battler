@@ -2,14 +2,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useRoom } from "@/src/hooks/useRoom";
 
 export default function TitlePage() {
   const router = useRouter();
 
-  const handleCreateRoom = () => {
+  const {
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    startGame,
+    getBattleID,
+    loading,
+    error,
+  } = useRoom();
+
+  const handleCreateRoom = async () => {
     // 4桁のランダムな部屋番号を発行（例: 1111〜9999）
     const roomId = Math.floor(1000 + Math.random() * 9000).toString();
-    router.push(`/room/${roomId}`);
+    const result = await createRoom("550e8400-e29b-41d4-a716-446655440001");
+    router.push(`/room/${result?.room_id}`);
   };
 
   return (

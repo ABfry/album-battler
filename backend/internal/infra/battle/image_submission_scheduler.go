@@ -1,4 +1,4 @@
-package clapinfra
+package battleinfra
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 )
 
-var _ service.ClapScheduler = (*ClapScheduler)(nil)
+var _ service.ImageSubmissionScheduler = (*ImageSubmissionScheduler)(nil)
 
-type ClapScheduler struct {
+type ImageSubmissionScheduler struct {
 	mu           sync.Mutex
 	timers       map[uuid.UUID]*time.Timer
 	triggered    map[uuid.UUID]bool
@@ -22,11 +22,11 @@ type ClapScheduler struct {
 	defaultDelay time.Duration
 }
 
-func NewClapScheduler(
+func NewImageSubmissionScheduler(
 	startClapUC *clap.StartClapTimeUseCase,
 	defaultDelay time.Duration,
-) *ClapScheduler {
-	return &ClapScheduler{
+) *ImageSubmissionScheduler {
+	return &ImageSubmissionScheduler{
 		timers:       make(map[uuid.UUID]*time.Timer),
 		triggered:    make(map[uuid.UUID]bool),
 		startClapUC:  startClapUC,
@@ -34,8 +34,8 @@ func NewClapScheduler(
 	}
 }
 
-// 指定した遅延後に拍手フェーズへ移行するタイマーを設定
-func (s *ClapScheduler) Schedule(battleID uuid.UUID, delay time.Duration) {
+// 指定した遅延後に画像投稿を締め切り、拍手フェーズへ移行するタイマーを設定
+func (s *ImageSubmissionScheduler) Schedule(battleID uuid.UUID, delay time.Duration) {
 	if delay <= 0 {
 		delay = s.defaultDelay
 	}
@@ -65,13 +65,13 @@ func (s *ClapScheduler) Schedule(battleID uuid.UUID, delay time.Duration) {
 	s.mu.Unlock()
 }
 
-// タイマーを破棄し、即座に拍手フェーズへ移行
-func (s *ClapScheduler) TriggerNow(ctx context.Context, battleID uuid.UUID) error {
+// タイマーを破棄し、即座に画像投稿を締め切り拍手フェーズへ移行
+func (s *ImageSubmissionScheduler) TriggerNow(ctx context.Context, battleID uuid.UUID) error {
 	fmt.Println("ClapScheduler TriggerNow", battleID)
 	return s.trigger(ctx, battleID)
 }
 
-func (s *ClapScheduler) Cancel(battleID uuid.UUID) {
+func (s *ImageSubmissionScheduler) Cancel(battleID uuid.UUID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -81,7 +81,7 @@ func (s *ClapScheduler) Cancel(battleID uuid.UUID) {
 	}
 }
 
-func (s *ClapScheduler) Close() {
+func (s *ImageSubmissionScheduler) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -92,8 +92,8 @@ func (s *ClapScheduler) Close() {
 	s.triggered = map[uuid.UUID]bool{}
 }
 
-// 拍手フェーズへ移行
-func (s *ClapScheduler) trigger(ctx context.Context, battleID uuid.UUID) error {
+// 画像投稿を締め切り、拍手フェーズへ移行
+func (s *ImageSubmissionScheduler) trigger(ctx context.Context, battleID uuid.UUID) error {
 	s.mu.Lock()
 	if s.triggered[battleID] {
 		s.mu.Unlock()

@@ -7,6 +7,7 @@ import { useBattle } from "@/src/hooks/useBattle";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
+import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { ApiTestView } from "../components/ApiTestView";
 import type {
   CreateRoomResponse,
@@ -17,6 +18,7 @@ import type {
   PlayerLeaveRoomPayload,
   StartGamePayload,
   ImageSendPayload,
+  ClapSendPayload,
 } from "@/src/lib/websocket/types";
 import type { DebugMessage } from "@/src/lib/types";
 
@@ -47,6 +49,7 @@ export function ApiTestPage() {
   // WebSocket接続
   const { connect, disconnect } = useWebSocket();
   const { subscribe } = useWebSocketEvents();
+  const { sendClap } = useWebSocketClap();
 
   // 作成された部屋の情報を保持
   const [createdRoom, setCreatedRoom] = useState<CreateRoomResponse | null>(
@@ -62,6 +65,7 @@ export function ApiTestPage() {
   const [leaveSuccess, setLeaveSuccess] = useState(false);
   const [startSuccess, setStartSuccess] = useState(false);
   const [sendImageSuccess, setSendImageSuccess] = useState(false);
+  const [sendClapSuccess, setSendClapSuccess] = useState(false);
   const [battleID, setBattleID] = useState<string | null>(null);
 
   // 部屋情報の取得（作成後に自動取得）
@@ -90,6 +94,7 @@ export function ApiTestPage() {
   // WebSocket接続の初期化
   useEffect(() => {
     connect();
+    //return () => disconnect();
   }, [connect, disconnect]);
 
   // WebSocketイベントの購読
@@ -157,11 +162,26 @@ export function ApiTestPage() {
       }
     );
 
+    const unsubscribeClap = subscribe(
+      "clap_send",
+      (payload: ClapSendPayload) => {
+        console.log("Clap sent:", payload);
+        setLatestWsMessage({
+          type: "clap_send",
+          payload,
+          timestamp: new Date().toISOString(),
+        });
+        // 拍手イベントを受信したら画像一覧を再取得（スコア更新）
+        refetchImages();
+      }
+    );
+
     return () => {
       unsubscribeJoin();
       unsubscribeLeave();
       unsubscribeStart();
       unsubscribeImageSend();
+      unsubscribeClap();
     };
   }, [subscribe, refetch, refetchImages, createdRoom, getBattleID]);
 
@@ -246,6 +266,34 @@ export function ApiTestPage() {
     });
   };
 
+  // 8. 拍手送信
+  const handleSendClap = (
+    userId: string,
+    targetUserId: string,
+    battleId: string,
+    count: number
+  ) => {
+    try {
+      sendClap({ userId, targetUserId, battleId, count });
+      setSendClapSuccess(true);
+      setLatestApiResponse({
+        api: "sendClap",
+        response: { success: true, count },
+        timestamp: new Date().toISOString(),
+      });
+      // 成功状態を3秒後にリセット
+      setTimeout(() => setSendClapSuccess(false), 3000);
+    } catch (error) {
+      console.error("Failed to send clap:", error);
+      setSendClapSuccess(false);
+      setLatestApiResponse({
+        api: "sendClap",
+        response: { success: false, error: String(error) },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  };
+
   return (
     <ApiTestView
       createdRoom={createdRoom}
@@ -266,6 +314,7 @@ export function ApiTestPage() {
       battleError={battleError}
       battleInfoError={battleInfoError}
       sendImageSuccess={sendImageSuccess}
+      sendClapSuccess={sendClapSuccess}
       latestWsMessage={latestWsMessage}
       latestApiResponse={latestApiResponse}
       onCreateRoom={handleCreateRoom}
@@ -274,6 +323,7 @@ export function ApiTestPage() {
       onStartGame={handleStartGame}
       onCreateBattle={handleCreateBattle}
       onSendImage={handleSendImage}
+      onSendClap={handleSendClap}
       onRefetch={refetch}
       onRefetchBattle={refetchBattle}
       onRefetchImages={refetchImages}
