@@ -11,8 +11,8 @@ import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 export default function TitlePage() {
   const router = useRouter();
 
-  // WebSocket接続
-  const { connect, disconnect } = useWebSocket();
+  // WebSocket接続（常に呼び出す、URLが空の場合は接続しない）
+  const { connect } = useWebSocket();
 
   const { createRoom } = useRoom();
 
@@ -26,10 +26,13 @@ export default function TitlePage() {
     router.push(`/room/${result?.room_id}`);
   };
 
-  // WebSocketを接続
+  // userIdがある場合のみWebSocketを接続
   useEffect(() => {
-    connect();
-  }, [connect, disconnect]);
+    const userId = getUserIdClient();
+    if (userId) {
+      connect();
+    }
+  }, [connect]);
 
   return (
     <main className="flex min-h-screen items-center justify-center">

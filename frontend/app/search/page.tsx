@@ -3,10 +3,13 @@
 
 import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useRoom } from "@/src/hooks/useRoom";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 
 export default function SearchPage() {
   const [roomId, setRoomId] = useState("");
   const router = useRouter();
+  const { joinRoom } = useRoom();
 
   // ルームID入力のハンドラ（数字のみ・最大4桁）
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -21,12 +24,14 @@ export default function SearchPage() {
     setRoomId(fourDigits);
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (roomId.length !== 4) {
       alert("部屋番号は数字4桁で入力してください");
       return;
     }
-    router.push(`/room/${roomId}`);
+    const userId = getUserIdClient() || "";
+    const joinRoomId = await joinRoom(userId, Number(roomId));
+    router.push(`/room/${joinRoomId}`);
   };
 
   return (
