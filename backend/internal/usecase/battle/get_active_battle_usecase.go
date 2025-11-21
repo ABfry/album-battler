@@ -14,6 +14,7 @@ type GetActiveBattleInput struct {
 }
 
 type GetActiveBattleOutput struct {
+	RoomID   uuid.UUID
 	BattleID uuid.UUID
 }
 
@@ -51,7 +52,7 @@ func (uc *GetActiveBattleUseCase) Execute(ctx context.Context, input GetActiveBa
 			return nil, errors.New("failed to find battle by room ID")
 		}
 
-		return &GetActiveBattleOutput{BattleID: battle.ID}, nil
+		return &GetActiveBattleOutput{RoomID: room.ID, BattleID: battle.ID}, nil
 	}
 
 	return nil, nil // アクティブなルームが見つからなかった場合
