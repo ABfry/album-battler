@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import imageCompression from "browser-image-compression";
-import heic2any from "heic2any";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -100,6 +99,9 @@ export async function compressImage(
   if (file.type === "image/heic" || file.type === "image/heif") {
     console.log("[imageCompression] HEIC形式を検出、JPEG変換中...");
     try {
+      // 動的インポート（ブラウザ専用ライブラリ）
+      const heic2any = (await import("heic2any")).default;
+
       const convertedBlob = await heic2any({
         blob: file,
         toType: "image/jpeg",
