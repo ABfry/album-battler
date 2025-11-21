@@ -65,6 +65,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
   }, [players]);
 
   useEffect(() => {
+    // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
+    // 循環参照を避けるためにuseEffect内で実行
     const handlers: PhaseHandlersMap = {
       waiting: {
         onPhaseStart: () => console.log("ゲーム開始待ち"),
