@@ -35,6 +35,12 @@ export type StartClapTimePayload = Record<string, never>; // バックエンド�
 
 export type ClapSendPayload = Record<string, never>; // バックエンドは空のペイロードを送信（誰が何回拍手したかは含まれない）
 
+export type StartResultPhasePayload = {
+  room_id: string;
+  battle_id: string;
+  winner_user_id: string;
+};
+
 // イベントマップ（型安全）
 export type EventMap = {
   player_join_room: PlayerJoinRoomPayload;
@@ -43,4 +49,5 @@ export type EventMap = {
   image_send: ImageSendPayload;
   start_clap_time: StartClapTimePayload;
   clap_send: ClapSendPayload;
+  start_result_phase: StartResultPhasePayload;
 };

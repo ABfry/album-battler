@@ -1,9 +1,14 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { UserInfo, BattleImage } from "@/src/lib/api/types";
+import type {
+  UserInfo,
+  BattleImage,
+  GetBattleResultResponse,
+} from "@/src/lib/api/types";
 import type { BattlePhase } from "@/src/hooks/useBattlePhase";
 import { ImageFrame } from "./ImageFrame";
 import { PlayerList } from "./PlayerList";
+import { ResultDisplay } from "./ResultDisplay";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +61,9 @@ type BattleProps = {
   canClap: boolean;
   onClap: () => void;
 
+  // 結果情報
+  battleResult: GetBattleResultResponse | null;
+
   // エラーダイアログ
   showErrorDialog: boolean;
   onCloseErrorDialog: () => void;
@@ -66,7 +74,6 @@ type BattleProps = {
  */
 export function Battle({
   // phase は将来的に使用予定のため型定義のみ保持
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   phase,
   // タイマー関連
   timeLeft,
@@ -97,6 +104,8 @@ export function Battle({
   // 拍手機能
   canClap,
   onClap,
+  // 結果情報
+  battleResult,
   // エラーダイアログ
   showErrorDialog,
   onCloseErrorDialog,
@@ -131,6 +140,13 @@ export function Battle({
     };
     setClapEffects((prev) => [...prev, newEffect]);
   }, [onClap]);
+
+  // 結果フェーズの表示
+  if (phase === "result" && battleResult) {
+    return (
+      <ResultDisplay battleResult={battleResult} players={players || []} />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
