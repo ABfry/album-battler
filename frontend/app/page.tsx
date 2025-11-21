@@ -8,6 +8,8 @@ import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { NeedLoginButton } from "@/src/components/need-login-button/container/NeedLoginButton";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 
+import TitleBackSlider from "@/src/features/title/components/BackSlider";
+
 export default function TitlePage() {
   const router = useRouter();
 
@@ -32,8 +34,8 @@ export default function TitlePage() {
   }, [connect, disconnect]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="flex h-[640px] w-[360px] flex-col items-center justify-center gap-6 rounded-2xl border border-gray-400 bg-white shadow-lg">
+    <main className="relative flex min-h-screen items-center justify-center">
+      <div className="relative z-10 flex h-[640px] w-[360px] flex-col items-center justify-center gap-6 rounded-2xl border border-gray-400 bg-white shadow-lg">
         <h1 className="mb-6 text-xl font-semibold">アルバムバトラー</h1>
 
         <NeedLoginButton
@@ -46,6 +48,7 @@ export default function TitlePage() {
           content="部屋をさがす"
         />
       </div>
+      <TitleBackSlider />
     </main>
   );
 }
