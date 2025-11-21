@@ -49,7 +49,7 @@ export default function RoomPage() {
     <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
       {/* 戻るボタン */}
       <Link
-        href="/title"
+        href="/"
         className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
       >
         ◀
