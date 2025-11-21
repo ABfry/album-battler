@@ -47,6 +47,7 @@ CREATE TABLE images (
     uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ai_score FLOAT,
     user_score INT,
+    ai_explanation TEXT,
     CHECK (ai_score IS NULL OR (ai_score >= 0 AND ai_score <= 100)),
     CHECK (user_score IS NULL OR user_score >= 0),
     CONSTRAINT fk_images_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
