@@ -14,15 +14,7 @@ export default function TitlePage() {
   // WebSocket接続
   const { connect, disconnect } = useWebSocket();
 
-  const {
-    createRoom,
-    joinRoom,
-    leaveRoom,
-    startGame,
-    getBattleID,
-    loading,
-    error,
-  } = useRoom();
+  const { createRoom } = useRoom();
 
   const handleCreateRoom = async () => {
     const userId = getUserIdClient() || "";
