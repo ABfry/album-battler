@@ -43,6 +43,10 @@ type BattleProps = {
   players: UserInfo[] | undefined;
   images: BattleImage[];
 
+  // 拍手機能
+  canClap: boolean;
+  onClap: () => void;
+
   // エラーダイアログ
   showErrorDialog: boolean;
   onCloseErrorDialog: () => void;
@@ -80,6 +84,9 @@ export function Battle({
   showPhaseMessage,
   players,
   images,
+  // 拍手機能
+  canClap,
+  onClap,
   // エラーダイアログ
   showErrorDialog,
   onCloseErrorDialog,
@@ -140,6 +147,16 @@ export function Battle({
 
         {/* プレイヤー情報（最下部） */}
         <PlayerList players={players} images={images} />
+
+        {/* 拍手ボタン（右下） */}
+        {canClap && (
+          <button
+            onClick={onClap}
+            className="absolute right-8 bottom-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-5xl shadow-2xl transition-transform hover:scale-110 active:scale-95"
+          >
+            👏
+          </button>
+        )}
       </div>
 
       {/* エラーダイアログ */}
