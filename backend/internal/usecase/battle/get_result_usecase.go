@@ -129,12 +129,13 @@ func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (
 	results := make([]UserResult, 0, len(scores))
 	for i, score := range scores {
 		results = append(results, UserResult{
-			UserID:     score.UserID,
-			AIScore:    score.AIScore,
-			UserScore:  score.UserScore,
-			FinalScore: score.FinalScore,
-			Rank:       i + 1,
-			ImageURL:   score.ImageURL,
+			UserID:        score.UserID,
+			AIScore:       score.AIScore,
+			UserScore:     score.UserScore,
+			FinalScore:    score.FinalScore,
+			Rank:          i + 1,
+			ImageURL:      score.ImageURL,
+			AIExplanation: score.AIExplanation,
 		})
 	}
 
