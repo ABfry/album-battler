@@ -73,6 +73,9 @@ jobs:
           tags: |
             ${{ steps.ecs-info.outputs.frontend_ecr }}:latest
             ${{ steps.ecs-info.outputs.frontend_ecr }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_WEBSOCKET_URL=${{ secrets.NEXT_PUBLIC_WEBSOCKET_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
