@@ -86,6 +86,12 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 		return err
 	}
 
+	// go func() {
+	// 	for _, userID := range battle.UserIDs {
+	// 		fmt.Printf("Clap time started for user %s in battle %s\n", userID, battle.ID)
+	// 	}
+	// }
+
 	// 非同期で画像採点をする
 	go func(battleID uuid.UUID) {
 		// 親contextから独立
