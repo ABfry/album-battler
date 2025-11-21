@@ -6,6 +6,7 @@ import type {
   GetImageResponse,
   SendImageRequest,
   SendImageResponse,
+  GetBattleResultResponse,
 } from "./types";
 
 /**
@@ -55,5 +56,13 @@ export const battleApi = {
         image_base64: imageBase64,
       } satisfies SendImageRequest),
     });
+  },
+
+  /**
+   * バトル結果を取得
+   * GET /battle/{id}/result
+   */
+  getResult: async (battleId: string): Promise<GetBattleResultResponse> => {
+    return fetchApi<GetBattleResultResponse>(`/battle/${battleId}/result`);
   },
 };
