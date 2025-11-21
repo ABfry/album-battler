@@ -8,14 +8,19 @@ variable "environment" {
   type        = string
 }
 
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+}
+
 variable "subnet_ids" {
   description = "サブネットID"
   type        = list(string)
 }
 
-variable "security_group_ids" {
-  description = "セキュリティグループID"
-  type        = list(string)
+variable "ecs_tasks_security_group_id" {
+  description = "ECSタスクのセキュリティグループID（RDSへのアクセスを許可）"
+  type        = string
 }
 
 variable "instance_class" {

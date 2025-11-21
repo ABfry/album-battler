@@ -103,10 +103,11 @@ module "s3_storage" {
 module "rds" {
   source = "./modules/rds"
 
-  project_name       = var.project_name
-  environment        = var.environment
-  subnet_ids         = aws_subnet.public[*].id
-  security_group_ids = [module.ecs.ecs_tasks_security_group_id]
+  project_name                = var.project_name
+  environment                 = var.environment
+  vpc_id                      = aws_vpc.main.id
+  subnet_ids                  = aws_subnet.public[*].id
+  ecs_tasks_security_group_id = module.ecs.ecs_tasks_security_group_id
 
   db_name     = var.db_name
   db_username = var.db_username

@@ -1,3 +1,33 @@
+# RDS Security Group
+resource "aws_security_group" "rds" {
+  name        = "${var.project_name}-rds-sg"
+  description = "Security group for RDS MySQL instance"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [var.ecs_tasks_security_group_id]
+    description     = "MySQL from ECS tasks"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound"
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.project_name}-rds-sg"
+    }
+  )
+}
+
 # RDS Subnet Group
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-db-subnet-group"
@@ -28,7 +58,7 @@ resource "aws_db_instance" "main" {
   password = var.db_password
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = var.security_group_ids
+  vpc_security_group_ids = [aws_security_group.rds.id]
 
   multi_az               = var.multi_az
   publicly_accessible    = false
