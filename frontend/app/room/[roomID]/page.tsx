@@ -4,16 +4,26 @@
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
-import type { PlayerJoinRoomPayload } from "@/src/lib/websocket/types";
+import type {
+  PlayerJoinRoomPayload,
+  StartGamePayload,
+} from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 import Link from "next/link";
+import { useRoom } from "@/src/hooks/useRoom";
+import { useRouter } from "next/navigation";
+import { Button } from "@/src/components/ui/button";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
+  const { startGame, getBattleID } = useRoom();
+
+  const router = useRouter();
+
   // 部屋情報の取得（作成後に自動取得）
   const { room, refetch } = useRoomInfo(roomID);
-
   const { subscribe } = useWebSocketEvents();
   useEffect(() => {
     const unsubscribeJoin = subscribe(
@@ -23,20 +33,40 @@ export default function RoomPage() {
         refetch();
       }
     );
+
+    const unsubscribeStart = subscribe(
+      "start_game",
+      async (payload: StartGamePayload) => {
+        console.log("Game started:", payload.room_id);
+        refetch();
+        const id = await getBattleID(roomID);
+        router.push(`/battle/${id}`);
+      }
+    );
     return () => {
       unsubscribeJoin();
+      unsubscribeStart();
     };
-  }, [subscribe, refetch]);
+  }, [subscribe, refetch, getBattleID, roomID, router]);
 
-  const handleBattle = () => {
-    alert("バトル開始の処理を書く");
+  const handleBattle = async () => {
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return;
+    }
+    await startGame(roomID, userId);
+
+    const battleId = await getBattleID(roomID);
+
+    router.push(`/battle/${battleId}`);
   };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
       {/* 戻るボタン */}
       <Link
-        href="/title"
+        href="/"
         className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
       >
         ◀
@@ -50,7 +80,9 @@ export default function RoomPage() {
         </h1>
 
         {/* 部屋番号（必要なら表示） */}
-        <p className="mb-4 text-xs text-gray-700">部屋番号: {roomID}</p>
+        <p className="mb-4 text-xs text-gray-700">
+          部屋番号: {room?.roomNumber}
+        </p>
 
         {/* プレイヤー一覧カード */}
         <div className="w-full max-w-xs rounded-xl border border-[#3551b8] bg-white px-6 py-6 shadow-[0_8px_0_rgba(0,0,0,0.15)]">
@@ -71,12 +103,15 @@ export default function RoomPage() {
         </div>
 
         {/* バトルボタン */}
-        <button
+        <Button
+          variant="primary"
+          size="lg"
+          disabled={(room?.users?.length ?? 0) < 2}
           onClick={handleBattle}
-          className="mt-8 w-56 rounded-xl bg-[#6b5337] py-3 text-lg font-black text-white shadow-[0_6px_0_rgba(0,0,0,0.35)] active:translate-y-1 active:shadow-[0_2px_0_rgba(0,0,0,0.35)]"
+          className="w-full"
         >
-          バトル！！
-        </button>
+          バトル！
+        </Button>
       </div>
     </main>
   );

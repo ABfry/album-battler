@@ -59,13 +59,17 @@ function useWebSocketConnection(url: string): WebSocketConnection {
 
   // 接続開始
   const connect = useCallback(() => {
+    if (!url) {
+      console.log("WebSocket URL is empty. Skipping connection.");
+      return;
+    }
     if (isWebSocketBusy(wsRef.current)) {
       console.log("WebSocket is already connecting or active");
       return;
     }
     setShouldConnect(true);
     setStatus("connecting");
-  }, []);
+  }, [url]);
 
   // 切断
   const disconnect = useCallback(() => {
