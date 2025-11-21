@@ -27,14 +27,9 @@ type BattlePageProps = {
  */
 export function BattlePage({ battleID }: BattlePageProps) {
   // CookieからユーザーIDを取得（フォールバックは固定値）
-  const [userId, setUserId] = useState("550e8400-e29b-41d4-a716-446655440001");
-
-  useEffect(() => {
-    const cookieUserId = getUserIdClient();
-    if (cookieUserId) {
-      setUserId(cookieUserId);
-    }
-  }, []);
+  const [userId] = useState(() => {
+    return getUserIdClient() || "550e8400-e29b-41d4-a716-446655440001";
+  });
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [displayedImage, setDisplayedImage] = useState<string | null>(null);
