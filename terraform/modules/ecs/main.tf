@@ -103,8 +103,9 @@ resource "aws_lb_target_group" "backend" {
   tags = var.tags
 }
 
-# ALB Listeners
-resource "aws_lb_listener" "http" {
+# ALB HTTP Listener - Forward (Route 53無効時)
+resource "aws_lb_listener" "http_forward" {
+  count             = var.enable_route53 ? 0 : 1
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
@@ -117,9 +118,47 @@ resource "aws_lb_listener" "http" {
   tags = var.tags
 }
 
-# ALB Listener Rules - Backend API
-resource "aws_lb_listener_rule" "backend" {
-  listener_arn = aws_lb_listener.http.arn
+# ALB HTTP Listener - Redirect to HTTPS (Route 53有効時)
+resource "aws_lb_listener" "http_redirect" {
+  count             = var.enable_route53 ? 1 : 0
+  load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+
+  tags = var.tags
+}
+
+# HTTPS Listener
+resource "aws_lb_listener" "https" {
+  count             = var.enable_route53 ? 1 : 0
+  load_balancer_arn = aws_lb.main.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.acm_certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend.arn
+  }
+
+  tags = var.tags
+}
+
+# ALB Listener Rules - Backend API (HTTP)
+resource "aws_lb_listener_rule" "backend_room" {
+  count        = var.enable_route53 ? 0 : 1
+  listener_arn = aws_lb_listener.http_forward[0].arn
   priority     = 100
 
   action {
@@ -129,7 +168,179 @@ resource "aws_lb_listener_rule" "backend" {
 
   condition {
     path_pattern {
-      values = ["/api/*"]
+      values = ["/room", "/room/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+# ALB Listener Rules - Backend API (HTTPS)
+resource "aws_lb_listener_rule" "backend_room_https" {
+  count        = var.enable_route53 ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/room", "/room/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_battle" {
+  count        = var.enable_route53 ? 0 : 1
+  listener_arn = aws_lb_listener.http_forward[0].arn
+  priority     = 101
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/battle", "/battle/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_battle_https" {
+  count        = var.enable_route53 ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 101
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/battle", "/battle/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_user" {
+  count        = var.enable_route53 ? 0 : 1
+  listener_arn = aws_lb_listener.http_forward[0].arn
+  priority     = 102
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/user", "/user/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_user_https" {
+  count        = var.enable_route53 ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 102
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/user", "/user/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_ws" {
+  count        = var.enable_route53 ? 0 : 1
+  listener_arn = aws_lb_listener.http_forward[0].arn
+  priority     = 103
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/ws"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_ws_https" {
+  count        = var.enable_route53 ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 103
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/ws"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_health" {
+  count        = var.enable_route53 ? 0 : 1
+  listener_arn = aws_lb_listener.http_forward[0].arn
+  priority     = 104
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_health_https" {
+  count        = var.enable_route53 ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 104
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health"]
     }
   }
 
@@ -148,6 +359,14 @@ resource "aws_security_group" "alb" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "HTTP from anywhere"
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS from anywhere"
   }
 
   egress {
@@ -293,10 +512,6 @@ resource "aws_ecs_task_definition" "frontend" {
           {
             name  = "NODE_ENV"
             value = "production"
-          },
-          {
-            name  = "NEXT_PUBLIC_API_URL"
-            value = "http://${aws_lb.main.dns_name}/api"
           }
         ],
         var.frontend_environment_variables
@@ -372,7 +587,6 @@ resource "aws_ecs_service" "frontend" {
   cluster                            = aws_ecs_cluster.main.id
   task_definition                    = aws_ecs_task_definition.frontend.arn
   desired_count                      = var.frontend_desired_count
-  launch_type                        = "FARGATE"
   platform_version                   = "LATEST"
   enable_execute_command             = true
   deployment_maximum_percent         = 200
@@ -397,7 +611,7 @@ resource "aws_ecs_service" "frontend" {
   }
 
   depends_on = [
-    aws_lb_listener.http,
+    aws_lb_listener.https,
     aws_iam_role_policy_attachment.ecs_task_execution_role_policy
   ]
 
@@ -409,7 +623,6 @@ resource "aws_ecs_service" "backend" {
   cluster                            = aws_ecs_cluster.main.id
   task_definition                    = aws_ecs_task_definition.backend.arn
   desired_count                      = var.backend_desired_count
-  launch_type                        = "FARGATE"
   platform_version                   = "LATEST"
   enable_execute_command             = true
   deployment_maximum_percent         = 200
@@ -434,7 +647,7 @@ resource "aws_ecs_service" "backend" {
   }
 
   depends_on = [
-    aws_lb_listener.http,
+    aws_lb_listener.https,
     aws_iam_role_policy_attachment.ecs_task_execution_role_policy
   ]
 

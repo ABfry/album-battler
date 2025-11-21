@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 import type {
   ImageSendPayload,
@@ -7,6 +7,7 @@ import type {
   StartGamePayload,
   StartClapTimePayload,
   ClapSendPayload,
+  StartResultPhasePayload,
 } from "@/src/lib/websocket/types";
 import type { BattlePhase } from "./useBattlePhase";
 
@@ -15,8 +16,9 @@ type UseBattleWebSocketOptions = {
   roomId: string | null;
   onPhaseTransition: (phase: BattlePhase) => void;
   onPlayerChange: () => void;
-  onImageUpdate: () => void;
+  onImageUpdate: () => void | Promise<void>;
   onClapUpdate?: () => void;
+  onResultStart?: () => void | Promise<void>;
 };
 
 /**
@@ -32,7 +34,29 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
     onPlayerChange,
     onImageUpdate,
     onClapUpdate,
+    onResultStart,
   } = options;
+
+  // コールバックをRefで保持（依存配列から除外するため）
+  const onPhaseTransitionRef = useRef(onPhaseTransition);
+  const onPlayerChangeRef = useRef(onPlayerChange);
+  const onImageUpdateRef = useRef(onImageUpdate);
+  const onClapUpdateRef = useRef(onClapUpdate);
+  const onResultStartRef = useRef(onResultStart);
+
+  useEffect(() => {
+    onPhaseTransitionRef.current = onPhaseTransition;
+    onPlayerChangeRef.current = onPlayerChange;
+    onImageUpdateRef.current = onImageUpdate;
+    onClapUpdateRef.current = onClapUpdate;
+    onResultStartRef.current = onResultStart;
+  }, [
+    onPhaseTransition,
+    onPlayerChange,
+    onImageUpdate,
+    onClapUpdate,
+    onResultStart,
+  ]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -45,38 +69,56 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
       // ゲーム開始 → 選択フェーズ
       subscribe("start_game", (payload: StartGamePayload) => {
         console.log("[useBattleWebSocket] Game started:", payload);
-        onPhaseTransition("selecting");
+        onPhaseTransitionRef.current("selecting");
       }),
 
       // 拍手タイム開始 → 拍手フェーズ
-      subscribe("start_clap_time", (payload: StartClapTimePayload) => {
+      subscribe("start_clap_time", async (payload: StartClapTimePayload) => {
         console.log("[useBattleWebSocket] Clap time started:", payload);
-        onPhaseTransition("clap_time");
+        console.log(
+          "[useBattleWebSocket] Fetching latest images before transition..."
+        );
+        await onImageUpdateRef.current();
+        console.log(
+          "[useBattleWebSocket] Images fetched, transitioning to clap_time_1"
+        );
+        onPhaseTransitionRef.current("clap_time_1");
       }),
 
       // プレイヤー参加
       subscribe("player_join_room", (payload: PlayerJoinRoomPayload) => {
         console.log("[useBattleWebSocket] Player joined:", payload);
-        onPlayerChange();
+        onPlayerChangeRef.current();
       }),
 
       // プレイヤー退出
       subscribe("player_leave_room", (payload: PlayerLeaveRoomPayload) => {
         console.log("[useBattleWebSocket] Player left:", payload);
-        onPlayerChange();
+        onPlayerChangeRef.current();
       }),
 
       // 画像送信
       subscribe("image_send", (payload: ImageSendPayload) => {
         console.log("[useBattleWebSocket] Image sent:", payload);
-        onImageUpdate();
+        onImageUpdateRef.current();
       }),
 
       // 拍手送信
       subscribe("clap_send", (payload: ClapSendPayload) => {
         console.log("[useBattleWebSocket] Clap sent:", payload);
-        onClapUpdate?.();
+        onClapUpdateRef.current?.();
       }),
+
+      // 結果フェーズ開始
+      subscribe(
+        "start_result_phase",
+        async (payload: StartResultPhasePayload) => {
+          console.log("[useBattleWebSocket] Result phase started:", payload);
+          // 結果データを取得してから結果フェーズへ遷移
+          await onResultStartRef.current?.();
+          onPhaseTransitionRef.current("result");
+        }
+      ),
     ];
 
     return () => {
@@ -85,13 +127,5 @@ export function useBattleWebSocket(options: UseBattleWebSocketOptions) {
       );
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [
-    roomId,
-    subscribe,
-    onPhaseTransition,
-    onPlayerChange,
-    onImageUpdate,
-    onClapUpdate,
-    battleId,
-  ]);
+  }, [roomId, subscribe, battleId]);
 }

@@ -17,11 +17,12 @@ type StartClapTimeInput struct {
 }
 
 type StartClapTimeUseCase struct {
-	battleRepo repository.BattleRepository
-	roomRepo   repository.RoomRepository
-	imageRepo  repository.ImageRepository
-	dispatcher service.EventDispatcher
-	llmClient  llm.LLMClient
+	battleRepo       repository.BattleRepository
+	roomRepo         repository.RoomRepository
+	imageRepo        repository.ImageRepository
+	dispatcher       service.EventDispatcher
+	llmClient        llm.LLMClient
+	clapTimeManageUC *ClapTimeManageUseCase
 }
 
 func NewStartClapTimeUseCase(
@@ -30,13 +31,15 @@ func NewStartClapTimeUseCase(
 	imageRepo repository.ImageRepository,
 	dispatcher service.EventDispatcher,
 	llmClient llm.LLMClient,
+	clapTimeManageUC *ClapTimeManageUseCase,
 ) *StartClapTimeUseCase {
 	return &StartClapTimeUseCase{
-		battleRepo: battleRepo,
-		roomRepo:   roomRepo,
-		imageRepo:  imageRepo,
-		dispatcher: dispatcher,
-		llmClient:  llmClient,
+		battleRepo:       battleRepo,
+		roomRepo:         roomRepo,
+		imageRepo:        imageRepo,
+		dispatcher:       dispatcher,
+		llmClient:        llmClient,
+		clapTimeManageUC: clapTimeManageUC,
 	}
 }
 
@@ -101,6 +104,12 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 		}
 	}(input.BattleID)
 
+	// 拍手時間管理を開始
+	if err := uc.clapTimeManageUC.Execute(ctx, ClapTimeManageInput(input)); err != nil {
+		fmt.Printf("Failed to start clap time management for battle %s: %v\n", input.BattleID, err)
+		return err
+	}
+
 	return nil
 }
 
@@ -153,6 +162,8 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 			fmt.Printf("Warning: failed to set score for image %s: %v\n", img.ID, err)
 			continue
 		}
+		// AIの評価説明文を設定
+		img.SetAIExplanation(result.Reason)
 
 		// DBに保存
 		if err := uc.imageRepo.Save(ctx, img); err != nil {

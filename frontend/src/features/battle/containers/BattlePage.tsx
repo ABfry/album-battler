@@ -1,27 +1,42 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
-import { useBattlePhase, PHASE_CONFIGS } from "@/src/hooks/useBattlePhase";
+import { useResult } from "@/src/hooks/useResult";
+import {
+  useBattlePhase,
+  PHASE_CONFIGS,
+  PhaseHandlersMap,
+  CLAP_PHASES,
+  BattlePhase,
+} from "@/src/hooks/useBattlePhase";
 import { useBattleTimer } from "@/src/hooks/useBattleTimer";
 import { useBattleWebSocket } from "@/src/hooks/useBattleWebSocket";
 import { useImageSelection } from "@/src/hooks/useImageSelection";
+import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { Battle } from "../components/Battle";
+import type { GetBattleResultResponse } from "@/src/lib/api/types";
 
 type BattlePageProps = {
   battleID: string;
 };
-
-// TODO: 実際のユーザーIDを取得する仕組みが必要
-const MOCK_USER_ID = "550e8400-e29b-41d4-a716-446655440001";
 
 /**
  * バトル画面のコンテナコンポーネント (Container)
  * ロジック・状態管理を担当
  */
 export function BattlePage({ battleID }: BattlePageProps) {
+  // CookieからユーザーIDを取得（フォールバックは固定値）
+  const [userId] = useState(() => {
+    return getUserIdClient() || "550e8400-e29b-41d4-a716-446655440001";
+  });
+
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [displayedImage, setDisplayedImage] = useState<string | null>(null);
+  const [battleResult, setBattleResult] =
+    useState<GetBattleResultResponse | null>(null);
 
   // 1. バトル情報取得
   const {
@@ -36,54 +51,244 @@ export function BattlePage({ battleID }: BattlePageProps) {
   // 2. 部屋情報取得
   const { room, refetch: refetchRoom } = useRoomInfo(battle?.roomId || null);
 
-  // 3. フェーズ管理（WebSocket駆動）
-  const battlePhase = useBattlePhase("waiting");
+  const players = useMemo(() => room?.users ?? [], [room?.users]);
 
-  // 4. タイマー（表示のみ）
+  // 3. 結果取得
+  const { getResult } = useResult();
+
+  // 3. フェーズ管理
+  const battlePhase = useBattlePhase({
+    initialPhase: "waiting",
+  });
+
+  // 4. タイマー
   const timer = useBattleTimer({
     initialTime: battlePhase.config.duration,
     autoStart: false,
     onWarning: useCallback((secondsLeft: number) => {
       console.log(`[BattlePage] Warning: ${secondsLeft} seconds left`);
     }, []),
-    onTimeUp: useCallback(() => {
-      console.log("[BattlePage] Time is up!");
-    }, []),
+    onTimeUp: battlePhase.onTimeUp,
   });
 
-  // 5. WebSocketイベント処理のコールバックをメモ化
-  const handlePhaseTransition = useCallback(
-    (
-      newPhase: "waiting" | "selecting" | "clap_time" | "result" | "finished"
-    ) => {
-      console.log(`[BattlePage] Transitioning to phase: ${newPhase}`);
-      battlePhase.transitionTo(newPhase);
-      // フェーズ遷移時にタイマーをリセット
-      const config = PHASE_CONFIGS[newPhase];
-      timer.resetTimer(config.duration);
-      timer.startTimer();
-    },
+  const playersRef = useRef(players);
+  const imagesRef = useRef(images);
+
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  useEffect(() => {
+    // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
+    // 循環参照を避けるためにuseEffect内で実行
+    const handlers: PhaseHandlersMap = {
+      waiting: {
+        onPhaseStart: () => console.log("ゲーム開始待ち"),
+      },
+      selecting: {
+        onPhaseStart: () => {
+          console.log("画像選択開始");
+          timer.resetTimer(60);
+          timer.startTimer();
+        },
+        onTimeUp: () => {
+          console.log("選択時間終了");
+        },
+        onPhaseEnd: () => {
+          console.log("選択終了");
+        },
+      },
+      result: {
+        onPhaseStart: () => {
+          console.log("結果発表");
+          // WebSocketイベント駆動で結果取得するため、ここでは何もしない
+        },
+      },
+    };
+
+    CLAP_PHASES.forEach((clapPhase, index) => {
+      const nextPhase = CLAP_PHASES[index + 1] ?? "result";
+
+      handlers[clapPhase] = {
+        onPhaseStart: () => {
+          const currentPlayers = playersRef.current;
+          const currentImages = imagesRef.current;
+          const player = currentPlayers[index];
+
+          if (!player) {
+            console.log(`${clapPhase}: プレイヤーがいないのでスキップ`);
+            battlePhase.transitionTo(nextPhase as BattlePhase);
+            return;
+          }
+
+          // プレイヤーの画像を表示
+          const playerImage = currentImages.find(
+            (img) => img.userId === player.id
+          );
+          if (playerImage) {
+            setDisplayedImage(playerImage.imageUrl);
+            console.log(`${player.name}の画像を表示: ${playerImage.imageUrl}`);
+          } else {
+            setDisplayedImage(null);
+            console.log(`${player.name}の画像が見つかりません`);
+          }
+
+          console.log(
+            `${player.name}の拍手開始 (${index + 1}/${currentPlayers.length})`
+          );
+          const duration = PHASE_CONFIGS[clapPhase].duration;
+          timer.resetTimer(duration);
+          timer.startTimer();
+        },
+        onTimeUp: () => {
+          const currentPlayers = playersRef.current;
+          const player = currentPlayers[index];
+          console.log(`${player?.name || "Player"}の拍手終了`);
+          battlePhase.transitionTo(nextPhase as BattlePhase);
+        },
+        onPhaseEnd: () => {
+          const currentPlayers = playersRef.current;
+          const player = currentPlayers[index];
+          console.log(`${player?.name || "Player"}の拍手フェーズ完了`);
+        },
+      };
+    });
+
+    battlePhase.setHandlers(handlers);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [battlePhase.transitionTo, timer.resetTimer, timer.startTimer]
-  );
+  }, []);
+
+  const phaseMessage = useMemo(() => {
+    if (battlePhase.phase === "selecting") {
+      return timer.timeLeft === 0 ? "タイムアップ！" : "画像を探せ！";
+    }
+
+    const clapIndex = CLAP_PHASES.indexOf(battlePhase.phase);
+    if (clapIndex !== -1) {
+      const player = players[clapIndex];
+      return player ? `${player.name}の画像` : "拍手タイム";
+    }
+
+    if (battlePhase.phase === "result") {
+      return "結果発表";
+    }
+
+    return "";
+  }, [battlePhase.phase, players, timer.timeLeft]);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    if (!phaseMessage) {
+      setShowToast(false);
+      return;
+    }
+
+    setToastMessage(phaseMessage);
+    setShowToast(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setShowToast(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [phaseMessage]);
+
+  // 5. WebSocketイベント処理のコールバックをメモ化
+  // battlePhase.transitionToをRefで保持
+  const battlePhaseTransitionRef = useRef(battlePhase.transitionTo);
+  useEffect(() => {
+    battlePhaseTransitionRef.current = battlePhase.transitionTo;
+  }, [battlePhase.transitionTo]);
+
+  const handlePhaseTransition = useCallback((newPhase: string) => {
+    console.log(`[BattlePage] Transitioning to phase: ${newPhase}`);
+    if (newPhase === "clap_time") {
+      battlePhaseTransitionRef.current("clap_time_1");
+    } else {
+      battlePhaseTransitionRef.current(newPhase as BattlePhase);
+    }
+  }, []);
+
+  // refetch関数をRefで保持
+  const refetchRoomRef = useRef(refetchRoom);
+  const refetchBattleRef = useRef(refetchBattle);
+  const refetchImagesRef = useRef(refetchImages);
+
+  useEffect(() => {
+    refetchRoomRef.current = refetchRoom;
+    refetchBattleRef.current = refetchBattle;
+    refetchImagesRef.current = refetchImages;
+  }, [refetchRoom, refetchBattle, refetchImages]);
 
   const handlePlayerChange = useCallback(() => {
     console.log("[BattlePage] Player change detected");
-    refetchRoom();
-    refetchBattle();
-  }, [refetchRoom, refetchBattle]);
+    refetchRoomRef.current();
+    refetchBattleRef.current();
+  }, []);
 
-  const handleImageUpdate = useCallback(() => {
+  const handleImageUpdate = useCallback(async () => {
     console.log("[BattlePage] Image update detected");
-    refetchBattle();
-    refetchImages();
-  }, [refetchBattle, refetchImages]);
+    await Promise.all([refetchBattleRef.current(), refetchImagesRef.current()]);
+    console.log("[BattlePage] Images and battle info refetched");
+  }, []);
 
   const handleClapUpdate = useCallback(() => {
     console.log("[BattlePage] Clap update detected");
     // TODO: 拍手を受け取ったら演出や音を鳴らす？
     // スコアのフェッチは最後で良さげ
   }, []);
+
+  const handleResultStart = useCallback(async () => {
+    console.log("[BattlePage] Result phase started, fetching battle result...");
+
+    // AI採点が完了していない可能性があるため、リトライロジックを実装
+    const maxRetries = 7;
+    const retryDelay = 3000; // 3秒
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(
+        `[BattlePage] Attempt ${attempt}/${maxRetries} to fetch result`
+      );
+
+      const result = await getResult(battleID);
+      if (result) {
+        // AI採点が完了しているかチェック（ai_explanationが空でないこと）
+        const isAIJudgingComplete = result.results.every(
+          (r) => r.ai_explanation && r.ai_explanation.trim() !== ""
+        );
+
+        if (isAIJudgingComplete) {
+          setBattleResult(result);
+          console.log(
+            "[BattlePage] Battle result fetched successfully:",
+            result
+          );
+          return;
+        } else {
+          console.log(
+            "[BattlePage] AI judging not complete yet, will retry..."
+          );
+        }
+      }
+
+      if (attempt < maxRetries) {
+        console.log(
+          `[BattlePage] Result not ready, waiting ${retryDelay}ms before retry...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+    }
+
+    console.error(
+      "[BattlePage] Failed to fetch battle result after all retries"
+    );
+  }, [battleID, getResult]);
 
   // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
   useBattleWebSocket({
@@ -93,6 +298,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     onPlayerChange: handlePlayerChange,
     onImageUpdate: handleImageUpdate,
     onClapUpdate: handleClapUpdate,
+    onResultStart: handleResultStart,
   });
 
   // 7. バトル情報取得後、途中参加を考慮してselectingフェーズに自動遷移
@@ -107,7 +313,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       timer.resetTimer(PHASE_CONFIGS.selecting.duration);
       timer.startTimer();
     }
-  }, [battle, battlePhase, timer]);
+  }, [battle, timer, battlePhase]);
 
   // 8. 画像選択ロジック（フェーズに依存）
   const handleSendSuccess = useCallback(() => {
@@ -121,23 +327,56 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const imageSelection = useImageSelection({
     battleId: battleID,
-    userId: MOCK_USER_ID,
+    userId: userId,
     canSelect: battlePhase.canSelectImage,
     onSendSuccess: handleSendSuccess,
     onSendError: handleSendError,
   });
 
+  // 9. 拍手機能
+  const { sendClap, isConnected: isClapConnected } = useWebSocketClap();
+
+  // 現在の拍手ターゲットユーザーを計算
+  const currentClapTarget = useMemo(() => {
+    const clapIndex = CLAP_PHASES.indexOf(battlePhase.phase);
+    if (clapIndex === -1) return null; // 拍手フェーズでない
+
+    const targetPlayer = players[clapIndex];
+    return targetPlayer || null;
+  }, [battlePhase.phase, players]);
+
+  // 拍手ハンドラー
+  const handleClap = useCallback(() => {
+    if (!currentClapTarget || !isClapConnected) return;
+
+    try {
+      sendClap({
+        userId: userId,
+        targetUserId: currentClapTarget.id,
+        battleId: battleID,
+        count: 1,
+      });
+      console.log(`[BattlePage] Clap sent to ${currentClapTarget.name}`);
+    } catch (error) {
+      console.error("[BattlePage] Failed to send clap:", error);
+    }
+  }, [currentClapTarget, isClapConnected, sendClap, userId, battleID]);
+
   return (
     <Battle
       // フェーズ情報
       phase={battlePhase.phase}
+      phaseMessage={toastMessage}
+      showPhaseMessage={showToast}
       // タイマー関連
       timeLeft={timer.timeLeft}
       isWarning={timer.isWarning}
       // 画像選択関連
       selectedImage={imageSelection.selectedImage}
+      displayedImage={displayedImage}
       isDragging={imageSelection.isDragging}
       isImageSent={imageSelection.isImageSent}
+      isCompressing={imageSelection.isCompressing}
       fileInputRef={imageSelection.fileInputRef}
       onImageSelect={imageSelection.handleImageSelect}
       onOpenAlbum={imageSelection.handleOpenAlbum}
@@ -151,8 +390,14 @@ export function BattlePage({ battleID }: BattlePageProps) {
       theme={battle?.theme || null}
       isLoading={battleInfoLoading}
       error={battleInfoError}
-      players={room?.users}
+      players={players}
       images={images}
+      // 拍手機能
+      canClap={battlePhase.canClap}
+      onClap={handleClap}
+      // 結果情報
+      battleResult={battleResult}
+      battleId={battleID}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
       onCloseErrorDialog={() => setShowErrorDialog(false)}

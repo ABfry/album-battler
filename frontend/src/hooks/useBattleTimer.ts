@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 type UseBattleTimerOptions = {
   initialTime?: number;
@@ -19,6 +19,15 @@ export function useBattleTimer(options: UseBattleTimerOptions = {}) {
 
   const { onWarning, onTimeUp } = options;
 
+  // コールバックをRefで保持（依存配列から除外するため）
+  const onWarningRef = useRef(onWarning);
+  const onTimeUpRef = useRef(onTimeUp);
+
+  useEffect(() => {
+    onWarningRef.current = onWarning;
+    onTimeUpRef.current = onTimeUp;
+  }, [onWarning, onTimeUp]);
+
   // カウントダウン処理
   useEffect(() => {
     if (!isRunning) return;
@@ -33,12 +42,12 @@ export function useBattleTimer(options: UseBattleTimerOptions = {}) {
         // 警告チェック（残り10秒以下）
         if (next <= 10 && next > 0) {
           setIsWarning(true);
-          onWarning?.(next);
+          onWarningRef.current?.(next);
         }
 
         // タイムアップ
         if (next === 0) {
-          onTimeUp?.();
+          onTimeUpRef.current?.();
           setIsRunning(false);
         }
 
@@ -47,7 +56,7 @@ export function useBattleTimer(options: UseBattleTimerOptions = {}) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isRunning, onWarning, onTimeUp]);
+  }, [isRunning]);
 
   const startTimer = useCallback(() => {
     setIsRunning(true);
