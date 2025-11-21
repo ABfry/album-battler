@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import {
@@ -13,21 +14,25 @@ import {
 import { useBattleTimer } from "@/src/hooks/useBattleTimer";
 import { useBattleWebSocket } from "@/src/hooks/useBattleWebSocket";
 import { useImageSelection } from "@/src/hooks/useImageSelection";
+import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { Battle } from "../components/Battle";
 
 type BattlePageProps = {
   battleID: string;
 };
 
-// TODO: 実際のユーザーIDを取得する仕組みが必要
-const MOCK_USER_ID = "550e8400-e29b-41d4-a716-446655440001";
-
 /**
  * バトル画面のコンテナコンポーネント (Container)
  * ロジック・状態管理を担当
  */
 export function BattlePage({ battleID }: BattlePageProps) {
+  // CookieからユーザーIDを取得（フォールバックは固定値）
+  const [userId] = useState(() => {
+    return getUserIdClient() || "550e8400-e29b-41d4-a716-446655440001";
+  });
+
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [displayedImage, setDisplayedImage] = useState<string | null>(null);
 
   // 1. バトル情報取得
   const {
@@ -60,9 +65,15 @@ export function BattlePage({ battleID }: BattlePageProps) {
   });
 
   const playersRef = useRef(players);
+  const imagesRef = useRef(images);
+
   useEffect(() => {
     playersRef.current = players;
   }, [players]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
 
   useEffect(() => {
     // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
@@ -97,12 +108,25 @@ export function BattlePage({ battleID }: BattlePageProps) {
       handlers[clapPhase] = {
         onPhaseStart: () => {
           const currentPlayers = playersRef.current;
+          const currentImages = imagesRef.current;
           const player = currentPlayers[index];
 
           if (!player) {
             console.log(`${clapPhase}: プレイヤーがいないのでスキップ`);
             battlePhase.transitionTo(nextPhase as BattlePhase);
             return;
+          }
+
+          // プレイヤーの画像を表示
+          const playerImage = currentImages.find(
+            (img) => img.userId === player.id
+          );
+          if (playerImage) {
+            setDisplayedImage(playerImage.imageUrl);
+            console.log(`${player.name}の画像を表示: ${playerImage.imageUrl}`);
+          } else {
+            setDisplayedImage(null);
+            console.log(`${player.name}の画像が見つかりません`);
           }
 
           console.log(
@@ -200,10 +224,10 @@ export function BattlePage({ battleID }: BattlePageProps) {
     refetchBattleRef.current();
   }, []);
 
-  const handleImageUpdate = useCallback(() => {
+  const handleImageUpdate = useCallback(async () => {
     console.log("[BattlePage] Image update detected");
-    refetchBattleRef.current();
-    refetchImagesRef.current();
+    await Promise.all([refetchBattleRef.current(), refetchImagesRef.current()]);
+    console.log("[BattlePage] Images and battle info refetched");
   }, []);
 
   const handleClapUpdate = useCallback(() => {
@@ -248,11 +272,40 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const imageSelection = useImageSelection({
     battleId: battleID,
-    userId: MOCK_USER_ID,
+    userId: userId,
     canSelect: battlePhase.canSelectImage,
     onSendSuccess: handleSendSuccess,
     onSendError: handleSendError,
   });
+
+  // 9. 拍手機能
+  const { sendClap, isConnected: isClapConnected } = useWebSocketClap();
+
+  // 現在の拍手ターゲットユーザーを計算
+  const currentClapTarget = useMemo(() => {
+    const clapIndex = CLAP_PHASES.indexOf(battlePhase.phase);
+    if (clapIndex === -1) return null; // 拍手フェーズでない
+
+    const targetPlayer = players[clapIndex];
+    return targetPlayer || null;
+  }, [battlePhase.phase, players]);
+
+  // 拍手ハンドラー
+  const handleClap = useCallback(() => {
+    if (!currentClapTarget || !isClapConnected) return;
+
+    try {
+      sendClap({
+        userId: userId,
+        targetUserId: currentClapTarget.id,
+        battleId: battleID,
+        count: 1,
+      });
+      console.log(`[BattlePage] Clap sent to ${currentClapTarget.name}`);
+    } catch (error) {
+      console.error("[BattlePage] Failed to send clap:", error);
+    }
+  }, [currentClapTarget, isClapConnected, sendClap, userId, battleID]);
 
   return (
     <Battle
@@ -265,8 +318,10 @@ export function BattlePage({ battleID }: BattlePageProps) {
       isWarning={timer.isWarning}
       // 画像選択関連
       selectedImage={imageSelection.selectedImage}
+      displayedImage={displayedImage}
       isDragging={imageSelection.isDragging}
       isImageSent={imageSelection.isImageSent}
+      isCompressing={imageSelection.isCompressing}
       fileInputRef={imageSelection.fileInputRef}
       onImageSelect={imageSelection.handleImageSelect}
       onOpenAlbum={imageSelection.handleOpenAlbum}
@@ -282,6 +337,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
       error={battleInfoError}
       players={players}
       images={images}
+      // 拍手機能
+      canClap={battlePhase.canClap}
+      onClap={handleClap}
       // エラーダイアログ
       showErrorDialog={showErrorDialog}
       onCloseErrorDialog={() => setShowErrorDialog(false)}

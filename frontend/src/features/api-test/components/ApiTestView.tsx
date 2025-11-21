@@ -20,6 +20,7 @@ import type { DebugMessage } from "@/src/lib/types";
 import { TitleLogo } from "@/src/components/ui/title-logo";
 
 type ApiTestViewProps = {
+  userId: string;
   createdRoom: CreateRoomResponse | null;
   room: Room | null;
   loading: boolean;
@@ -63,6 +64,7 @@ type ApiTestViewProps = {
  * UIの表示のみを担当
  */
 export function ApiTestView({
+  userId,
   createdRoom,
   room,
   loading,
@@ -122,6 +124,7 @@ export function ApiTestView({
         <div className="grid gap-6 md:grid-cols-2">
           {/* 1. 部屋作成 */}
           <RoomCreateForm
+            userId={userId}
             onCreateRoom={onCreateRoom}
             loading={loading}
             error={error}
@@ -158,7 +161,7 @@ export function ApiTestView({
           {/* 5. ゲーム開始 */}
           <GameStartButton
             roomId={createdRoom?.room_id || null}
-            userId="550e8400-e29b-41d4-a716-446655440001"
+            userId={userId}
             onStartGame={onStartGame}
             loading={loading}
             error={error}

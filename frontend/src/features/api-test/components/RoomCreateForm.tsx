@@ -1,4 +1,5 @@
 type Props = {
+  userId: string;
   onCreateRoom: (userId: string) => void;
   loading: boolean;
   error: string | null;
@@ -9,6 +10,7 @@ type Props = {
  * 部屋作成フォーム (Presentational)
  */
 export function RoomCreateForm({
+  userId,
   onCreateRoom,
   loading,
   error,
@@ -31,7 +33,7 @@ export function RoomCreateForm({
           <input
             name="userId"
             type="text"
-            defaultValue="550e8400-e29b-41d4-a716-446655440001"
+            defaultValue={userId}
             className="w-full rounded border px-3 py-2"
             disabled={loading}
           />
