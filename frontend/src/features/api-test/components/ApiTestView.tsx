@@ -7,6 +7,7 @@ import { BattleIDInfo } from "./BattleIDInfo";
 import { BattleCreateForm } from "./BattleCreateForm";
 import { BattleInfo } from "./BattleInfo";
 import { ImageSendForm } from "./ImageSendForm";
+import { ClapSendForm } from "./ClapSendForm";
 import { ImageList } from "./ImageList";
 import type {
   CreateRoomResponse,
@@ -37,6 +38,7 @@ type ApiTestViewProps = {
   battleError: string | null;
   battleInfoError: string | null;
   sendImageSuccess: boolean;
+  sendClapSuccess: boolean;
   latestWsMessage: DebugMessage;
   latestApiResponse: DebugMessage;
   onCreateRoom: (userId: string) => Promise<void>;
@@ -45,6 +47,12 @@ type ApiTestViewProps = {
   onStartGame: () => Promise<void>;
   onCreateBattle: () => Promise<void>;
   onSendImage: (userId: string, imageBase64: string) => Promise<void>;
+  onSendClap: (
+    userId: string,
+    targetUserId: string,
+    battleId: string,
+    count: number
+  ) => void;
   onRefetch: () => void;
   onRefetchBattle: () => void;
   onRefetchImages: () => void;
@@ -73,6 +81,7 @@ export function ApiTestView({
   battleError,
   battleInfoError,
   sendImageSuccess,
+  sendClapSuccess,
   latestWsMessage,
   latestApiResponse,
   onCreateRoom,
@@ -81,6 +90,7 @@ export function ApiTestView({
   onStartGame,
   onCreateBattle,
   onSendImage,
+  onSendClap,
   onRefetch,
   onRefetchBattle,
   onRefetchImages,
@@ -190,6 +200,14 @@ export function ApiTestView({
             loading={battleInfoLoading}
             error={battleInfoError}
             onRefetch={onRefetchImages}
+          />
+
+          {/* 11. 拍手送信 */}
+          <ClapSendForm
+            battleId={battleID}
+            onSendClap={onSendClap}
+            loading={false}
+            success={sendClapSuccess}
           />
         </div>
 

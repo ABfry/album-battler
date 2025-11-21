@@ -7,11 +7,12 @@ import (
 )
 
 type ClapSendEvent struct {
-	RoomID     uuid.UUID
-	BattleID   uuid.UUID
-	UserID     uuid.UUID
-	ClapCount  int
-	OccurredOn time.Time
+	RoomID       uuid.UUID
+	BattleID     uuid.UUID
+	UserID       uuid.UUID // 拍手した人
+	TargetUserID uuid.UUID // 拍手された画像の投稿者
+	ClapCount    int
+	OccurredOn   time.Time
 }
 
 func (e ClapSendEvent) EventType() string {
@@ -33,5 +34,20 @@ func (e StartClapTimeEvent) EventType() string {
 }
 
 func (e StartClapTimeEvent) OccurredAt() time.Time {
+	return e.OccurredOn
+}
+
+type ChangeClapUserEvent struct {
+	RoomID     uuid.UUID
+	BattleID   uuid.UUID
+	UserID     uuid.UUID
+	OccurredOn time.Time
+}
+
+func (e ChangeClapUserEvent) EventType() string {
+	return "change_clap_user"
+}
+
+func (e ChangeClapUserEvent) OccurredAt() time.Time {
 	return e.OccurredOn
 }

@@ -11,9 +11,10 @@ import (
 )
 
 type ClapSendInput struct {
-	BattleID uuid.UUID
-	UserID   uuid.UUID
-	Count    int
+	BattleID     uuid.UUID
+	UserID       uuid.UUID // 拍手した人
+	TargetUserID uuid.UUID // 拍手された画像の投稿者
+	Count        int
 }
 
 type ClapSendUseCase struct {
@@ -45,7 +46,7 @@ func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) err
 		return errors.New("failed to find battle")
 	}
 
-	// ユーザがいるか確認
+	// 拍手した人がバトル参加者か確認
 	found := false
 	for _, userID := range battle.UserIDs {
 		if userID == input.UserID {
@@ -58,14 +59,27 @@ func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) err
 		return errors.New("user not found in battle")
 	}
 
-	// 拍手数を追加
-	if _, err := uc.clapCounter.Add(input.BattleID, input.UserID, input.Count); err != nil {
+	// 拍手された人（ターゲット）がバトル参加者か確認
+	targetFound := false
+	for _, userID := range battle.UserIDs {
+		if userID == input.TargetUserID {
+			targetFound = true
+			break
+		}
+	}
+	if !targetFound {
+		fmt.Printf("Target user not found in battle: %v", input.TargetUserID)
+		return errors.New("target user not found in battle")
+	}
+
+	// 拍手数を追加（拍手される側で集計）
+	if _, err := uc.clapCounter.Add(input.BattleID, input.TargetUserID, input.Count); err != nil {
 		fmt.Printf("Failed to add clap count: %v", err)
 		return errors.New("failed to add clap count")
 	}
 
 	// ドメインイベントを記録
-	battle.RecordClapCounted(input.UserID, input.Count)
+	battle.RecordClapCounted(input.UserID, input.TargetUserID, input.Count)
 
 	// イベントをディスパッチ
 	events := battle.PopEvents()

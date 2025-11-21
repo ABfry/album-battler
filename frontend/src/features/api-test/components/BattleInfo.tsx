@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Battle } from "@/src/lib/api/types";
 
 type Props = {
@@ -15,13 +16,23 @@ export function BattleInfo({ battle, loading, error, onRefetch }: Props) {
     <div className="rounded-lg border bg-white p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">8. Battle Info</h2>
-        <button
-          onClick={onRefetch}
-          disabled={loading}
-          className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600 disabled:bg-gray-300"
-        >
-          {loading ? "Loading..." : "Refetch"}
-        </button>
+        <div className="flex gap-2">
+          {battle && (
+            <Link
+              href={`/battle/${battle.id}`}
+              className="rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600"
+            >
+              Open Battle
+            </Link>
+          )}
+          <button
+            onClick={onRefetch}
+            disabled={loading}
+            className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600 disabled:bg-gray-300"
+          >
+            {loading ? "Loading..." : "Refetch"}
+          </button>
+        </div>
       </div>
 
       <div className="mb-3 space-y-2 rounded bg-gray-50 p-3">

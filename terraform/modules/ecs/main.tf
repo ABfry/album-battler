@@ -118,7 +118,7 @@ resource "aws_lb_listener" "http" {
 }
 
 # ALB Listener Rules - Backend API
-resource "aws_lb_listener_rule" "backend" {
+resource "aws_lb_listener_rule" "backend_room" {
   listener_arn = aws_lb_listener.http.arn
   priority     = 100
 
@@ -129,7 +129,79 @@ resource "aws_lb_listener_rule" "backend" {
 
   condition {
     path_pattern {
-      values = ["/api/*"]
+      values = ["/room", "/room/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_battle" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 101
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/battle", "/battle/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_user" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 102
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/user", "/user/*"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_ws" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 103
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/ws"]
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "backend_health" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 104
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health"]
     }
   }
 
@@ -293,10 +365,6 @@ resource "aws_ecs_task_definition" "frontend" {
           {
             name  = "NODE_ENV"
             value = "production"
-          },
-          {
-            name  = "NEXT_PUBLIC_API_URL"
-            value = "http://${aws_lb.main.dns_name}/api"
           }
         ],
         var.frontend_environment_variables
@@ -372,7 +440,6 @@ resource "aws_ecs_service" "frontend" {
   cluster                            = aws_ecs_cluster.main.id
   task_definition                    = aws_ecs_task_definition.frontend.arn
   desired_count                      = var.frontend_desired_count
-  launch_type                        = "FARGATE"
   platform_version                   = "LATEST"
   enable_execute_command             = true
   deployment_maximum_percent         = 200
@@ -409,7 +476,6 @@ resource "aws_ecs_service" "backend" {
   cluster                            = aws_ecs_cluster.main.id
   task_definition                    = aws_ecs_task_definition.backend.arn
   desired_count                      = var.backend_desired_count
-  launch_type                        = "FARGATE"
   platform_version                   = "LATEST"
   enable_execute_command             = true
   deployment_maximum_percent         = 200
