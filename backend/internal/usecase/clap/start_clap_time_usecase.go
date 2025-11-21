@@ -17,11 +17,12 @@ type StartClapTimeInput struct {
 }
 
 type StartClapTimeUseCase struct {
-	battleRepo repository.BattleRepository
-	roomRepo   repository.RoomRepository
-	imageRepo  repository.ImageRepository
-	dispatcher service.EventDispatcher
-	llmClient  llm.LLMClient
+	battleRepo       repository.BattleRepository
+	roomRepo         repository.RoomRepository
+	imageRepo        repository.ImageRepository
+	dispatcher       service.EventDispatcher
+	llmClient        llm.LLMClient
+	clapTimeManageUC *ClapTimeManageUseCase
 }
 
 func NewStartClapTimeUseCase(
@@ -30,13 +31,15 @@ func NewStartClapTimeUseCase(
 	imageRepo repository.ImageRepository,
 	dispatcher service.EventDispatcher,
 	llmClient llm.LLMClient,
+	clapTimeManageUC *ClapTimeManageUseCase,
 ) *StartClapTimeUseCase {
 	return &StartClapTimeUseCase{
-		battleRepo: battleRepo,
-		roomRepo:   roomRepo,
-		imageRepo:  imageRepo,
-		dispatcher: dispatcher,
-		llmClient:  llmClient,
+		battleRepo:       battleRepo,
+		roomRepo:         roomRepo,
+		imageRepo:        imageRepo,
+		dispatcher:       dispatcher,
+		llmClient:        llmClient,
+		clapTimeManageUC: clapTimeManageUC,
 	}
 }
 
@@ -100,6 +103,12 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 			fmt.Printf("Failed to judge images asynchronously for battle %s: %v\n", battleID, err)
 		}
 	}(input.BattleID)
+
+	// 拍手時間管理を開始
+	if err := uc.clapTimeManageUC.Execute(ctx, ClapTimeManageInput(input)); err != nil {
+		fmt.Printf("Failed to start clap time management for battle %s: %v\n", input.BattleID, err)
+		return err
+	}
 
 	return nil
 }
