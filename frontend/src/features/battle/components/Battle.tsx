@@ -15,7 +15,8 @@ import {
 type BattleProps = {
   // フェーズ情報
   phase: BattlePhase;
-
+  phaseMessage: string;
+  showPhaseMessage: boolean;
   // タイマー関連
   timeLeft: number;
   isWarning: boolean;
@@ -73,6 +74,8 @@ export function Battle({
   theme,
   isLoading,
   error,
+  phaseMessage,
+  showPhaseMessage,
   players,
   images,
   // エラーダイアログ
@@ -81,7 +84,7 @@ export function Battle({
 }: BattleProps) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="flex h-screen w-full max-w-4xl flex-col items-center justify-between py-8">
+      <div className="relative flex h-screen w-full max-w-4xl flex-col items-center justify-between py-8">
         {/* タイマー表示（右上） */}
         <div className="absolute top-8 right-8">
           <div
@@ -107,6 +110,14 @@ export function Battle({
             )}
           </h1>
         </div>
+
+        {phaseMessage && showPhaseMessage && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+            <div className="rounded-3xl bg-black/70 px-8 py-6 text-4xl font-black text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-4 ring-white/30 animate-in fade-in zoom-in duration-300">
+              {phaseMessage}
+            </div>
+          </div>
+        )}
 
         {/* バトル画像（中央） */}
         <ImageFrame
