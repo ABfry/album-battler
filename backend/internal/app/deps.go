@@ -65,12 +65,13 @@ type Dependencies struct {
 	StartGameUseCase  *room.StartGameUseCase
 	GetRoomUseCase    *room.GetRoomUseCase
 
-	CreateBattleUseCase *battle.CreateBattleUseCase
-	GetBattleUseCase    *battle.GetBattleUseCase
-	GetBattleIDUseCase  *battle.GetBattleIDUseCase
-	GetImageUseCase     *battle.GetImageUseCase
-	ImageSendUseCase    *battle.ImageSendUseCase
-	GetResultUseCase    *battle.GetResultUseCase
+	CreateBattleUseCase    *battle.CreateBattleUseCase
+	GetBattleUseCase       *battle.GetBattleUseCase
+	GetBattleIDUseCase     *battle.GetBattleIDUseCase
+	GetActiveBattleUseCase *battle.GetActiveBattleUseCase
+	GetImageUseCase        *battle.GetImageUseCase
+	ImageSendUseCase       *battle.ImageSendUseCase
+	GetResultUseCase       *battle.GetResultUseCase
 
 	ClapSendUseCase       *clap.ClapSendUseCase
 	StartClapTimeUseCase  *clap.StartClapTimeUseCase
@@ -332,6 +333,11 @@ func initUseCases(deps *Dependencies) error {
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
 		deps.RoomRepository,
 		deps.UserRepository,
+	)
+
+	deps.GetActiveBattleUseCase = battle.NewGetActiveBattleUseCase(
+		deps.RoomRepository,
+		deps.BattleRepository,
 	)
 
 	deps.GetImageUseCase = battle.NewGetImageUseCase(

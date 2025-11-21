@@ -79,6 +79,42 @@ func (r *mysqlRoomRepository) FindByRoomNumber(ctx context.Context, roomNumber i
 	return room, nil
 }
 
+func (r *mysqlRoomRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Room, error) {
+	query := "SELECT room_id FROM room_users WHERE user_id = ?"
+	rows, err := r.db.QueryContext(ctx, query, userID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			fmt.Printf("failed to close rows: %v\n", err)
+		}
+	}()
+
+	var rooms []*entity.Room
+	for rows.Next() {
+		var roomIDStr string
+		if err := rows.Scan(&roomIDStr); err != nil {
+			return nil, err
+		}
+
+		roomRow, err := findRowByKey(ctx, r.db, RoomsTable, "id", roomIDStr)
+		if err != nil {
+			return nil, err
+		}
+
+		room, err := r.createRoom(roomRow)
+		if err != nil {
+			return nil, err
+		}
+		rooms = append(rooms, room)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return rooms, nil
+}
+
 // FindAll は rooms テーブル全件を読み出す。
 // why: 管理画面やバッチでの一括処理向け。件数増大時は呼び出し側でページネーションを検討する。
 func (r *mysqlRoomRepository) FindAll(ctx context.Context) ([]*entity.Room, error) {
