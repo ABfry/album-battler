@@ -249,7 +249,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
     // AI採点が完了していない可能性があるため、リトライロジックを実装
     const maxRetries = 5;
-    const retryDelay = 2000; // 2秒
+    const retryDelay = 3000; // 3秒
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(
