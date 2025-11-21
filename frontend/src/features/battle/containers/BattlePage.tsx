@@ -30,7 +30,12 @@ type BattlePageProps = {
 export function BattlePage({ battleID }: BattlePageProps) {
   // CookieからユーザーIDを取得（フォールバックは固定値）
   const [userId] = useState(() => {
-    return getUserIdClient() || "550e8400-e29b-41d4-a716-446655440001";
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return "";
+    }
+    return userId;
   });
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);

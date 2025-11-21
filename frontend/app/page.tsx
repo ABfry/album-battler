@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { NeedLoginButton } from "@/src/components/need-login-button/container/NeedLoginButton";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 
 export default function TitlePage() {
   const router = useRouter();
@@ -24,9 +25,12 @@ export default function TitlePage() {
   } = useRoom();
 
   const handleCreateRoom = async () => {
-    // 4桁のランダムな部屋番号を発行（例: 1111〜9999）
-    const roomId = Math.floor(1000 + Math.random() * 9000).toString();
-    const result = await createRoom("550e8400-e29b-41d4-a716-446655440001");
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return;
+    }
+    const result = await createRoom(getUserIdClient() || "");
     router.push(`/room/${result?.room_id}`);
   };
 

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
+import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
@@ -35,10 +36,12 @@ export default function RoomPage() {
   }, [subscribe, refetch]);
 
   const handleBattle = async () => {
-    const success = await startGame(
-      roomID,
-      "550e8400-e29b-41d4-a716-446655440001"
-    );
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return;
+    }
+    const success = await startGame(roomID, userId);
 
     const battleId = await getBattleID(roomID);
 
