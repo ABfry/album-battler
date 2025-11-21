@@ -24,7 +24,7 @@ var tableColumns = map[TableName][]string{
 	RoomUsersTable:   {"room_id", "user_id", "joined_at"},
 	BattlesTable:     {"id", "room_id", "started_at", "theme"},
 	BattleUsersTable: {"battle_id", "user_id"},
-	ImagesTable:      {"id", "user_id", "battle_id", "image_url", "uploaded_at", "ai_score", "user_score"},
+	ImagesTable:      {"id", "user_id", "battle_id", "image_url", "uploaded_at", "ai_score", "user_score", "ai_explanation"},
 }
 
 func findRowByKey(ctx context.Context, db *sql.DB, table TableName, key string, value interface{}) (*sql.Row, error) {
