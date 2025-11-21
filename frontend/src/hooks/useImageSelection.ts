@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useBattle } from "./useBattle";
+import { compressImage } from "@/src/lib/utils";
 
 type UseImageSelectionOptions = {
   battleId: string;
@@ -7,6 +8,23 @@ type UseImageSelectionOptions = {
   canSelect: boolean; // フェーズから受け取る
   onSendSuccess?: () => void;
   onSendError?: () => void;
+};
+
+// バックエンドが受け付ける画像形式
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+] as const;
+
+/**
+ * 画像形式が許可されているかチェック
+ */
+const isAllowedImageType = (type: string): boolean => {
+  return ALLOWED_IMAGE_TYPES.includes(
+    type as (typeof ALLOWED_IMAGE_TYPES)[number]
+  );
 };
 
 /**
@@ -18,25 +36,43 @@ export function useImageSelection(options: UseImageSelectionOptions) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isImageSent, setIsImageSent] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendImage } = useBattle();
 
+  // 共通の画像処理ロジック
+  const processImageFile = useCallback(async (file: File) => {
+    // 画像形式チェック
+    if (!isAllowedImageType(file.type)) {
+      alert(
+        `サポートされていない画像形式です。\nJPEG、PNG、WebP、HEICのいずれかを選択してください。`
+      );
+      return;
+    }
+
+    try {
+      setIsCompressing(true);
+      const compressedDataUrl = await compressImage(file);
+      setSelectedImage(compressedDataUrl);
+    } catch (error) {
+      console.error("[useImageSelection] 圧縮エラー:", error);
+      alert("画像の圧縮に失敗しました。別の画像を選択してください。");
+    } finally {
+      setIsCompressing(false);
+    }
+  }, []);
+
   // 画像選択ハンドラー
   const handleImageSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!options.canSelect || isImageSent) return;
 
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setSelectedImage(result);
-      };
-      reader.readAsDataURL(file);
+      await processImageFile(file);
     },
-    [options.canSelect, isImageSent]
+    [options.canSelect, isImageSent, processImageFile]
   );
 
   // アルバムを開く
@@ -131,7 +167,7 @@ export function useImageSelection(options: UseImageSelectionOptions) {
   );
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       if (!options.canSelect || isImageSent) return;
       e.preventDefault();
       e.stopPropagation();
@@ -140,21 +176,16 @@ export function useImageSelection(options: UseImageSelectionOptions) {
       const file = e.dataTransfer.files?.[0];
       if (!file || !file.type.startsWith("image/")) return;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setSelectedImage(result);
-      };
-      reader.readAsDataURL(file);
+      await processImageFile(file);
     },
-    [options.canSelect, isImageSent]
+    [options.canSelect, isImageSent, processImageFile]
   );
 
   // クリップボードからの貼り付けハンドラー
   useEffect(() => {
     if (!options.canSelect || isImageSent) return;
 
-    const handlePaste = (e: ClipboardEvent) => {
+    const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -164,12 +195,7 @@ export function useImageSelection(options: UseImageSelectionOptions) {
           const file = item.getAsFile();
           if (!file) continue;
 
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const result = event.target?.result as string;
-            setSelectedImage(result);
-          };
-          reader.readAsDataURL(file);
+          await processImageFile(file);
           break;
         }
       }
@@ -177,12 +203,13 @@ export function useImageSelection(options: UseImageSelectionOptions) {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [options.canSelect, isImageSent]);
+  }, [options.canSelect, isImageSent, processImageFile]);
 
   return {
     selectedImage,
     isDragging,
     isImageSent,
+    isCompressing,
     fileInputRef,
     handleImageSelect,
     handleOpenAlbum,

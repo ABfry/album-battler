@@ -7,6 +7,7 @@ type ImageFrameProps = {
   displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
+  isCompressing?: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -26,6 +27,7 @@ export function ImageFrame({
   displayedImage,
   isDragging,
   isImageSent,
+  isCompressing = false,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -57,15 +59,29 @@ export function ImageFrame({
           onDrop={isImageSent ? undefined : onDrop}
         >
           <button
-            onClick={isImageSent || displayedImage ? undefined : onOpenAlbum}
-            disabled={isImageSent || !!displayedImage}
+            onClick={
+              isImageSent || displayedImage || isCompressing
+                ? undefined
+                : onOpenAlbum
+            }
+            disabled={isImageSent || !!displayedImage || isCompressing}
             className={`flex h-full w-full items-center justify-center transition-colors ${
-              isImageSent || displayedImage
+              isImageSent || displayedImage || isCompressing
                 ? "cursor-not-allowed"
                 : "hover:bg-gray-50"
             }`}
           >
-            {imageToShow ? (
+            {isCompressing ? (
+              <div className="text-center">
+                <div className="mb-4 text-6xl">⏳</div>
+                <p className="text-lg font-semibold text-gray-700">
+                  画像を圧縮中...
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  しばらくお待ちください
+                </p>
+              </div>
+            ) : imageToShow ? (
               <Image
                 src={imageToShow}
                 alt="選択した画像"
@@ -76,9 +92,7 @@ export function ImageFrame({
               />
             ) : (
               <div className="text-center">
-                <div className="mb-2 text-6xl">
-                  {isDragging ? "📥" : "📂"}
-                </div>
+                <div className="mb-2 text-6xl">{isDragging ? "📥" : "📂"}</div>
                 <p className="text-lg font-semibold text-gray-700">
                   {isDragging ? "ここにドロップ" : "アルバムを開く"}
                 </p>
@@ -101,7 +115,7 @@ export function ImageFrame({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic"
         onChange={onImageSelect}
         className="hidden"
         disabled={isImageSent}
