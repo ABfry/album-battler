@@ -29,14 +29,9 @@ import type { DebugMessage } from "@/src/lib/types";
  */
 export function ApiTestPage() {
   // CookieからユーザーIDを取得（フォールバックは固定値）
-  const [userId, setUserId] = useState("550e8400-e29b-41d4-a716-446655440001");
-
-  useEffect(() => {
-    const cookieUserId = getUserIdClient();
-    if (cookieUserId) {
-      setUserId(cookieUserId);
-    }
-  }, []);
+  const [userId] = useState(() => {
+    return getUserIdClient() || "550e8400-e29b-41d4-a716-446655440001";
+  });
   // 部屋作成・参加・退出・ゲーム開始の操作
   const {
     createRoom,
@@ -238,10 +233,7 @@ export function ApiTestPage() {
   // 4. ゲーム開始
   const handleStartGame = async () => {
     if (!createdRoom) return;
-    const success = await startGame(
-      createdRoom.room_id,
-      userId
-    );
+    const success = await startGame(createdRoom.room_id, userId);
     setStartSuccess(success);
     setLatestApiResponse({
       api: "startGame",
