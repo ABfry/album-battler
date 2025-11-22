@@ -2,10 +2,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type {
   PlayerJoinRoomPayload,
+  StartButtonPressedPayload,
   StartGamePayload,
 } from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
@@ -22,6 +23,9 @@ export default function RoomPage() {
 
   const router = useRouter();
 
+  // ゲーム開始待機中のローディング状態
+  const [isLoading, setIsLoading] = useState(false);
+
   // 部屋情報の取得（作成後に自動取得）
   const { room, refetch } = useRoomInfo(roomID);
   const { subscribe } = useWebSocketEvents();
@@ -34,10 +38,20 @@ export default function RoomPage() {
       }
     );
 
+    const unsubscribePressed = subscribe(
+      "start_button_pressed",
+      async (payload: StartButtonPressedPayload) => {
+        console.log("Start button Pressed:", payload.room_id);
+        setIsLoading(true);
+        refetch();
+      }
+    );
+
     const unsubscribeStart = subscribe(
       "start_game",
       async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
+        setIsLoading(false);
         refetch();
         const id = await getBattleID(roomID);
         router.push(`/battle/${id}`);
@@ -45,6 +59,7 @@ export default function RoomPage() {
     );
     return () => {
       unsubscribeJoin();
+      unsubscribePressed();
       unsubscribeStart();
     };
   }, [subscribe, refetch, getBattleID, roomID, router]);
@@ -106,7 +121,7 @@ export default function RoomPage() {
         <Button
           variant="primary"
           size="lg"
-          disabled={(room?.users?.length ?? 0) < 2}
+          disabled={(room?.users?.length ?? 0) < 2 || isLoading}
           onClick={handleBattle}
           className="w-full"
         >
