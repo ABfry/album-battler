@@ -41,6 +41,7 @@ type BattleProps = {
   isDragging: boolean;
   isImageSent: boolean;
   isCompressing: boolean;
+  canSelect: boolean; // 画像選択可能か
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -86,6 +87,7 @@ export function Battle({
   isDragging,
   isImageSent,
   isCompressing,
+  canSelect,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -209,6 +211,7 @@ export function Battle({
             isDragging={isDragging}
             isImageSent={isImageSent}
             isCompressing={isCompressing}
+            canSelect={canSelect}
             fileInputRef={fileInputRef}
             onImageSelect={onImageSelect}
             onOpenAlbum={onOpenAlbum}

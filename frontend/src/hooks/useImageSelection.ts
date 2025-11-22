@@ -98,10 +98,14 @@ export function useImageSelection(options: UseImageSelectionOptions) {
       selectedImage?.substring(0, 50)
     );
     console.log("[useImageSelection] battleId:", options.battleId);
+    console.log("[useImageSelection] canSelect:", options.canSelect);
 
-    if (!selectedImage || isImageSent) {
+    if (!options.canSelect || !selectedImage || isImageSent) {
       console.log(
-        "[useImageSelection] No selected image or already sent, returning"
+        "[useImageSelection] Cannot confirm: canSelect=%s, hasImage=%s, alreadySent=%s",
+        options.canSelect,
+        !!selectedImage,
+        isImageSent
       );
       return;
     }
