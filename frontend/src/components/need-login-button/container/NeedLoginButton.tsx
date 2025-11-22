@@ -71,7 +71,7 @@ export function NeedLoginButton({
       setIsDialogOpen(false);
       setUserName("");
       onLoginSuccess?.();
-      onClick?.();
+      loggedInOnClick?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {

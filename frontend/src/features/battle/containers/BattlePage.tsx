@@ -19,6 +19,7 @@ import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { useGameStateRestore } from "@/src/hooks/useGameStateRestore";
 import { Battle } from "../components/Battle";
+import type { ClapEffect } from "../components/Battle";
 import type { GetBattleResultResponse } from "@/src/lib/api/types";
 
 type BattlePageProps = {
@@ -41,9 +42,13 @@ export function BattlePage({ battleID }: BattlePageProps) {
   });
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [displayedImage, setDisplayedImage] = useState<string | null>(null);
+  // 拍手フェーズで表示する画像（undefined: 通常モード, null: 未提出, string: 画像URL）
+  const [displayedImage, setDisplayedImage] = useState<
+    string | null | undefined
+  >(undefined);
   const [battleResult, setBattleResult] =
     useState<GetBattleResultResponse | null>(null);
+  const [remoteClapEffects, setRemoteClapEffects] = useState<ClapEffect[]>([]);
 
   // 1. バトル情報取得
   const {
@@ -171,6 +176,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       result: {
         onPhaseStart: () => {
           console.log("結果発表");
+          // 拍手フェーズ終了、displayedImageをクリア
+          setDisplayedImage(undefined);
           // WebSocketイベント駆動で結果取得するため、ここでは何もしない
         },
       },
@@ -306,8 +313,15 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const handleClapUpdate = useCallback(() => {
     console.log("[BattlePage] Clap update detected");
-    // TODO: 拍手を受け取ったら演出や音を鳴らす？
-    // スコアのフェッチは最後で良さげ
+    const id = `remote-clap-${Date.now()}-${Math.random()}`;
+    const offsetX = Math.random() * 60 - 30; // -30px ~ +30px
+    setRemoteClapEffects((prev) => [
+      ...prev,
+      { id, timestamp: Date.now(), offsetX },
+    ]);
+    setTimeout(() => {
+      setRemoteClapEffects((prev) => prev.filter((e) => e.id !== id));
+    }, 1500);
   }, []);
 
   const handleResultStart = useCallback(async () => {
@@ -454,6 +468,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       displayedImage={displayedImage}
       isDragging={imageSelection.isDragging}
       isImageSent={imageSelection.isImageSent}
+      isSending={imageSelection.isSending}
       isCompressing={imageSelection.isCompressing}
       canSelect={battlePhase.canSelectImage}
       fileInputRef={imageSelection.fileInputRef}
@@ -471,6 +486,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       error={battleInfoError}
       players={players}
       images={images}
+      remoteClapEffects={remoteClapEffects}
       // 拍手機能
       canClap={battlePhase.canClap}
       onClap={handleClap}

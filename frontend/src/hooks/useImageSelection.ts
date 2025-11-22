@@ -37,6 +37,7 @@ export function useImageSelection(options: UseImageSelectionOptions) {
   const [isDragging, setIsDragging] = useState(false);
   const [isImageSent, setIsImageSent] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendImage } = useBattle();
 
@@ -100,12 +101,13 @@ export function useImageSelection(options: UseImageSelectionOptions) {
     console.log("[useImageSelection] battleId:", options.battleId);
     console.log("[useImageSelection] canSelect:", options.canSelect);
 
-    if (!options.canSelect || !selectedImage || isImageSent) {
+    if (!options.canSelect || !selectedImage || isImageSent || isSending) {
       console.log(
-        "[useImageSelection] Cannot confirm: canSelect=%s, hasImage=%s, alreadySent=%s",
+        "[useImageSelection] Cannot confirm: canSelect=%s, hasImage=%s, alreadySent=%s, isSending=%s",
         options.canSelect,
         !!selectedImage,
-        isImageSent
+        isImageSent,
+        isSending
       );
       return;
     }
@@ -120,25 +122,31 @@ export function useImageSelection(options: UseImageSelectionOptions) {
       return;
     }
 
-    console.log(
-      "[useImageSelection] Sending image with userId:",
-      options.userId
-    );
-    console.log("[useImageSelection] Base64 length:", base64.length);
-    const success = await sendImage(options.battleId, options.userId, base64);
-    console.log("[useImageSelection] Send image result:", success);
+    setIsSending(true);
 
-    if (success) {
-      console.log("[useImageSelection] Image sent successfully");
-      // 送信成功時は画像をそのまま表示し、操作を無効化する
-      setIsImageSent(true);
-      options.onSendSuccess?.();
-    } else {
-      console.error("[useImageSelection] Failed to send image");
-      // 送信失敗時はエラーダイアログを表示
-      options.onSendError?.();
+    try {
+      console.log(
+        "[useImageSelection] Sending image with userId:",
+        options.userId
+      );
+      console.log("[useImageSelection] Base64 length:", base64.length);
+      const success = await sendImage(options.battleId, options.userId, base64);
+      console.log("[useImageSelection] Send image result:", success);
+
+      if (success) {
+        console.log("[useImageSelection] Image sent successfully");
+        // 送信成功時は画像をそのまま表示し、操作を無効化する
+        setIsImageSent(true);
+        options.onSendSuccess?.();
+      } else {
+        console.error("[useImageSelection] Failed to send image");
+        // 送信失敗時はエラーダイアログを表示
+        options.onSendError?.();
+      }
+    } finally {
+      setIsSending(false);
     }
-  }, [selectedImage, isImageSent, options, sendImage]);
+  }, [selectedImage, isImageSent, isSending, options, sendImage]);
 
   // ドラッグ&ドロップハンドラー
   const handleDragEnter = useCallback(
@@ -213,6 +221,7 @@ export function useImageSelection(options: UseImageSelectionOptions) {
     selectedImage,
     isDragging,
     isImageSent,
+    isSending,
     isCompressing,
     fileInputRef,
     handleImageSelect,

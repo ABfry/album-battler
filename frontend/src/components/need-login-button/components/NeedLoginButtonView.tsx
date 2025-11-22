@@ -39,7 +39,7 @@ export function NeedLoginButtonView({
 }: NeedLoginButtonViewProps) {
   return (
     <>
-      <Button onClick={onButtonClick} className={className}>
+      <Button onClick={onButtonClick} size={null} className={className}>
         {loggedInLink && isLoggedIn ? (
           <Link href={loggedInLink}>{content}</Link>
         ) : (

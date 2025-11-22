@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
 
-type ClapEffect = {
+export type ClapEffect = {
   id: string;
   timestamp: number;
   offsetX: number; // ランダムな横移動量
@@ -37,9 +37,10 @@ type BattleProps = {
 
   // 画像選択関連
   selectedImage: string | null;
-  displayedImage: string | null; // 拍手フェーズで表示する画像
+  displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
+  isSending: boolean;
   isCompressing: boolean;
   canSelect: boolean; // 画像選択可能か
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -58,6 +59,7 @@ type BattleProps = {
   error: string | null;
   players: UserInfo[] | undefined;
   images: BattleImage[];
+  remoteClapEffects: ClapEffect[];
 
   // 拍手機能
   canClap: boolean;
@@ -86,6 +88,7 @@ export function Battle({
   displayedImage,
   isDragging,
   isImageSent,
+  isSending,
   isCompressing,
   canSelect,
   fileInputRef,
@@ -105,6 +108,7 @@ export function Battle({
   showPhaseMessage,
   players,
   images,
+  remoteClapEffects,
   // 拍手機能
   canClap,
   onClap,
@@ -210,6 +214,7 @@ export function Battle({
             displayedImage={displayedImage}
             isDragging={isDragging}
             isImageSent={isImageSent}
+            isSending={isSending}
             isCompressing={isCompressing}
             canSelect={canSelect}
             fileInputRef={fileInputRef}
@@ -226,7 +231,11 @@ export function Battle({
 
         {/* プレイヤー情報（最下部） */}
         <div className="shrink-0">
-          <PlayerList players={players} images={images} />
+          <PlayerList
+            players={players}
+            images={images}
+            remoteClapEffects={remoteClapEffects}
+          />
         </div>
 
         {/* 拍手ボタン（右下） */}
