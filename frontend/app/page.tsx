@@ -16,18 +16,15 @@ export default function TitlePage() {
 
   const { createRoom } = useRoom();
 
-  // ログイン成功時: WebSocket URL を設定して接続
+  // ログイン成功時: WebSocket URL を設定
+  // connect は useEffect([connect]) で自動的に呼ばれる
   const handleLoginSuccess = useCallback(() => {
     const userId = getUserIdClient();
     if (userId) {
       const wsUrl = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080/ws"}?user_id=${userId}`;
       setUrl(wsUrl);
-      // URL 設定後に接続（少し遅延を入れて state 更新を待つ）
-      setTimeout(() => {
-        connect();
-      }, 0);
     }
-  }, [setUrl, connect]);
+  }, [setUrl]);
 
   const handleCreateRoom = async () => {
     const userId = getUserIdClient() || "";
