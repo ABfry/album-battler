@@ -6,9 +6,20 @@ import { useRouter } from "next/navigation";
 import { useRoom } from "@/src/hooks/useRoom";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
 
 export default function SearchPage() {
   const [roomId, setRoomId] = useState("");
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
   const { joinRoom } = useRoom();
 
@@ -20,12 +31,23 @@ export default function SearchPage() {
   };
 
   const handleJoin = async () => {
+    if (roomId.trim() === "") {
+      setErrorMessage("部屋番号を入力してください");
+      setShowErrorDialog(true);
+      return;
+    }
     if (roomId.length !== 4) {
-      alert("部屋番号は数字4桁で入力してください");
+      setErrorMessage("部屋番号は数字4桁で入力してください");
+      setShowErrorDialog(true);
       return;
     }
     const userId = getUserIdClient() || "";
     const joinRoomId = await joinRoom(userId, Number(roomId));
+    if (!joinRoomId) {
+      setErrorMessage("指定された部屋が見つかりませんでした");
+      setShowErrorDialog(true);
+      return;
+    }
     router.push(`/room/${joinRoomId}`);
   };
 
@@ -57,6 +79,23 @@ export default function SearchPage() {
           ◀
         </Link>
       </div>
+
+      <AlertDialog
+        open={showErrorDialog}
+        onOpenChange={(open) => setShowErrorDialog(open)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>入室エラー</AlertDialogTitle>
+            <AlertDialogDescription>{errorMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowErrorDialog(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
