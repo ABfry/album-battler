@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type {
   PlayerJoinRoomPayload,
@@ -15,7 +15,6 @@ import { useRoom } from "@/src/hooks/useRoom";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
-import { useState } from "react";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
