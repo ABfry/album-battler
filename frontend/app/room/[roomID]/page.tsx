@@ -125,9 +125,16 @@ export default function RoomPage() {
           size="lg"
           disabled={(room?.users?.length ?? 0) < 2 || isLoading}
           onClick={handleBattle}
-          className="w-full"
+          className="mt-8 w-full"
         >
-          バトル！
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+              <span className="text-lg font-black">待機中...</span>
+            </div>
+          ) : (
+            <span className="text-lg font-black">バトル！</span>
+          )}
         </Button>
       </div>
     </main>
