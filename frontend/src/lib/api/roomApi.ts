@@ -7,6 +7,8 @@ import type {
   JoinRoomResponse,
   LeaveRoomRequest,
   LeaveRoomResponse,
+  RejoinRoomRequest,
+  RejoinRoomResponse,
   RoomInfoResponse,
   StartGameRequest,
   StartGameResponse,
@@ -86,5 +88,22 @@ export const roomApi = {
    */
   getBattleID: async (roomId: string): Promise<GetBattleIDResponse> => {
     return fetchApi<GetBattleIDResponse>(`/room/${roomId}/battle-id`);
+  },
+
+  /**
+   * 部屋に再参加（WebSocket再接続時）
+   * POST /room/rejoin
+   */
+  rejoinRoom: async (
+    userId: string,
+    roomId: string
+  ): Promise<RejoinRoomResponse> => {
+    return fetchApi<RejoinRoomResponse>("/room/rejoin", {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: userId,
+        room_id: roomId,
+      } satisfies RejoinRoomRequest),
+    });
   },
 };
