@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
@@ -77,6 +78,19 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 	if err := uc.roomRepo.Save(ctx, room); err != nil {
 		fmt.Printf("Failed to save room: %v", err)
 		return errors.New("failed to save room")
+	}
+
+	// バトルの状態を拍手フェーズに更新（WebSocket再接続時の状態復元用）
+	battle.CurrentPhase = "clap_time"
+	now := time.Now()
+	battle.ClapPhaseStartedAt = &now
+	zeroIndex := 0
+	battle.ClapCurrentUserIndex = &zeroIndex
+
+	// バトルを保存
+	if err := uc.battleRepo.Save(ctx, battle); err != nil {
+		fmt.Printf("Failed to save battle: %v", err)
+		return errors.New("failed to save battle")
 	}
 
 	// ドメインイベントを記録
