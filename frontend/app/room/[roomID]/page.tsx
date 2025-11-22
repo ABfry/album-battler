@@ -15,13 +15,12 @@ import { useRoom } from "@/src/hooks/useRoom";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
-import { roomApi } from "@/src/lib/api/roomApi";
 import { useState } from "react";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
-  const { startGame, getBattleID } = useRoom();
+  const { startGame, getBattleID, updateRoomSettings } = useRoom();
 
   const router = useRouter();
 
@@ -90,10 +89,14 @@ export default function RoomPage() {
 
     setIsUpdating(true);
     try {
-      await roomApi.updateRoomSettings(roomID, userId, {
+      const success = await updateRoomSettings(roomID, userId, {
         battle_time_limit_seconds: newTimeLimit,
       });
-      await refetch();
+      if (success) {
+        await refetch();
+      } else {
+        console.error("Failed to update time limit");
+      }
     } catch (error) {
       console.error("Failed to update time limit:", error);
     } finally {
