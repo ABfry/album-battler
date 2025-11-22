@@ -41,11 +41,13 @@ export default function TitlePage() {
 
         <NeedLoginButton
           loggedInOnClick={handleCreateRoom}
+          onLoginSuccess={() => window.location.reload()}
           content="部屋をつくる"
         />
 
         <NeedLoginButton
           loggedInOnClick={() => router.push("/search")}
+          onLoginSuccess={() => window.location.reload()}
           content="部屋をさがす"
         />
       </div>
