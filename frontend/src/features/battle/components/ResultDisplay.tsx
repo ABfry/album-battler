@@ -1,7 +1,7 @@
 import type { GetBattleResultResponse, UserInfo } from "@/src/lib/api/types";
 import Image from "next/image";
 import { animate, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ResultDisplayProps = {
   battleResult: GetBattleResultResponse;
@@ -34,6 +34,59 @@ export function ResultDisplay({ battleResult, players }: ResultDisplayProps) {
     CLAP_BAR_DURATION +
     lastIndexDelay * BAR_DELAY_STEP;
   const winnerStart = totalBarTimeline + 0.2;
+
+  const drumRollRef = useRef<HTMLAudioElement | null>(null);
+  const showResultSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  // 結果演出にあわせたSE制御
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const drum = new Audio("/sounds/drum-roll.mp3");
+    drum.loop = true;
+    drum.volume = 0.7;
+    drum.preload = "auto";
+    drumRollRef.current = drum;
+
+    const show = new Audio("/sounds/show-result-sound.mp3");
+    show.volume = 0.8;
+    show.preload = "auto";
+    showResultSoundRef.current = show;
+
+    const aiPhaseDuration = AI_BAR_DURATION + lastIndexDelay * BAR_DELAY_STEP;
+    void drum.play();
+
+    const stopDrumTimer = window.setTimeout(() => {
+      drum.loop = false;
+      drum.pause();
+      drum.currentTime = 0;
+    }, Math.max(0, (aiPhaseDuration + 0.3) * 1000));
+
+    const hasClapScore = battleResult.results.some(
+      (r) => Math.max(r.user_score, 0) > 0
+    );
+    const clapStartDelay = AI_BAR_DURATION + PAUSE_DURATION;
+    const showResultTimer = hasClapScore
+      ? window.setTimeout(() => {
+          if (!showResultSoundRef.current) return;
+          try {
+            showResultSoundRef.current.currentTime = 0;
+            void showResultSoundRef.current.play();
+          } catch {
+            // 自動再生制限などは無視
+          }
+        }, Math.max(0, clapStartDelay * 1000))
+      : null;
+
+    return () => {
+      clearTimeout(stopDrumTimer);
+      if (showResultTimer) clearTimeout(showResultTimer);
+      drum.pause();
+      drum.currentTime = 0;
+      show.pause();
+      show.currentTime = 0;
+    };
+  }, [battleResult.results, lastIndexDelay]);
 
   // プレイヤーごとの色定義（順番に割り当て）
   const playerColors = [
