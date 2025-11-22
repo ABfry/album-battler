@@ -63,6 +63,18 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 				continue
 			}
 
+			// 拍手ユーザーインデックスをインクリメント（WebSocket再接続時の状態復元用）
+			nextIndex := i + 1
+			b.ClapCurrentUserIndex = &nextIndex
+			now := time.Now()
+			b.ClapPhaseStartedAt = &now
+
+			// バトルを保存
+			if err := uc.battleRepo.Save(context.Background(), b); err != nil {
+				fmt.Printf("Failed to save battle: %v\n", err)
+				continue
+			}
+
 			// ドメインイベントを記録
 			b.RecordClapUserChanged(userID)
 			events := b.PopEvents()

@@ -130,6 +130,17 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 		return errors.New("failed to save room")
 	}
 
+	// バトルの状態を結果フェーズに更新（WebSocket再接続時の状態復元用）
+	battle.CurrentPhase = "result"
+	now := time.Now()
+	battle.ResultStartedAt = &now
+
+	// バトルを保存
+	if err := uc.battleRepo.Save(ctx, battle); err != nil {
+		fmt.Printf("Failed to save battle: %v", err)
+		return errors.New("failed to save battle")
+	}
+
 	// ドメインイベントを記録
 	battle.RecordResultPhaseStarted(winnerUserID)
 
