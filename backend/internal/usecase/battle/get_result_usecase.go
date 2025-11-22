@@ -103,6 +103,7 @@ func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (
 
 	for _, img := range images {
 		finalScore := img.AIScore + float64(img.UserScore)
+
 		scores = append(scores, scoreData{
 			UserID:        img.UserID,
 			AIScore:       img.AIScore,

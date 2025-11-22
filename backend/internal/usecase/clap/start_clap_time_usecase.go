@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
@@ -79,6 +80,19 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 		return errors.New("failed to save room")
 	}
 
+	// バトルの状態を拍手フェーズに更新（WebSocket再接続時の状態復元用）
+	battle.CurrentPhase = "clap_time"
+	now := time.Now()
+	battle.ClapPhaseStartedAt = &now
+	zeroIndex := 0
+	battle.ClapCurrentUserIndex = &zeroIndex
+
+	// バトルを保存
+	if err := uc.battleRepo.Save(ctx, battle); err != nil {
+		fmt.Printf("Failed to save battle: %v", err)
+		return errors.New("failed to save battle")
+	}
+
 	// ドメインイベントを記録
 	battle.RecordClapTimeStarted()
 
@@ -114,8 +128,6 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 }
 
 func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uuid.UUID) error {
-	fmt.Printf("Starting async image judging for battle: %s\n", battleID)
-
 	// バトル情報を取得（テーマ取得のため）
 	battle, err := uc.battleRepo.FindByID(ctx, battleID)
 	if err != nil {
@@ -155,10 +167,17 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 
 	// 各画像のAIScoreを更新してDB保存
 	for i, result := range judgeResp.Results {
-		img := images[i]
+		img, err := uc.imageRepo.FindByID(ctx, images[i].ID)
+		if err != nil {
+			fmt.Printf("Warning: failed to find image %s: %v\n", images[i].ID, err)
+			continue
+		} else if img == nil {
+			fmt.Printf("Warning: image not found: %s\n", images[i].ID)
+			continue
+		}
 
 		// スコアを設定
-		if err := img.SetScore(float64(result.Score), 0); err != nil {
+		if err := img.SetAIScore(float64(result.Score)); err != nil {
 			fmt.Printf("Warning: failed to set score for image %s: %v\n", img.ID, err)
 			continue
 		}
@@ -170,11 +189,7 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 			fmt.Printf("Warning: failed to save image %s: %v\n", img.ID, err)
 			continue
 		}
-
-		// デバッグ
-		fmt.Printf("Image %s scored: %d (reason: %s)\n", img.ID, result.Score, result.Reason)
 	}
 
-	fmt.Printf("Completed judging %d images for battle: %s\n", len(images), battleID)
 	return nil
 }

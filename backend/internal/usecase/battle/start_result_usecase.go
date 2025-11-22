@@ -77,7 +77,7 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 	// UserScoreを更新してDBに保存
 	for _, img := range images {
 		if clapImg, ok := clapSnapshot[img.UserID]; ok {
-			if err := img.SetScore(img.AIScore, clapImg.UserScore); err != nil {
+			if err := img.SetUserScore(clapImg.UserScore); err != nil {
 				fmt.Printf("Failed to set score for image %s: %v", img.ID, err)
 				continue
 			}
@@ -130,6 +130,17 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 		return errors.New("failed to save room")
 	}
 
+	// バトルの状態を結果フェーズに更新（WebSocket再接続時の状態復元用）
+	battle.CurrentPhase = "result"
+	now := time.Now()
+	battle.ResultStartedAt = &now
+
+	// バトルを保存
+	if err := uc.battleRepo.Save(ctx, battle); err != nil {
+		fmt.Printf("Failed to save battle: %v", err)
+		return errors.New("failed to save battle")
+	}
+
 	// ドメインイベントを記録
 	battle.RecordResultPhaseStarted(winnerUserID)
 
@@ -143,6 +154,5 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 	// 拍手カウンターをリセット
 	uc.clapCounter.Reset(input.BattleID)
 
-	fmt.Printf("Result phase started for battle %s, winner: %s\n", input.BattleID, winnerUserID)
 	return nil
 }

@@ -48,9 +48,6 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 	// goroutineで非同期実行（HTTPレスポンスはすぐ返る）
 	go func(battleID uuid.UUID, userIDs []uuid.UUID) {
 		for i, userID := range userIDs {
-			// 拍手時間待機
-			<-time.After(defaultClapDelay)
-
 			// 最後のユーザーはイベント通知不要
 			if i >= len(userIDs)-1 {
 				continue
@@ -63,17 +60,35 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 				continue
 			}
 
+			// 拍手ユーザーインデックスをインクリメント（WebSocket再接続時の状態復元用）
+			nextIndex := i + 1
+			b.ClapCurrentUserIndex = &nextIndex
+			now := time.Now()
+			b.ClapPhaseStartedAt = &now
+
+			// バトルを保存
+			if err := uc.battleRepo.Save(context.Background(), b); err != nil {
+				fmt.Printf("Failed to save battle: %v\n", err)
+				continue
+			}
+
 			// ドメインイベントを記録
 			b.RecordClapUserChanged(userID)
 			events := b.PopEvents()
 
 			// タイムアウト付きコンテキストでDispatch実行
 			dispatchCtx, cancel := context.WithTimeout(context.Background(), defaultClapDelay)
-			defer cancel()
 			if err := uc.dispatcher.Dispatch(dispatchCtx, events); err != nil {
 				fmt.Printf("failed to dispatch domain events: %v\n", err)
 			}
+			cancel()
+
+			// 拍手時間待機
+			<-time.After(defaultClapDelay)
 		}
+
+		// 最終ユーザーの持ち時間相当を待ってから結果フェーズへ
+		<-time.After(defaultClapDelay)
 
 		resultCtx := context.Background()
 		if err := uc.startResultUC.Execute(resultCtx, battle.StartResultInput{
