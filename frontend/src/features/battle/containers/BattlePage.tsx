@@ -39,7 +39,10 @@ export function BattlePage({ battleID }: BattlePageProps) {
   });
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [displayedImage, setDisplayedImage] = useState<string | null>(null);
+  // 拍手フェーズで表示する画像（undefined: 通常モード, null: 未提出, string: 画像URL）
+  const [displayedImage, setDisplayedImage] = useState<
+    string | null | undefined
+  >(undefined);
   const [battleResult, setBattleResult] =
     useState<GetBattleResultResponse | null>(null);
 
@@ -110,6 +113,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       result: {
         onPhaseStart: () => {
           console.log("結果発表");
+          // 拍手フェーズ終了、displayedImageをクリア
+          setDisplayedImage(undefined);
           // WebSocketイベント駆動で結果取得するため、ここでは何もしない
         },
       },
