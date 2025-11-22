@@ -226,7 +226,7 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 	var (
 		idStr                   string
 		roomNumber              int
-		hostUserID              string
+		hostUserID              sql.NullString
 		createdAt               time.Time
 		expiredAt               sql.NullTime
 		statusString            string
@@ -245,10 +245,17 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse room id: %w", err)
 	}
-	hostID, err := uuid.Parse(hostUserID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse host user id: %w", err)
+
+	// host_user_id のNULLチェック
+	var hostPtr *uuid.UUID
+	if hostUserID.Valid && hostUserID.String != "" {
+		hostID, err := uuid.Parse(hostUserID.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse host user id: %w", err)
+		}
+		hostPtr = &hostID
 	}
+
 	status, err := toEntityRoomStatus(statusString)
 	if err != nil {
 		return nil, err
@@ -257,13 +264,13 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 	room := &entity.Room{
 		ID:                     roomID,
 		RoomNumber:             roomNumber,
+		HostUserID:             hostPtr,
 		CreatedAt:              createdAt,
 		ExpiredAt:              expiredAt.Time,
 		Status:                 status,
 		MaxUsers:               maxUsers,
 		BattleTimeLimitSeconds: battleTimeLimitSeconds,
 	}
-	room.HostUserID = &hostID
 	return room, nil
 }
 
