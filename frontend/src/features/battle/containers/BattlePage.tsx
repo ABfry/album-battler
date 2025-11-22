@@ -451,6 +451,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       displayedImage={displayedImage}
       isDragging={imageSelection.isDragging}
       isImageSent={imageSelection.isImageSent}
+      isSending={imageSelection.isSending}
       isCompressing={imageSelection.isCompressing}
       fileInputRef={imageSelection.fileInputRef}
       onImageSelect={imageSelection.handleImageSelect}
