@@ -15,6 +15,7 @@ import { useRoom } from "@/src/hooks/useRoom";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
+import { Loading } from "@/src/components/ui/loading";
 
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
@@ -129,7 +130,7 @@ export default function RoomPage() {
         >
           {isLoading ? (
             <div className="flex items-center justify-center gap-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+              <Loading />
               <span className="text-lg font-black">待機中...</span>
             </div>
           ) : (
