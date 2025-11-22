@@ -84,6 +84,7 @@ export type GetBattleResponse = {
     StartedAt: string;
     Theme: string;
     UserIDs: string[];
+    BattleTimeLimitSeconds: number;
   };
 };
 
@@ -146,6 +147,7 @@ export type Battle = {
   startedAt: string;
   theme: string;
   userIds: string[];
+  battleTimeLimitSeconds: number;
 };
 
 export type BattleImage = {

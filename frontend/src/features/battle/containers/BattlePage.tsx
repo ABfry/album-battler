@@ -78,6 +78,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const playersRef = useRef(players);
   const imagesRef = useRef(images);
+  const battleRef = useRef(battle);
 
   useEffect(() => {
     playersRef.current = players;
@@ -86,6 +87,10 @@ export function BattlePage({ battleID }: BattlePageProps) {
   useEffect(() => {
     imagesRef.current = images;
   }, [images]);
+
+  useEffect(() => {
+    battleRef.current = battle;
+  }, [battle]);
 
   useEffect(() => {
     // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
@@ -97,7 +102,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       selecting: {
         onPhaseStart: () => {
           console.log("画像選択開始");
-          timer.resetTimer(60);
+          const timeLimit = battleRef.current?.battleTimeLimitSeconds ?? 60;
+          timer.resetTimer(timeLimit);
           timer.startTimer();
         },
         onTimeUp: () => {
