@@ -6,7 +6,7 @@ import type { CreateRoomResponse } from "@/src/lib/api/types";
 
 type UseRoomResult = {
   createRoom: (userId: string) => Promise<CreateRoomResponse | null>;
-  joinRoom: (userId: string, roomNumber: number) => Promise<boolean>;
+  joinRoom: (userId: string, roomNumber: number) => Promise<string | null>;
   leaveRoom: (roomId: string, userId: string) => Promise<boolean>;
   startGame: (roomId: string, userId: string) => Promise<boolean>;
   getBattleID: (roomId: string) => Promise<string | null>;
@@ -42,13 +42,13 @@ export function useRoom(): UseRoomResult {
     setLoading(true);
     setError(null);
     try {
-      await roomApi.joinRoom(userId, roomNumber);
-      return true;
+      const result = await roomApi.joinRoom(userId, roomNumber);
+      return result.room_id;
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to join room";
       setError(message);
-      return false;
+      return null;
     } finally {
       setLoading(false);
     }

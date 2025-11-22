@@ -164,6 +164,11 @@ func initEvents(deps *Dependencies) error {
 	)
 	dispatcherImpl.Register(domainEvent.UserLeftRoomEvent{}.EventType(), userLeftHandler)
 
+	startButtonPressedHandler := handlers.NewStartButtonPressedHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.GameStartButtonPressedEvent{}.EventType(), startButtonPressedHandler)
+
 	gameStartedHandler := handlers.NewGameStartedHandler(
 		deps.EventPublisher,
 	)

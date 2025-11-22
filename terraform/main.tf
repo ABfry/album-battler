@@ -183,7 +183,7 @@ module "ecs" {
   frontend_environment_variables = var.enable_route53 ? [
     {
       name  = "NEXT_PUBLIC_API_URL"
-      value = "https://${var.domain_name}"
+      value = "https://${var.domain_name}/api"
     },
     {
       name  = "NEXT_PUBLIC_WEBSOCKET_URL"
@@ -192,7 +192,7 @@ module "ecs" {
     ] : [
     {
       name  = "NEXT_PUBLIC_API_URL"
-      value = "http://${module.ecs.alb_dns_name}"
+      value = "http://${module.ecs.alb_dns_name}/api"
     },
     {
       name  = "NEXT_PUBLIC_WEBSOCKET_URL"

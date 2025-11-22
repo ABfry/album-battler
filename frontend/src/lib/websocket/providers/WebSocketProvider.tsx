@@ -32,6 +32,7 @@ type WebSocketConnection = {
   getWebSocket: () => WebSocket | null;
   connect: () => void;
   disconnect: () => void;
+  isReconnecting: boolean;
 };
 
 /**
@@ -44,9 +45,24 @@ function useWebSocketConnection(url: string): WebSocketConnection {
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [messages, setMessages] = useState<string[]>([]);
   const [shouldConnect, setShouldConnect] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+
+  // 再接続関連の状態
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
+  const isManualDisconnectRef = useRef(false);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // WebSocketインスタンスを取得する関数
   const getWebSocket = useCallback(() => wsRef.current, []);
+
+  // 再接続タイマーをクリア
+  const clearReconnectTimeout = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
 
   // メッセージ送信関数
   const sendMessage = useCallback((data: string) => {
@@ -59,16 +75,25 @@ function useWebSocketConnection(url: string): WebSocketConnection {
 
   // 接続開始
   const connect = useCallback(() => {
+    if (!url) {
+      console.log("WebSocket URL is empty. Skipping connection.");
+      return;
+    }
     if (isWebSocketBusy(wsRef.current)) {
       console.log("WebSocket is already connecting or active");
       return;
     }
+    isManualDisconnectRef.current = false;
+    clearReconnectTimeout();
     setShouldConnect(true);
     setStatus("connecting");
-  }, []);
+  }, [url, clearReconnectTimeout]);
 
   // 切断
   const disconnect = useCallback(() => {
+    isManualDisconnectRef.current = true;
+    clearReconnectTimeout();
+    reconnectAttemptsRef.current = 0;
     setShouldConnect(false);
     if (wsRef.current) {
       if (canCloseWebSocket(wsRef.current)) {
@@ -77,7 +102,7 @@ function useWebSocketConnection(url: string): WebSocketConnection {
       wsRef.current = null;
     }
     setStatus("disconnected");
-  }, []);
+  }, [clearReconnectTimeout]);
 
   useEffect(() => {
     if (!shouldConnect) {
@@ -95,7 +120,10 @@ function useWebSocketConnection(url: string): WebSocketConnection {
 
     websocket.onopen = () => {
       console.log("WebSocket connected");
+      const wasReconnecting = reconnectAttemptsRef.current > 0;
+      reconnectAttemptsRef.current = 0;
       setStatus("connected");
+      setIsReconnecting(wasReconnecting);
       setMessages((prev) => [...prev, "Connected to WebSocket server"]);
     };
 
@@ -117,10 +145,32 @@ function useWebSocketConnection(url: string): WebSocketConnection {
       }
       setStatus("disconnected");
       setMessages((prev) => [...prev, "Disconnected from server"]);
+
+      // 手動切断でない場合のみ再接続を試みる
+      if (!isManualDisconnectRef.current && shouldConnect) {
+        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 32000);
+          console.log(
+            `WebSocket will attempt to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`
+          );
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current += 1;
+            console.log(`Attempting to reconnect... (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
+            setShouldConnect(false); // 強制的に再接続をトリガー
+            setShouldConnect(true);
+          }, delay);
+        } else {
+          console.log("Max reconnect attempts reached. Giving up.");
+          setStatus("error");
+          setMessages((prev) => [...prev, "Failed to reconnect after multiple attempts"]);
+        }
+      }
     };
 
     // クリーンアップ
     return () => {
+      clearReconnectTimeout();
       if (canCloseWebSocket(websocket)) {
         websocket.close();
       }
@@ -131,7 +181,7 @@ function useWebSocketConnection(url: string): WebSocketConnection {
         wsRef.current = null;
       }
     };
-  }, [shouldConnect, url]);
+  }, [shouldConnect, url, clearReconnectTimeout]);
 
   return {
     status,
@@ -140,6 +190,7 @@ function useWebSocketConnection(url: string): WebSocketConnection {
     getWebSocket,
     connect,
     disconnect,
+    isReconnecting,
   };
 }
 
@@ -156,6 +207,10 @@ type WebSocketProviderProps = {
 export function WebSocketProvider({ url, children }: WebSocketProviderProps) {
   const connection = useWebSocketConnection(url);
 
+  // 再接続時の状態復元用
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const [currentBattleId, setCurrentBattleId] = useState<string | null>(null);
+
   const contextValue = {
     getWebSocket: connection.getWebSocket,
     status: connection.status,
@@ -163,6 +218,11 @@ export function WebSocketProvider({ url, children }: WebSocketProviderProps) {
     sendMessage: connection.sendMessage,
     connect: connection.connect,
     disconnect: connection.disconnect,
+    isReconnecting: connection.isReconnecting,
+    currentRoomId,
+    currentBattleId,
+    setCurrentRoomId,
+    setCurrentBattleId,
   };
 
   return (

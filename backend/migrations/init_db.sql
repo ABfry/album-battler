@@ -36,6 +36,11 @@ CREATE TABLE battles (
     room_id CHAR(36) NOT NULL,
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     theme VARCHAR(100) NOT NULL,
+    current_phase VARCHAR(20) DEFAULT 'selecting',
+    selecting_started_at DATETIME,
+    clap_phase_started_at DATETIME,
+    clap_current_user_index INT,
+    result_started_at DATETIME,
     CONSTRAINT fk_battles_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

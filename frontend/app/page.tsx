@@ -13,8 +13,8 @@ import TitleBackSlider from "@/src/features/title/components/BackSlider";
 export default function TitlePage() {
   const router = useRouter();
 
-  // WebSocket接続
-  const { connect, disconnect } = useWebSocket();
+  // WebSocket接続（常に呼び出す、URLが空の場合は接続しない）
+  const { connect } = useWebSocket();
 
   const { createRoom } = useRoom();
 
@@ -28,10 +28,13 @@ export default function TitlePage() {
     router.push(`/room/${result?.room_id}`);
   };
 
-  // WebSocketを接続
+  // userIdがある場合のみWebSocketを接続
   useEffect(() => {
-    connect();
-  }, [connect, disconnect]);
+    const userId = getUserIdClient();
+    if (userId) {
+      connect();
+    }
+  }, [connect]);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center">
@@ -40,11 +43,13 @@ export default function TitlePage() {
 
         <NeedLoginButton
           loggedInOnClick={handleCreateRoom}
+          onLoginSuccess={() => window.location.reload()}
           content="部屋をつくる"
         />
 
         <NeedLoginButton
           loggedInOnClick={() => router.push("/search")}
+          onLoginSuccess={() => window.location.reload()}
           content="部屋をさがす"
         />
       </div>

@@ -7,6 +7,7 @@ import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import { useBattleInfo } from "@/src/hooks/useBattleInfo";
 import type { GetBattleResultResponse } from "@/src/lib/api/types";
 import { ResultView } from "../components/ResultView";
+import { toast } from "sonner";
 
 type ResultPageProps = {
   battleId: string;
@@ -44,7 +45,43 @@ export function ResultPage({ battleId }: ResultPageProps) {
   }, [battleId]);
 
   const handleBackToTitle = () => {
-    router.push("/title");
+    router.push("/");
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const shareData = {
+      title: "アルバムバトラー - 対戦結果",
+      text: battle?.theme
+        ? `お題「${battle.theme}」のバトル結果をチェック！`
+        : "バトル結果をチェック！",
+      url,
+    };
+
+    // Web Share APIが利用可能な場合はそれを使用
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // ユーザーがキャンセルした場合など
+        if ((err as Error).name !== "AbortError") {
+          // フォールバック: クリップボードにコピー
+          await copyToClipboard(url);
+        }
+      }
+    } else {
+      // フォールバック: クリップボードにコピー
+      await copyToClipboard(url);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("URLをコピーしました");
+    } catch {
+      toast.error("コピーに失敗しました");
+    }
   };
 
   const players = room?.users || [];
@@ -56,6 +93,7 @@ export function ResultPage({ battleId }: ResultPageProps) {
       theme={battle?.theme || null}
       isLoading={isLoading}
       onBackToTitle={handleBackToTitle}
+      onShare={handleShare}
     />
   );
 }
