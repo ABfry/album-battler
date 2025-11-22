@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
 
-type ClapEffect = {
+export type ClapEffect = {
   id: string;
   timestamp: number;
   offsetX: number; // ランダムな横移動量
@@ -57,6 +57,7 @@ type BattleProps = {
   error: string | null;
   players: UserInfo[] | undefined;
   images: BattleImage[];
+  remoteClapEffects: ClapEffect[];
 
   // 拍手機能
   canClap: boolean;
@@ -103,6 +104,7 @@ export function Battle({
   showPhaseMessage,
   players,
   images,
+  remoteClapEffects,
   // 拍手機能
   canClap,
   onClap,
@@ -223,7 +225,11 @@ export function Battle({
 
         {/* プレイヤー情報（最下部） */}
         <div className="shrink-0">
-          <PlayerList players={players} images={images} />
+          <PlayerList
+            players={players}
+            images={images}
+            remoteClapEffects={remoteClapEffects}
+          />
         </div>
 
         {/* 拍手ボタン（右下） */}
