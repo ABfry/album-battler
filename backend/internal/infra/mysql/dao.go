@@ -20,7 +20,7 @@ const (
 
 var tableColumns = map[TableName][]string{
 	UsersTable:       {"id", "name", "icon_url", "hashed_password", "created_at"},
-	RoomsTable:       {"id", "room_number", "host_user_id", "created_at", "expired_at", "status", "max_users"},
+	RoomsTable:       {"id", "room_number", "host_user_id", "created_at", "expired_at", "status", "max_users", "battle_time_limit_seconds"},
 	RoomUsersTable:   {"room_id", "user_id", "joined_at"},
 	BattlesTable:     {"id", "room_id", "started_at", "theme"},
 	BattleUsersTable: {"battle_id", "user_id"},

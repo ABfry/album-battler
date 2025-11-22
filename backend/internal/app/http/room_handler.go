@@ -11,13 +11,14 @@ import (
 )
 
 type RoomHandler struct {
-	createRoomUC   *room.CreateRoomUseCase
-	joinRoomUC     *room.JoinRoomUseCase
-	leaveRoomUC    *room.LeaveRoomUseCase
-	startGameUC    *room.StartGameUseCase
-	getRoomUC      *room.GetRoomUseCase
-	roomManager    service.RoomManager
-	eventPublisher service.EventPublisher
+	createRoomUC         *room.CreateRoomUseCase
+	joinRoomUC           *room.JoinRoomUseCase
+	leaveRoomUC          *room.LeaveRoomUseCase
+	startGameUC          *room.StartGameUseCase
+	getRoomUC            *room.GetRoomUseCase
+	updateSettingsUC     *room.UpdateRoomSettingsUseCase
+	roomManager          service.RoomManager
+	eventPublisher       service.EventPublisher
 }
 
 func NewRoomHandler(
@@ -26,17 +27,19 @@ func NewRoomHandler(
 	leaveRoomUC *room.LeaveRoomUseCase,
 	startGameUC *room.StartGameUseCase,
 	getRoomUC *room.GetRoomUseCase,
+	updateSettingsUC *room.UpdateRoomSettingsUseCase,
 	roomManager service.RoomManager,
 	eventPublisher service.EventPublisher,
 ) *RoomHandler {
 	return &RoomHandler{
-		createRoomUC:   createRoomUC,
-		joinRoomUC:     joinRoomUC,
-		leaveRoomUC:    leaveRoomUC,
-		startGameUC:    startGameUC,
-		getRoomUC:      getRoomUC,
-		roomManager:    roomManager,
-		eventPublisher: eventPublisher,
+		createRoomUC:     createRoomUC,
+		joinRoomUC:       joinRoomUC,
+		leaveRoomUC:      leaveRoomUC,
+		startGameUC:      startGameUC,
+		getRoomUC:        getRoomUC,
+		updateSettingsUC: updateSettingsUC,
+		roomManager:      roomManager,
+		eventPublisher:   eventPublisher,
 	}
 }
 
@@ -244,6 +247,57 @@ func (h *RoomHandler) GetRoom(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(output); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
+}
+
+// PATCH /room/{id}/settings
+func (h *RoomHandler) UpdateRoomSettings(w http.ResponseWriter, r *http.Request) {
+	// パスパラメータからroom_idを取得
+	roomIDStr := r.PathValue("id")
+	if roomIDStr == "" {
+		http.Error(w, "room_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	roomID, err := uuid.Parse(roomIDStr)
+	if err != nil {
+		http.Error(w, "Invalid room_id format", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		UserID                 string `json:"user_id"`
+		BattleTimeLimitSeconds *int   `json:"battle_time_limit_seconds,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		return
+	}
+
+	err = h.updateSettingsUC.Execute(r.Context(), room.UpdateRoomSettingsInput{
+		RoomID:                 roomID,
+		UserID:                 userID,
+		BattleTimeLimitSeconds: req.BattleTimeLimitSeconds,
+	})
+	if err != nil {
+		log.Printf("UpdateRoomSettings error: %v", err)
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"result": "ok",
+	}); err != nil {
 		log.Printf("Failed to encode response: %v", err)
 	}
 }

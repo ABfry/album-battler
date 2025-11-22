@@ -26,7 +26,9 @@ CREATE TABLE rooms (
     expired_at DATETIME,
     status ENUM('waiting', 'full', 'battling', 'clap_time', 'result', 'closed') NOT NULL DEFAULT 'waiting',
     max_users INT NOT NULL DEFAULT 5,
+    battle_time_limit_seconds INT NOT NULL DEFAULT 60,
     CHECK (room_number BETWEEN 0 AND 9999),
+    CHECK (battle_time_limit_seconds BETWEEN 30 AND 300),
     CONSTRAINT fk_rooms_host_user FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     UNIQUE KEY uq_rooms_room_number_status (room_number, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

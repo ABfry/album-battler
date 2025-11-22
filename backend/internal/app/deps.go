@@ -59,11 +59,12 @@ type Dependencies struct {
 	ImageSubmissionScheduler service.ImageSubmissionScheduler
 
 	// Usecase
-	CreateRoomUseCase *room.CreateRoomUseCase
-	JoinRoomUseCase   *room.JoinRoomUseCase
-	LeaveRoomUseCase  *room.LeaveRoomUseCase
-	StartGameUseCase  *room.StartGameUseCase
-	GetRoomUseCase    *room.GetRoomUseCase
+	CreateRoomUseCase        *room.CreateRoomUseCase
+	JoinRoomUseCase          *room.JoinRoomUseCase
+	LeaveRoomUseCase         *room.LeaveRoomUseCase
+	StartGameUseCase         *room.StartGameUseCase
+	GetRoomUseCase           *room.GetRoomUseCase
+	UpdateRoomSettingsUseCase *room.UpdateRoomSettingsUseCase
 
 	CreateBattleUseCase *battle.CreateBattleUseCase
 	GetBattleUseCase    *battle.GetBattleUseCase
@@ -193,6 +194,11 @@ func initEvents(deps *Dependencies) error {
 		deps.EventPublisher,
 	)
 	dispatcherImpl.Register(domainEvent.StartResultPhaseEvent{}.EventType(), resultStartedHandler)
+
+	roomSettingsUpdatedHandler := handlers.NewRoomSettingsUpdatedHandler(
+		deps.EventPublisher,
+	)
+	dispatcherImpl.Register(domainEvent.RoomSettingsUpdatedEvent{}.EventType(), roomSettingsUpdatedHandler)
 
 	return nil
 }
@@ -332,6 +338,11 @@ func initUseCases(deps *Dependencies) error {
 	deps.GetRoomUseCase = room.NewGetRoomUseCase(
 		deps.RoomRepository,
 		deps.UserRepository,
+	)
+
+	deps.UpdateRoomSettingsUseCase = room.NewUpdateRoomSettingsUseCase(
+		deps.RoomRepository,
+		deps.EventDispatcher,
 	)
 
 	deps.GetImageUseCase = battle.NewGetImageUseCase(
