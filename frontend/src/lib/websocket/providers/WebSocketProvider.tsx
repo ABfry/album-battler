@@ -32,19 +32,22 @@ type WebSocketConnection = {
   getWebSocket: () => WebSocket | null;
   connect: () => void;
   disconnect: () => void;
+  setUrl: (url: string) => void;
+  currentUrl: string;
   isReconnecting: boolean;
 };
 
 /**
  * WebSocket接続を管理するカスタムフック（遅延接続対応）
- * @param url - WebSocketサーバのURL
+ * @param initialUrl - WebSocketサーバの初期URL
  * @returns WebSocket接続の状態と操作関数
  */
-function useWebSocketConnection(url: string): WebSocketConnection {
+function useWebSocketConnection(initialUrl: string): WebSocketConnection {
   const wsRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [messages, setMessages] = useState<string[]>([]);
   const [shouldConnect, setShouldConnect] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState(initialUrl);
   const [isReconnecting, setIsReconnecting] = useState(false);
 
   // 再接続関連の状態
@@ -73,9 +76,29 @@ function useWebSocketConnection(url: string): WebSocketConnection {
     }
   }, []);
 
+  // URL を動的に設定
+  const setUrl = useCallback(
+    (newUrl: string) => {
+      if (newUrl === currentUrl) {
+        return;
+      }
+      // 既存の接続があれば切断
+      if (canCloseWebSocket(wsRef.current)) {
+        wsRef.current?.close();
+        wsRef.current = null;
+      }
+      clearReconnectTimeout();
+      reconnectAttemptsRef.current = 0;
+      setShouldConnect(false);
+      setCurrentUrl(newUrl);
+      console.log("WebSocket URL updated:", newUrl);
+    },
+    [currentUrl, clearReconnectTimeout]
+  );
+
   // 接続開始
   const connect = useCallback(() => {
-    if (!url) {
+    if (!currentUrl) {
       console.log("WebSocket URL is empty. Skipping connection.");
       return;
     }
@@ -87,7 +110,7 @@ function useWebSocketConnection(url: string): WebSocketConnection {
     clearReconnectTimeout();
     setShouldConnect(true);
     setStatus("connecting");
-  }, [url, clearReconnectTimeout]);
+  }, [currentUrl, clearReconnectTimeout]);
 
   // 切断
   const disconnect = useCallback(() => {
@@ -115,7 +138,7 @@ function useWebSocketConnection(url: string): WebSocketConnection {
     }
 
     // WebSocket接続を作成
-    const websocket = new WebSocket(url);
+    const websocket = new WebSocket(currentUrl);
     wsRef.current = websocket;
 
     websocket.onopen = () => {
@@ -149,21 +172,29 @@ function useWebSocketConnection(url: string): WebSocketConnection {
       // 手動切断でない場合のみ再接続を試みる
       if (!isManualDisconnectRef.current && shouldConnect) {
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 32000);
+          const delay = Math.min(
+            1000 * Math.pow(2, reconnectAttemptsRef.current),
+            32000
+          );
           console.log(
             `WebSocket will attempt to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`
           );
 
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current += 1;
-            console.log(`Attempting to reconnect... (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
+            console.log(
+              `Attempting to reconnect... (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
+            );
             setShouldConnect(false); // 強制的に再接続をトリガー
             setShouldConnect(true);
           }, delay);
         } else {
           console.log("Max reconnect attempts reached. Giving up.");
           setStatus("error");
-          setMessages((prev) => [...prev, "Failed to reconnect after multiple attempts"]);
+          setMessages((prev) => [
+            ...prev,
+            "Failed to reconnect after multiple attempts",
+          ]);
         }
       }
     };
@@ -181,7 +212,7 @@ function useWebSocketConnection(url: string): WebSocketConnection {
         wsRef.current = null;
       }
     };
-  }, [shouldConnect, url, clearReconnectTimeout]);
+  }, [shouldConnect, currentUrl, clearReconnectTimeout]);
 
   return {
     status,
@@ -190,6 +221,8 @@ function useWebSocketConnection(url: string): WebSocketConnection {
     getWebSocket,
     connect,
     disconnect,
+    setUrl,
+    currentUrl,
     isReconnecting,
   };
 }
@@ -218,6 +251,7 @@ export function WebSocketProvider({ url, children }: WebSocketProviderProps) {
     sendMessage: connection.sendMessage,
     connect: connection.connect,
     disconnect: connection.disconnect,
+    setUrl: connection.setUrl,
     isReconnecting: connection.isReconnecting,
     currentRoomId,
     currentBattleId,
