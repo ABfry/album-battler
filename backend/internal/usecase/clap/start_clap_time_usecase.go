@@ -114,8 +114,6 @@ func (uc *StartClapTimeUseCase) Execute(ctx context.Context, input StartClapTime
 }
 
 func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uuid.UUID) error {
-	fmt.Printf("Starting async image judging for battle: %s\n", battleID)
-
 	// バトル情報を取得（テーマ取得のため）
 	battle, err := uc.battleRepo.FindByID(ctx, battleID)
 	if err != nil {
@@ -172,18 +170,12 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 		// AIの評価説明文を設定
 		img.SetAIExplanation(result.Reason)
 
-		fmt.Printf("Image %s judged with score %d and reason: %s\n", img.ID, result.Score, result.Reason)
-
 		// DBに保存
 		if err := uc.imageRepo.Save(ctx, img); err != nil {
 			fmt.Printf("Warning: failed to save image %s: %v\n", img.ID, err)
 			continue
 		}
-
-		// デバッグ
-		fmt.Printf("Image %s scored: %d (reason: %s)\n", img.ID, result.Score, result.Reason)
 	}
 
-	fmt.Printf("Completed judging %d images for battle: %s\n", len(images), battleID)
 	return nil
 }

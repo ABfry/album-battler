@@ -66,7 +66,6 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 
 	// 拍手カウンターから最終UserScoreを取得
 	clapSnapshot := uc.clapCounter.Snapshot(input.BattleID)
-	fmt.Printf("[clap] snapshot at result start battle=%s count=%d\n", input.BattleID, len(clapSnapshot))
 
 	// 全画像を取得してUserScoreを更新
 	images, err := uc.imageRepo.FindImagesByBattleID(ctx, input.BattleID)
@@ -82,7 +81,6 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 				fmt.Printf("Failed to set score for image %s: %v", img.ID, err)
 				continue
 			}
-			fmt.Printf("[clap] final user score for image %s: %d\n", img.ID, clapImg.UserScore)
 		}
 
 		if err := uc.imageRepo.Save(ctx, img); err != nil {
@@ -142,9 +140,8 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 		return err
 	}
 
-	// // 拍手カウンターをリセット
-	// uc.clapCounter.Reset(input.BattleID)
+	// 拍手カウンターをリセット
+	uc.clapCounter.Reset(input.BattleID)
 
-	fmt.Printf("Result phase started for battle %s, winner: %s\n", input.BattleID, winnerUserID)
 	return nil
 }

@@ -84,7 +84,6 @@ func (uc *ClapTimeManageUseCase) Execute(ctx context.Context, input ClapTimeMana
 		}); err != nil {
 			fmt.Printf("Failed to start result phase: %v\n", err)
 		}
-		fmt.Printf("Result phase started for battle %s\n", battleID)
 	}(b.ID, b.UserIDs)
 
 	return nil
