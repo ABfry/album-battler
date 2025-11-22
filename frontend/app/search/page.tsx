@@ -5,6 +5,7 @@ import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useRoom } from "@/src/hooks/useRoom";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
+import Link from "next/link";
 
 export default function SearchPage() {
   const [roomId, setRoomId] = useState("");
@@ -35,7 +36,7 @@ export default function SearchPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100">
+    <main className="flex min-h-screen items-center justify-center">
       <div className="flex h-[640px] w-[360px] flex-col items-center rounded-2xl border border-gray-400 bg-white px-6 pt-12 shadow-lg">
         <h1 className="mb-24 text-xl font-semibold">アルバムバトラー</h1>
 
@@ -63,12 +64,12 @@ export default function SearchPage() {
           </button>
         </div>
 
-        <button
-          onClick={() => router.push("/title")}
-          className="mt-10 text-xs text-gray-500 hover:underline"
+        <Link //タイトルに戻るボタン
+          href="/"
+          className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
         >
-          ← タイトルに戻る
-        </button>
+          ◀
+        </Link>
       </div>
     </main>
   );
