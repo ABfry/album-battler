@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { WebSocketProvider } from "@/src/lib/websocket/providers/WebSocketProvider";
+import { Toaster } from "@/src/components/ui/sonner";
 
 type ClientLayoutProps = {
   children: ReactNode;
@@ -20,5 +21,10 @@ export function ClientLayout({ children, userId }: ClientLayoutProps) {
     : "";
 
   // 常にWebSocketProviderで囲む（urlが空文字列の場合は接続しない）
-  return <WebSocketProvider url={wsUrl}>{children}</WebSocketProvider>;
+  return (
+    <WebSocketProvider url={wsUrl}>
+      {children}
+      <Toaster />
+    </WebSocketProvider>
+  );
 }
