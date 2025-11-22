@@ -8,6 +8,12 @@ export type WebSocketContextType = {
   sendMessage: (data: string) => void;
   connect: () => void;
   disconnect: () => void;
+  isReconnecting: boolean;
+  // 再接続時の状態復元用
+  currentRoomId: string | null;
+  currentBattleId: string | null;
+  setCurrentRoomId: (roomId: string | null) => void;
+  setCurrentBattleId: (battleId: string | null) => void;
 };
 
 export const WebSocketContext = createContext<WebSocketContextType | null>(
