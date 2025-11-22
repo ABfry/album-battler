@@ -37,7 +37,7 @@ type BattleProps = {
 
   // 画像選択関連
   selectedImage: string | null;
-  displayedImage: string | null; // 拍手フェーズで表示する画像
+  displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
   isSending: boolean;
