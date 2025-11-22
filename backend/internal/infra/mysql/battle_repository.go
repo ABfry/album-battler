@@ -32,12 +32,12 @@ func NewBattleRepository(db *sql.DB) repository.BattleRepository {
 // why: バトル詳細表示や集計で ID を直接指定するケースがあるため。
 func (r *mysqlBattleRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Battle, error) {
 	query := `
-		SELECT b.id, b.room_id, b.started_at, b.theme,
+		SELECT b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
 		       GROUP_CONCAT(bu.user_id ORDER BY bu.user_id SEPARATOR ',') as user_ids
 		FROM battles b
 		LEFT JOIN battle_users bu ON b.id = bu.battle_id
 		WHERE b.id = ?
-		GROUP BY b.id, b.room_id, b.started_at, b.theme
+		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds
 	`
 
 	row := r.db.QueryRowContext(ctx, query, id.String())
@@ -48,12 +48,12 @@ func (r *mysqlBattleRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 // why: ルームごとの進行状況確認で RoomID からバトルを逆引きするため。
 func (r *mysqlBattleRepository) FindByRoomID(ctx context.Context, roomID uuid.UUID) (*entity.Battle, error) {
 	query := `
-		SELECT b.id, b.room_id, b.started_at, b.theme,
+		SELECT b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
 		       GROUP_CONCAT(bu.user_id ORDER BY bu.user_id SEPARATOR ',') as user_ids
 		FROM battles b
 		LEFT JOIN battle_users bu ON b.id = bu.battle_id
 		WHERE b.room_id = ?
-		GROUP BY b.id, b.room_id, b.started_at, b.theme
+		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds
 		ORDER BY b.started_at DESC
 		LIMIT 1
 	`
@@ -73,6 +73,7 @@ func (r *mysqlBattleRepository) Save(ctx context.Context, battle *entity.Battle)
 		battle.RoomID.String(),
 		battle.StartedAt,
 		battle.Theme,
+		battle.BattleTimeLimitSeconds,
 	)
 }
 
@@ -82,14 +83,15 @@ func (r *mysqlBattleRepository) Save(ctx context.Context, battle *entity.Battle)
 // why: スキーマに変更が入っても変換ロジックを 1 箇所で管理するため。
 func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle, error) {
 	var (
-		idStr       string
-		roomIDStr   string
-		startedAt   time.Time
-		theme       string
-		userIDsStr  sql.NullString // GROUP_CONCAT の結果は NULL の可能性がある
+		idStr                  string
+		roomIDStr              string
+		startedAt              time.Time
+		theme                  string
+		battleTimeLimitSeconds int
+		userIDsStr             sql.NullString // GROUP_CONCAT の結果は NULL の可能性がある
 	)
 
-	if err := scanner.Scan(&idStr, &roomIDStr, &startedAt, &theme, &userIDsStr); err != nil {
+	if err := scanner.Scan(&idStr, &roomIDStr, &startedAt, &theme, &battleTimeLimitSeconds, &userIDsStr); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -120,11 +122,12 @@ func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle
 	}
 
 	return &entity.Battle{
-		ID:        battleID,
-		RoomID:    roomID,
-		StartedAt: startedAt,
-		Theme:     theme,
-		UserIDs:   userIDs,
+		ID:                     battleID,
+		RoomID:                 roomID,
+		StartedAt:              startedAt,
+		Theme:                  theme,
+		UserIDs:                userIDs,
+		BattleTimeLimitSeconds: battleTimeLimitSeconds,
 	}, nil
 }
 

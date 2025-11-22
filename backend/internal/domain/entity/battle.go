@@ -11,20 +11,25 @@ import (
 type Battle struct {
 	event.AggregateRoot
 
-	ID        uuid.UUID
-	RoomID    uuid.UUID
-	StartedAt time.Time
-	Theme     string
-	UserIDs   []uuid.UUID
+	ID                     uuid.UUID
+	RoomID                 uuid.UUID
+	StartedAt              time.Time
+	Theme                  string
+	UserIDs                []uuid.UUID
+	BattleTimeLimitSeconds int // 30~300秒
 }
 
-func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string) (*Battle, error) {
+func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string, battleTimeLimitSeconds int) (*Battle, error) {
 	if roomID == uuid.Nil {
 		return nil, errors.New("roomID is required")
 	}
 
 	if theme == "" {
 		return nil, errors.New("theme is required")
+	}
+
+	if battleTimeLimitSeconds < 30 || battleTimeLimitSeconds > 300 {
+		return nil, errors.New("battle time limit must be between 30 and 300 seconds")
 	}
 
 	// 人数チェック
@@ -39,11 +44,12 @@ func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string) (*Battle, er
 	}
 
 	return &Battle{
-		ID:        uuid.New(),
-		RoomID:    roomID,
-		StartedAt: time.Now(),
-		Theme:     theme,
-		UserIDs:   userIDs,
+		ID:                     uuid.New(),
+		RoomID:                 roomID,
+		StartedAt:              time.Now(),
+		Theme:                  theme,
+		UserIDs:                userIDs,
+		BattleTimeLimitSeconds: battleTimeLimitSeconds,
 	}, nil
 }
 

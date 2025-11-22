@@ -69,7 +69,7 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 	}
 
 	// バトルを作成
-	battle, err := entity.NewBattle(input.RoomID, userIDs, theme)
+	battle, err := entity.NewBattle(input.RoomID, userIDs, theme, room.BattleTimeLimitSeconds)
 	if err != nil {
 		return nil, errors.New("failed to create battle")
 	}
