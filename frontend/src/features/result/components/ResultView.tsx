@@ -8,6 +8,7 @@ type ResultViewProps = {
   theme: string | null;
   isLoading: boolean;
   onBackToTitle: () => void;
+  onShare: () => void;
 };
 
 /**
@@ -20,6 +21,7 @@ export function ResultView({
   theme,
   isLoading,
   onBackToTitle,
+  onShare,
 }: ResultViewProps) {
   if (isLoading) {
     return (
@@ -164,8 +166,11 @@ export function ResultView({
           })}
         </div>
 
-        {/* タイトルに戻るボタン */}
-        <div className="flex justify-center pb-8">
+        {/* ボタン群 */}
+        <div className="flex flex-col items-center gap-3 pb-8">
+          <Button onClick={onShare} variant="secondary">
+            この結果を共有
+          </Button>
           <Button onClick={onBackToTitle}>タイトルに戻る</Button>
         </div>
       </div>
