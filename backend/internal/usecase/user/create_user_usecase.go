@@ -3,11 +3,19 @@ package user
 import (
 	"context"
 	"fmt"
+	"math/rand"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/google/uuid"
 )
+
+var iconUrlList = []string{
+	"https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon_gorilla.png",
+	"https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon_rabbit.png",
+	"https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon_koara.png",
+	"https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon_panda.png",
+}
 
 type CreateUserInput struct {
 	UserName string
@@ -27,8 +35,8 @@ func NewCreateUserUseCase(userRepo repository.UserRepository) *CreateUserUseCase
 
 // ユーザーを作成する
 func (uc *CreateUserUseCase) Execute(ctx context.Context, input CreateUserInput) (*CreateUserOutput, error) {
-	// iconURLは仮
-	iconURL := "https://album-battler-images.s3.ap-northeast-1.amazonaws.com/icon/default/icon.png"
+	// ランダムにアイコン設定
+	iconURL := iconUrlList[rand.Intn(len(iconUrlList))]
 
 	user, err := entity.NewUser(input.UserName, iconURL, "password") // todo: passwordは仮
 	if err != nil {
