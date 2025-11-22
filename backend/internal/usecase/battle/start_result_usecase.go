@@ -77,7 +77,7 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 	// UserScoreを更新してDBに保存
 	for _, img := range images {
 		if clapImg, ok := clapSnapshot[img.UserID]; ok {
-			if err := img.SetScore(img.AIScore, clapImg.UserScore); err != nil {
+			if err := img.SetUserScore(clapImg.UserScore); err != nil {
 				fmt.Printf("Failed to set score for image %s: %v", img.ID, err)
 				continue
 			}
@@ -143,6 +143,5 @@ func (uc *StartResultUseCase) Execute(ctx context.Context, input StartResultInpu
 	// 拍手カウンターをリセット
 	uc.clapCounter.Reset(input.BattleID)
 
-	fmt.Printf("Result phase started for battle %s, winner: %s\n", input.BattleID, winnerUserID)
 	return nil
 }
