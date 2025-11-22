@@ -7,8 +7,13 @@ export function middleware(request: NextRequest) {
 
   // 認証不要なパス (動的な除外リスト)
   const excludedPaths = ["/", "/api-test", "/ui-demo", "/title"];
+  // 認証不要なパスのプレフィックス
+  const excludedPrefixes = ["/result"];
 
-  if (excludedPaths.includes(pathname)) {
+  if (
+    excludedPaths.includes(pathname) ||
+    excludedPrefixes.some((prefix) => pathname.startsWith(prefix))
+  ) {
     return NextResponse.next();
   }
 

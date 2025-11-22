@@ -167,12 +167,12 @@ export function Battle({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="relative flex h-screen w-full max-w-4xl flex-col items-center justify-between py-8">
-        {/* タイマー表示（右上） */}
-        <div className="absolute top-8 right-8">
+    <div className="flex h-dvh flex-col items-center justify-center overflow-hidden p-4">
+      <div className="relative flex h-full w-full max-w-4xl flex-col items-center gap-2 py-2">
+        {/* タイマー表示（最上部・中央） */}
+        <div className="w-full shrink-0 text-center">
           <div
-            className={`rounded-lg px-6 py-3 text-4xl font-bold shadow-lg ${
+            className={`inline-block rounded-lg px-6 py-3 text-3xl font-bold shadow-lg ${
               isWarning ? "bg-red-500 text-white" : "bg-white text-slate-800"
             }`}
           >
@@ -180,8 +180,8 @@ export function Battle({
           </div>
         </div>
 
-        {/* お題表示（最上部） */}
-        <div className="w-full text-center">
+        {/* お題表示（タイマーの下） */}
+        <div className="w-full shrink-0 text-center">
           <h1 className="text-4xl font-black text-slate-800 md:text-5xl">
             {isLoading ? (
               <span className="text-gray-400">Loading...</span>
@@ -203,27 +203,31 @@ export function Battle({
           </div>
         )}
 
-        {/* バトル画像（中央） */}
-        <ImageFrame
-          selectedImage={selectedImage}
-          displayedImage={displayedImage}
-          isDragging={isDragging}
-          isImageSent={isImageSent}
-          isSending={isSending}
-          isCompressing={isCompressing}
-          fileInputRef={fileInputRef}
-          onImageSelect={onImageSelect}
-          onOpenAlbum={onOpenAlbum}
-          onCancel={onCancel}
-          onConfirmImage={onConfirmImage}
-          onDragEnter={onDragEnter}
-          onDragLeave={onDragLeave}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-        />
+        {/* バトル画像（中央） - min-h-0でflexboxの縮小を有効化 */}
+        <div className="min-h-0 w-full flex-1">
+          <ImageFrame
+            selectedImage={selectedImage}
+            displayedImage={displayedImage}
+            isDragging={isDragging}
+            isImageSent={isImageSent}
+            isSending={isSending}
+            isCompressing={isCompressing}
+            fileInputRef={fileInputRef}
+            onImageSelect={onImageSelect}
+            onOpenAlbum={onOpenAlbum}
+            onCancel={onCancel}
+            onConfirmImage={onConfirmImage}
+            onDragEnter={onDragEnter}
+            onDragLeave={onDragLeave}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+          />
+        </div>
 
         {/* プレイヤー情報（最下部） */}
-        <PlayerList players={players} images={images} />
+        <div className="shrink-0">
+          <PlayerList players={players} images={images} />
+        </div>
 
         {/* 拍手ボタン（右下） */}
         {canClap && (

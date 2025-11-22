@@ -45,12 +45,12 @@ export function ImageFrame({
 
   // 額縁コンテンツを共通化
   const frameContent = (
-    <div className="rounded-lg bg-linear-to-br from-amber-800 via-amber-700 to-amber-900 p-4 shadow-2xl">
+    <div className="h-full w-full rounded-lg bg-linear-to-br from-amber-800 via-amber-700 to-amber-900 p-4 shadow-2xl">
       {/* 額縁の内側（金色の装飾） */}
-      <div className="rounded-md border-4 border-amber-600 bg-linear-to-br from-amber-200 to-amber-300 p-3 shadow-inner">
-        {/* 白いマット（正方形の固定サイズ） */}
+      <div className="h-full w-full rounded-md border-4 border-amber-600 bg-linear-to-br from-amber-200 to-amber-300 p-3 shadow-inner">
+        {/* 白いマット（正方形を維持） */}
         <div
-          className={`relative aspect-square w-full overflow-hidden rounded-sm border-2 bg-white p-6 shadow-md transition-colors ${
+          className={`relative h-full w-full overflow-hidden rounded-sm border-2 bg-white p-6 shadow-md transition-colors ${
             isDragging && !isImageSent
               ? "border-blue-400 bg-blue-50"
               : "border-amber-100"
@@ -112,7 +112,7 @@ export function ImageFrame({
   );
 
   return (
-    <div className="flex w-full flex-1 flex-col items-center justify-center gap-4">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4">
       {/* 隠しファイル入力 */}
       <input
         ref={fileInputRef}
@@ -123,30 +123,52 @@ export function ImageFrame({
         disabled={isImageSent}
       />
 
-      {/* 拍手フェーズ（displayedImage使用時）のみアニメーション */}
-      {displayedImage ? (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={displayedImage}
-            initial={{ x: "100%", opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "-100%", opacity: 0 }}
-            transition={{
-              duration: 0.5,
-              ease: "easeInOut",
-            }}
-            className="relative w-2/3 max-w-md"
-          >
-            {frameContent}
-          </motion.div>
-        </AnimatePresence>
-      ) : (
-        <div className="relative w-2/3 max-w-md">{frameContent}</div>
-      )}
+      {/* 額縁コンテナ: 利用可能なスペース内で最大の正方形を維持 */}
+      <div
+        className="relative min-h-0 w-full flex-1"
+        style={{ containerType: "size" }}
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          {displayedImage ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={displayedImage}
+                initial={{ x: "100%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "-100%", opacity: 0 }}
+                transition={{
+                  duration: 0.5,
+                  ease: "easeInOut",
+                }}
+                style={{
+                  aspectRatio: "1 / 1",
+                  width: "min(100%, 100cqmin)",
+                  height: "auto",
+                  maxHeight: "100%",
+                }}
+              >
+                {frameContent}
+              </motion.div>
+            </AnimatePresence>
+          ) : (
+            <div
+              style={{
+                aspectRatio: "1 / 1",
+                width: "100%",
+                height: "100%",
+                maxWidth: "min(100cqw, 100cqh)",
+                maxHeight: "min(100cqw, 100cqh)",
+              }}
+            >
+              {frameContent}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ボタン */}
       {selectedImage && !isImageSent && (
-        <div className="flex gap-3">
+        <div className="flex w-full shrink-0 flex-wrap justify-center gap-3 px-2">
           <Button
             variant="secondary"
             size="lg"
