@@ -1,7 +1,7 @@
 // app/title/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
@@ -15,9 +15,19 @@ export default function TitlePage() {
   const router = useRouter();
 
   // WebSocket接続（常に呼び出す、URLが空の場合は接続しない）
-  const { connect } = useWebSocket();
+  const { connect, setUrl } = useWebSocket();
 
   const { createRoom } = useRoom();
+
+  // ログイン成功時: WebSocket URL を設定
+  // connect は useEffect([connect]) で自動的に呼ばれる
+  const handleLoginSuccess = useCallback(() => {
+    const userId = getUserIdClient();
+    if (userId) {
+      const wsUrl = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080/ws"}?user_id=${userId}`;
+      setUrl(wsUrl);
+    }
+  }, [setUrl]);
 
   const handleCreateRoom = async () => {
     const userId = getUserIdClient() || "";
@@ -43,14 +53,14 @@ export default function TitlePage() {
       <div className="flex flex-col items-center justify-center">
         <NeedLoginButton
           loggedInOnClick={handleCreateRoom}
-          onLoginSuccess={() => window.location.reload()}
+          onLoginSuccess={handleLoginSuccess}
           content="部屋をつくる"
           className="px-12 py-5 text-xl"
         />
 
         <NeedLoginButton
           loggedInOnClick={() => router.push("/search")}
-          onLoginSuccess={() => window.location.reload()}
+          onLoginSuccess={handleLoginSuccess}
           content="部屋をさがす"
           className="px-12 py-5 text-xl"
         />
