@@ -39,16 +39,21 @@ func NewImage(userID, battleID uuid.UUID, imageURL string) (*Image, error) {
 	}, nil
 }
 
-func (i *Image) SetScore(aiScore float64, userScore int) error {
-	if aiScore < 0 || aiScore > 100 {
-		return errors.New("ai score must be between 0 and 100")
-	}
+func (i *Image) SetUserScore(userScore int) error {
 	if userScore < 0 {
 		return errors.New("user score must be non-negative")
 	}
 
-	i.AIScore = aiScore
 	i.UserScore = userScore
+	return nil
+}
+
+func (i *Image) SetAIScore(aiScore float64) error {
+	if aiScore < 0 || aiScore > 100 {
+		return errors.New("ai score must be between 0 and 100")
+	}
+
+	i.AIScore = aiScore
 	return nil
 }
 

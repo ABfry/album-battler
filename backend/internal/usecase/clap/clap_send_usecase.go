@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
@@ -75,10 +76,12 @@ func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) err
 	}
 
 	// 拍手数を追加（拍手される側で集計）
-	if _, err := uc.clapCounter.Add(input.BattleID, input.TargetUserID, input.Count); err != nil {
+	updatedImg, err := uc.clapCounter.Add(input.BattleID, input.TargetUserID, input.Count)
+	if err != nil {
 		fmt.Printf("Failed to add clap count: %v", err)
 		return errors.New("failed to add clap count")
 	}
+	log.Printf("[clap] added: battle=%s from=%s to=%s add=%d total=%d", input.BattleID, input.UserID, input.TargetUserID, input.Count, updatedImg.UserScore)
 
 	// ドメインイベントを記録
 	battle.RecordClapCounted(input.UserID, input.TargetUserID, input.Count)
