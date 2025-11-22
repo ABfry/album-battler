@@ -8,6 +8,9 @@ import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { NeedLoginButton } from "@/src/components/need-login-button/container/NeedLoginButton";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 
+import TitleBackSlider from "@/src/features/title/components/BackSlider";
+import { TitleLogo } from "@/src/components/ui/title-logo";
+
 export default function TitlePage() {
   const router = useRouter();
 
@@ -35,22 +38,24 @@ export default function TitlePage() {
   }, [connect]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="flex h-[640px] w-[360px] flex-col items-center justify-center gap-6 rounded-2xl border border-gray-400 bg-white shadow-lg">
-        <h1 className="mb-6 text-xl font-semibold">アルバムバトラー</h1>
-
+    <main className="relative flex min-h-screen flex-col items-center justify-center">
+      <TitleLogo className="mx-auto w-4/5 md:w-96" />
+      <div className="flex flex-col items-center justify-center">
         <NeedLoginButton
           loggedInOnClick={handleCreateRoom}
           onLoginSuccess={() => window.location.reload()}
           content="部屋をつくる"
+          className="px-12 py-5 text-xl"
         />
 
         <NeedLoginButton
           loggedInOnClick={() => router.push("/search")}
           onLoginSuccess={() => window.location.reload()}
           content="部屋をさがす"
+          className="px-12 py-5 text-xl"
         />
       </div>
+      <TitleBackSlider />
     </main>
   );
 }
