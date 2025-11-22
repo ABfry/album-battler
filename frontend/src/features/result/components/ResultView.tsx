@@ -92,17 +92,19 @@ export function ResultView({
                 }`}
               >
                 {/* ヘッダー：順位・名前・スコア */}
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {/* ユーザー情報 */}
+                  <div className="flex items-center gap-3">
+                    {/* 順位 */}
                     <span
-                      className={`text-3xl font-bold ${
+                      className={`text-2xl font-bold sm:text-3xl ${
                         isWinner ? "text-yellow-600" : "text-gray-500"
                       }`}
                     >
                       {result.rank}位
                     </span>
                     {/* ユーザーアイコン */}
-                    <div className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-gray-300">
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-gray-300 sm:h-12 sm:w-12">
                       {player?.icon_url ? (
                         <Image
                           src={player.icon_url}
@@ -112,20 +114,26 @@ export function ResultView({
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gray-200">
-                          <span className="text-xl">👤</span>
+                          <span className="text-lg sm:text-xl">👤</span>
                         </div>
                       )}
                     </div>
-                    <span className="text-2xl font-black text-slate-800">
-                      {player?.name || "Unknown"}
-                    </span>
-                    {isWinner && <span className="text-3xl">👑</span>}
+                    {/* 名前と王冠 */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-lg font-black text-slate-800 sm:text-2xl">
+                        {player?.name || "Unknown"}
+                      </span>
+                      {isWinner && (
+                        <span className="text-2xl sm:text-3xl">👑</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-4xl font-black text-[#b57c39]">
+                  {/* スコア */}
+                  <div className="flex items-baseline gap-2 sm:block sm:text-right">
+                    <div className="text-2xl font-black text-[#b57c39] sm:text-4xl">
                       {Math.round(result.final_score)}点
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs text-gray-600 sm:text-sm">
                       AI: {Math.round(result.ai_score)}点 / 拍手:{" "}
                       {result.user_score}点
                     </div>
