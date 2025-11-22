@@ -229,7 +229,7 @@ export function Battle({
         </div>
 
         {/* プレイヤー情報（最下部） */}
-        <div className="shrink-0 w-full">
+        <div className="w-full shrink-0">
           <PlayerList
             players={players}
             images={images}
@@ -271,7 +271,7 @@ export function Battle({
               {/* 拍手ボタン */}
               <button
                 onClick={handleClapClick}
-                className="flex h-16 w-full items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
+                className="mx-auto flex h-16 w-full max-w-md items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
               >
                 👏
               </button>
