@@ -73,8 +73,6 @@ export default function RoomPage() {
     setIsLoading(true);
     try {
       await startGame(roomID, userId);
-      const battleId = await getBattleID(roomID);
-      router.push(`/battle/${battleId}`);
     } catch {
       console.error("ゲーム開始エラー");
       setIsLoading(false);
