@@ -41,6 +41,12 @@ export type StartResultPhasePayload = {
   winner_user_id: string;
 };
 
+export type RoomSettingsUpdatedPayload = {
+  room_id: string;
+  room_number: number;
+  battle_time_limit_seconds: number;
+};
+
 // イベントマップ（型安全）
 export type EventMap = {
   player_join_room: PlayerJoinRoomPayload;
@@ -50,4 +56,5 @@ export type EventMap = {
   start_clap_time: StartClapTimePayload;
   clap_send: ClapSendPayload;
   start_result_phase: StartResultPhasePayload;
+  room_settings_updated: RoomSettingsUpdatedPayload;
 };

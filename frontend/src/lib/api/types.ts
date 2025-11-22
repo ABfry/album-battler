@@ -38,6 +38,7 @@ export type RoomInfoResponse = {
   is_expired: boolean;
   room_status: RoomStatusString;
   host_user_id: string | null;
+  battle_time_limit_seconds: number;
 };
 
 export type StartGameResponse = {
@@ -46,6 +47,15 @@ export type StartGameResponse = {
 
 export type LeaveRoomResponse = {
   message: string;
+};
+
+export type UpdateRoomSettingsRequest = {
+  user_id: string;
+  battle_time_limit_seconds?: number;
+};
+
+export type UpdateRoomSettingsResponse = {
+  result: string;
 };
 
 export type GetBattleIDResponse = {
@@ -127,6 +137,7 @@ export type Room = {
   users: UserInfo[];
   status: RoomStatus;
   isExpired: boolean;
+  battleTimeLimitSeconds: number;
 };
 
 export type Battle = {

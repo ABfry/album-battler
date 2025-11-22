@@ -34,6 +34,7 @@ function mapToRoom(roomId: string, data: RoomInfoResponse): Room {
     users: data.users,
     status: statusMap[data.room_status] ?? RoomStatus.WaitJoin,
     isExpired: data.is_expired,
+    battleTimeLimitSeconds: data.battle_time_limit_seconds,
   };
 }
 

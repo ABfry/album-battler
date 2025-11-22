@@ -10,6 +10,8 @@ import type {
   RoomInfoResponse,
   StartGameRequest,
   StartGameResponse,
+  UpdateRoomSettingsRequest,
+  UpdateRoomSettingsResponse,
 } from "./types";
 
 /**
@@ -86,5 +88,23 @@ export const roomApi = {
    */
   getBattleID: async (roomId: string): Promise<GetBattleIDResponse> => {
     return fetchApi<GetBattleIDResponse>(`/room/${roomId}/battle-id`);
+  },
+
+  /**
+   * 部屋の設定を更新
+   * PATCH /room/{id}/settings
+   */
+  updateRoomSettings: async (
+    roomId: string,
+    userId: string,
+    settings: Partial<Omit<UpdateRoomSettingsRequest, "user_id">>
+  ): Promise<UpdateRoomSettingsResponse> => {
+    return fetchApi<UpdateRoomSettingsResponse>(`/room/${roomId}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        user_id: userId,
+        ...settings,
+      } satisfies UpdateRoomSettingsRequest),
+    });
   },
 };
