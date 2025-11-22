@@ -19,6 +19,7 @@ import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { useGameStateRestore } from "@/src/hooks/useGameStateRestore";
 import { Battle } from "../components/Battle";
+import type { ClapEffect } from "../components/Battle";
 import type { GetBattleResultResponse } from "@/src/lib/api/types";
 
 type BattlePageProps = {
@@ -44,6 +45,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
   const [displayedImage, setDisplayedImage] = useState<string | null>(null);
   const [battleResult, setBattleResult] =
     useState<GetBattleResultResponse | null>(null);
+  const [remoteClapEffects, setRemoteClapEffects] = useState<ClapEffect[]>([]);
 
   // 1. バトル情報取得
   const {
@@ -134,9 +136,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       battlePhase.transitionTo("result");
     }
 
-    console.log(
-      `[BattlePage] Game state restored to phase: ${current_phase}`
-    );
+    console.log(`[BattlePage] Game state restored to phase: ${current_phase}`);
   }, [restoredState, battlePhase, timer]);
 
   const playersRef = useRef(players);
@@ -308,8 +308,15 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const handleClapUpdate = useCallback(() => {
     console.log("[BattlePage] Clap update detected");
-    // TODO: 拍手を受け取ったら演出や音を鳴らす？
-    // スコアのフェッチは最後で良さげ
+    const id = `remote-clap-${Date.now()}-${Math.random()}`;
+    const offsetX = Math.random() * 60 - 30; // -30px ~ +30px
+    setRemoteClapEffects((prev) => [
+      ...prev,
+      { id, timestamp: Date.now(), offsetX },
+    ]);
+    setTimeout(() => {
+      setRemoteClapEffects((prev) => prev.filter((e) => e.id !== id));
+    }, 1500);
   }, []);
 
   const handleResultStart = useCallback(async () => {
@@ -460,6 +467,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       error={battleInfoError}
       players={players}
       images={images}
+      remoteClapEffects={remoteClapEffects}
       // 拍手機能
       canClap={battlePhase.canClap}
       onClap={handleClap}
