@@ -38,6 +38,8 @@ CREATE TABLE battles (
     room_id CHAR(36) NOT NULL,
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     theme VARCHAR(100) NOT NULL,
+    battle_time_limit_seconds INT NOT NULL DEFAULT 60,
+    CHECK (battle_time_limit_seconds BETWEEN 30 AND 300),
     CONSTRAINT fk_battles_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
