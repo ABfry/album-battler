@@ -40,6 +40,7 @@ type BattleProps = {
   displayedImage: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
+  isSending: boolean;
   isCompressing: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -85,6 +86,7 @@ export function Battle({
   displayedImage,
   isDragging,
   isImageSent,
+  isSending,
   isCompressing,
   fileInputRef,
   onImageSelect,
@@ -207,6 +209,7 @@ export function Battle({
           displayedImage={displayedImage}
           isDragging={isDragging}
           isImageSent={isImageSent}
+          isSending={isSending}
           isCompressing={isCompressing}
           fileInputRef={fileInputRef}
           onImageSelect={onImageSelect}

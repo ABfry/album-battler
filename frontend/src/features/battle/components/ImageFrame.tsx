@@ -7,6 +7,7 @@ type ImageFrameProps = {
   displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
+  isSending?: boolean;
   isCompressing?: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -27,6 +28,7 @@ export function ImageFrame({
   displayedImage,
   isDragging,
   isImageSent,
+  isSending = false,
   isCompressing = false,
   fileInputRef,
   onImageSelect,
@@ -148,6 +150,7 @@ export function ImageFrame({
           <Button
             variant="secondary"
             size="lg"
+            disabled={isSending}
             onClick={() => {
               console.log("Cancel button clicked");
               onCancel();
@@ -158,12 +161,13 @@ export function ImageFrame({
           <Button
             variant="primary"
             size="lg"
+            disabled={isSending}
             onClick={() => {
               console.log("Confirm button clicked");
               onConfirmImage();
             }}
           >
-            これで決定
+            {isSending ? "送信中..." : "これで決定"}
           </Button>
         </div>
       )}
