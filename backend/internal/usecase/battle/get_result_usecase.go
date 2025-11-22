@@ -51,7 +51,6 @@ func NewGetResultUseCase(
 }
 
 func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (*GetResultOutput, error) {
-	fmt.Printf("GetResultUseCase Execute: battleID=%s\n", input.BattleID)
 	// バトルを取得
 	battle, err := uc.battleRepo.FindByID(ctx, input.BattleID)
 	if err != nil {
@@ -104,7 +103,6 @@ func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (
 
 	for _, img := range images {
 		finalScore := img.AIScore + float64(img.UserScore)
-		fmt.Printf("Image %s: AIScore=%.2f, UserScore=%d, FinalScore=%.2f\n", img.ID, img.AIScore, img.UserScore, finalScore)
 		scores = append(scores, scoreData{
 			UserID:        img.UserID,
 			AIScore:       img.AIScore,

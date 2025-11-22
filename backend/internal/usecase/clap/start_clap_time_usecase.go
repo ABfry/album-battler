@@ -155,24 +155,15 @@ func (uc *StartClapTimeUseCase) JudgeImageAsync(ctx context.Context, battleID uu
 
 	// 各画像のAIScoreを更新してDB保存
 	for i, result := range judgeResp.Results {
-		img, err := uc.imageRepo.FindByID(ctx, images[i].ID)
-		if err != nil {
-			fmt.Printf("Warning: failed to find image %s: %v\n", images[i].ID, err)
-			continue
-		} else if img == nil {
-			fmt.Printf("Warning: image not found: %s\n", images[i].ID)
-			continue
-		}
+		img := images[i]
 
 		// スコアを設定
-		if err := img.SetAIScore(float64(result.Score)); err != nil {
+		if err := img.SetScore(float64(result.Score), 0); err != nil {
 			fmt.Printf("Warning: failed to set score for image %s: %v\n", img.ID, err)
 			continue
 		}
 		// AIの評価説明文を設定
 		img.SetAIExplanation(result.Reason)
-
-		fmt.Printf("Image %s judged with score %d and reason: %s\n", img.ID, result.Score, result.Reason)
 
 		// DBに保存
 		if err := uc.imageRepo.Save(ctx, img); err != nil {
