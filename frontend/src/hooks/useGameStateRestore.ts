@@ -7,8 +7,6 @@ import { battleApi } from "@/src/lib/api/battleApi";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
 import type { GetBattleStateResponse } from "@/src/lib/api/types";
 
-type GamePhase = "selecting" | "clap_time" | "result" | "finished";
-
 type GameStateRestoreResult = {
   isRestoring: boolean;
   error: string | null;

@@ -76,7 +76,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
   }, [battleID, setCurrentBattleId]);
 
   // ゲーム状態復元（WebSocket再接続時）
-  const { isRestoring, restoredState } = useGameStateRestore();
+  const { restoredState } = useGameStateRestore();
 
   // 3. 結果取得
   const { getResult } = useResult();
