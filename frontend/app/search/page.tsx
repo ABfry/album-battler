@@ -5,6 +5,7 @@ import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useRoom } from "@/src/hooks/useRoom";
 import { getUserIdClient } from "@/src/lib/auth/getUserIdClient";
+import Link from "next/link";
 
 export default function SearchPage() {
   const [roomId, setRoomId] = useState("");
@@ -49,12 +50,12 @@ export default function SearchPage() {
           参加
         </button>
 
-        <button
-          onClick={() => router.push("/title")}
-          className="text-sm text-[#6b5337] hover:underline"
+        <Link //タイトルに戻るボタン
+          href="/"
+          className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
         >
-          ← タイトルに戻る
-        </button>
+          ◀
+        </Link>
       </div>
     </main>
   );

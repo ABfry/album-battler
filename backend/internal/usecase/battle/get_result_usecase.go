@@ -98,6 +98,9 @@ func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (
 	}
 
 	scores := make([]scoreData, 0, len(images))
+	ranks := make(map[uuid.UUID]int)
+	var winnerUserID uuid.UUID
+
 	for _, img := range images {
 		finalScore := img.AIScore + float64(img.UserScore)
 		scores = append(scores, scoreData{
@@ -111,29 +114,34 @@ func (uc *GetResultUseCase) Execute(ctx context.Context, input GetResultInput) (
 		})
 	}
 
-	// スコアでソート（降順、同点なら投稿時刻の早い順）
-	sort.Slice(scores, func(i, j int) bool {
-		if scores[i].FinalScore != scores[j].FinalScore {
-			return scores[i].FinalScore > scores[j].FinalScore
+	// 勝者決定＆順位付け
+	sorted := make([]scoreData, len(scores))
+	copy(sorted, scores)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].FinalScore != sorted[j].FinalScore {
+			return sorted[i].FinalScore > sorted[j].FinalScore
 		}
-		return scores[i].UploadedAt.Before(scores[j].UploadedAt)
+
+		return sorted[i].UploadedAt.Before(sorted[j].UploadedAt)
 	})
 
-	// 勝者を決定
-	var winnerUserID uuid.UUID
-	if len(scores) > 0 {
-		winnerUserID = scores[0].UserID
+	for i, score := range sorted {
+		ranks[score.UserID] = i + 1
+	}
+
+	if len(sorted) > 0 {
+		winnerUserID = sorted[0].UserID
 	}
 
 	// 結果をランク付きで返却
 	results := make([]UserResult, 0, len(scores))
-	for i, score := range scores {
+	for _, score := range scores {
 		results = append(results, UserResult{
 			UserID:        score.UserID,
 			AIScore:       score.AIScore,
 			UserScore:     score.UserScore,
 			FinalScore:    score.FinalScore,
-			Rank:          i + 1,
+			Rank:          ranks[score.UserID],
 			ImageURL:      score.ImageURL,
 			AIExplanation: score.AIExplanation,
 		})
