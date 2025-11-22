@@ -9,6 +9,7 @@ type ImageFrameProps = {
   isImageSent: boolean;
   isSending?: boolean;
   isCompressing?: boolean;
+  canSelect: boolean; // 画像選択可能か（タイムアップ判定用）
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -30,6 +31,7 @@ export function ImageFrame({
   isImageSent,
   isSending = false,
   isCompressing = false,
+  canSelect,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -176,31 +178,37 @@ export function ImageFrame({
         </div>
       </div>
 
-      {/* ボタン */}
+      {/* ボタン or 時間切れ表示 */}
       {selectedImage && !isImageSent && (
         <div className="flex w-full shrink-0 flex-wrap justify-center gap-3 px-2">
-          <Button
-            variant="secondary"
-            size="lg"
-            disabled={isSending}
-            onClick={() => {
-              console.log("Cancel button clicked");
-              onCancel();
-            }}
-          >
-            取り消す
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            disabled={isSending}
-            onClick={() => {
-              console.log("Confirm button clicked");
-              onConfirmImage();
-            }}
-          >
-            {isSending ? "送信中..." : "これで決定"}
-          </Button>
+          {canSelect ? (
+            <>
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={isSending}
+                onClick={() => {
+                  console.log("Cancel button clicked");
+                  onCancel();
+                }}
+              >
+                取り消す
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                disabled={isSending}
+                onClick={() => {
+                  console.log("Confirm button clicked");
+                  onConfirmImage();
+                }}
+              >
+                {isSending ? "送信中..." : "これで決定"}
+              </Button>
+            </>
+          ) : (
+            <p className="text-lg font-bold text-red-500">時間切れ！</p>
+          )}
         </div>
       )}
     </div>

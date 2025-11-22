@@ -330,6 +330,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     // AI採点が完了していない可能性があるため、リトライロジックを実装
     const maxRetries = 7;
     const retryDelay = 3000; // 3秒
+    let lastResult: GetBattleResultResponse | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(
@@ -338,6 +339,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
       const result = await getResult(battleID);
       if (result) {
+        lastResult = result;
+
         // AI採点が完了しているかチェック（ai_explanationが空でないこと）
         const isAIJudgingComplete = result.results.every(
           (r) => r.ai_explanation && r.ai_explanation.trim() !== ""
@@ -365,9 +368,18 @@ export function BattlePage({ battleID }: BattlePageProps) {
       }
     }
 
-    console.error(
-      "[BattlePage] Failed to fetch battle result after all retries"
-    );
+    // 最後のリトライでも完了しなかった場合、取得できた結果があればそれを使用
+    if (lastResult) {
+      setBattleResult(lastResult);
+      console.warn(
+        "[BattlePage] AI judging not fully complete, but proceeding with available result:",
+        lastResult
+      );
+    } else {
+      console.error(
+        "[BattlePage] Failed to fetch battle result after all retries"
+      );
+    }
   }, [battleID, getResult]);
 
   // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
@@ -458,6 +470,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       isImageSent={imageSelection.isImageSent}
       isSending={imageSelection.isSending}
       isCompressing={imageSelection.isCompressing}
+      canSelect={battlePhase.canSelectImage}
       fileInputRef={imageSelection.fileInputRef}
       onImageSelect={imageSelection.handleImageSelect}
       onOpenAlbum={imageSelection.handleOpenAlbum}
