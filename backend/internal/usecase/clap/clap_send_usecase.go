@@ -35,8 +35,10 @@ func NewClapSendUseCase(roomRepo repository.RoomRepository, battleRepo repositor
 
 func (uc *ClapSendUseCase) Execute(ctx context.Context, input ClapSendInput) error {
 	// 拍手数が不正なら弾く
-	if input.Count <= 0 || input.Count > 10 {
-		return errors.New("count must be greater than zero and less than or equal to 10")
+	if input.Count <= 0 {
+		return errors.New("count must be greater than zero")
+	} else if input.Count > 10 {
+		input.Count = 10 // 上限10拍手
 	}
 
 	// バトルを取得

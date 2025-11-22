@@ -16,6 +16,8 @@ import { useBattleTimer } from "@/src/hooks/useBattleTimer";
 import { useBattleWebSocket } from "@/src/hooks/useBattleWebSocket";
 import { useImageSelection } from "@/src/hooks/useImageSelection";
 import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
+import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
+import { useGameStateRestore } from "@/src/hooks/useGameStateRestore";
 import { Battle } from "../components/Battle";
 import type { GetBattleResultResponse } from "@/src/lib/api/types";
 
@@ -58,6 +60,24 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const players = useMemo(() => room?.users ?? [], [room?.users]);
 
+  // WebSocket再接続用: roomIdとbattleIdを保存
+  const { setCurrentRoomId, setCurrentBattleId } = useWebSocket();
+
+  useEffect(() => {
+    if (battle?.roomId) {
+      setCurrentRoomId(battle.roomId);
+    }
+  }, [battle?.roomId, setCurrentRoomId]);
+
+  useEffect(() => {
+    if (battleID) {
+      setCurrentBattleId(battleID);
+    }
+  }, [battleID, setCurrentBattleId]);
+
+  // ゲーム状態復元（WebSocket再接続時）
+  const { restoredState } = useGameStateRestore();
+
   // 3. 結果取得
   const { getResult } = useResult();
 
@@ -75,6 +95,49 @@ export function BattlePage({ battleID }: BattlePageProps) {
     }, []),
     onTimeUp: battlePhase.onTimeUp,
   });
+
+  // 状態復元処理（WebSocket再接続時）
+  useEffect(() => {
+    if (!restoredState) return;
+
+    console.log("[BattlePage] Restoring game state:", restoredState);
+
+    const { current_phase, clap_current_user_index, selecting_started_at } =
+      restoredState;
+
+    // フェーズ復元
+    if (current_phase === "selecting") {
+      battlePhase.transitionTo("selecting");
+
+      // タイマー復元: 開始時刻から経過時間を計算
+      if (selecting_started_at) {
+        const startTime = new Date(selecting_started_at).getTime();
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const remainingTime = Math.max(60 - elapsed, 0);
+
+        timer.resetTimer(remainingTime);
+        if (remainingTime > 0) {
+          timer.startTimer();
+        }
+      }
+    } else if (current_phase === "clap_time") {
+      // 拍手フェーズ復元: clap_current_user_indexに基づいてフェーズを決定
+      const clapIndex = clap_current_user_index ?? 0;
+      const clapPhase =
+        CLAP_PHASES[clapIndex] || ("clap_time_1" as BattlePhase);
+
+      battlePhase.transitionTo(clapPhase);
+
+      // タイマーは各拍手フェーズのonPhaseStartで再設定されるため、ここでは明示的な復元不要
+    } else if (current_phase === "result") {
+      battlePhase.transitionTo("result");
+    }
+
+    console.log(
+      `[BattlePage] Game state restored to phase: ${current_phase}`
+    );
+  }, [restoredState, battlePhase, timer]);
 
   const playersRef = useRef(players);
   const imagesRef = useRef(images);

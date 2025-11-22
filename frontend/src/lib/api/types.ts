@@ -16,6 +16,11 @@ export type LeaveRoomRequest = {
   user_id: string;
 };
 
+export type RejoinRoomRequest = {
+  user_id: string;
+  room_id: string;
+};
+
 // レスポンス型
 export type CreateRoomResponse = {
   room_id: string;
@@ -60,6 +65,10 @@ export type UpdateRoomSettingsResponse = {
 
 export type GetBattleIDResponse = {
   BattleID: string;
+};
+
+export type RejoinRoomResponse = {
+  message: string;
 };
 
 // Battle リクエスト型
@@ -113,6 +122,14 @@ export type GetBattleResultResponse = {
   battle_id: string;
   winner_user_id: string;
   results: UserResult[];
+};
+
+export type GetBattleStateResponse = {
+  current_phase: string;
+  selecting_started_at: string | null;
+  clap_phase_started_at: string | null;
+  clap_current_user_index: number | null;
+  result_started_at: string | null;
 };
 
 // ドメイン型

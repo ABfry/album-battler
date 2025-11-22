@@ -23,6 +23,7 @@ func (s *APIServer) registerRoutes() {
 	)
 	s.mux.HandleFunc("POST /api/room", roomHandler.CreateRoom)
 	s.mux.HandleFunc("POST /api/room/join", roomHandler.JoinRoom)
+	s.mux.HandleFunc("POST /api/room/rejoin", roomHandler.RejoinRoom)
 	s.mux.HandleFunc("POST /api/room/{id}/leave", roomHandler.LeaveRoom)
 	s.mux.HandleFunc("POST /api/room/{id}/start", roomHandler.StartGame)
 	s.mux.HandleFunc("GET /api/room/{id}", roomHandler.GetRoom)
@@ -44,6 +45,7 @@ func (s *APIServer) registerRoutes() {
 
 	s.mux.HandleFunc("POST /api/battle", battleHandler.CreateBattle) // デバッグ用
 	s.mux.HandleFunc("GET /api/battle/{id}", battleHandler.GetBattle)
+	s.mux.HandleFunc("GET /api/battle/{id}/state", battleHandler.GetBattleState)
 	s.mux.HandleFunc("GET /api/room/{id}/battle-id", battleHandler.GetBattleIDByRoom)
 	s.mux.HandleFunc("GET /api/battle/{id}/image", battleHandler.GetImage)
 	s.mux.HandleFunc("POST /api/battle/{id}/send-image", battleHandler.SendImage)

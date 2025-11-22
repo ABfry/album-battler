@@ -74,6 +74,10 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 		return nil, errors.New("failed to create battle")
 	}
 
+	// 画像選択フェーズ開始時刻を記録（WebSocket再接続時の状態復元用）
+	now := time.Now()
+	battle.SelectingStartedAt = &now
+
 	err = uc.battleRepo.Save(ctx, battle)
 	if err != nil {
 		return nil, errors.New("failed to save battle")

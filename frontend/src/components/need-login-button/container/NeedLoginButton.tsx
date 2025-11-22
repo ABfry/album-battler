@@ -8,6 +8,7 @@ export type NeedLoginButtonProps = {
   onClick?: () => void; // ログインの有無に関わらずクリックした時の処理
   loggedInOnClick?: () => void; // ログインしている時のクリック処理
   notLoggedInOnClick?: () => void; // ログインしていない時のクリック処理
+  onLoginSuccess?: () => void; // ユーザー作成成功時のコールバック
   content: string;
   loggedInLink?: string; // ログインしている時、クリック時のリンク先
   className?: string;
@@ -17,6 +18,7 @@ export function NeedLoginButton({
   onClick,
   loggedInOnClick,
   notLoggedInOnClick,
+  onLoginSuccess,
   content,
   loggedInLink,
   className,
@@ -68,7 +70,8 @@ export function NeedLoginButton({
       setUserId(newUserId);
       setIsDialogOpen(false);
       setUserName("");
-      onClick?.();
+      onLoginSuccess?.();
+      loggedInOnClick?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {

@@ -301,3 +301,45 @@ func (h *RoomHandler) UpdateRoomSettings(w http.ResponseWriter, r *http.Request)
 		log.Printf("Failed to encode response: %v", err)
 	}
 }
+
+// POST /room/rejoin
+// WebSocket再接続時に部屋のWebSocketグループに再参加するためのエンドポイント
+func (h *RoomHandler) RejoinRoom(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		UserID string `json:"user_id"`
+		RoomID string `json:"room_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		return
+	}
+
+	roomID, err := uuid.Parse(req.RoomID)
+	if err != nil {
+		http.Error(w, "Invalid room_id format", http.StatusBadRequest)
+		return
+	}
+
+	// WebSocket HubのRoomに再参加
+	h.roomManager.JoinRoom(userID, roomID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "rejoined successfully",
+	}); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
+}

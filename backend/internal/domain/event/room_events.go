@@ -42,6 +42,20 @@ func (e UserLeftRoomEvent) OccurredAt() time.Time {
 	return e.OccurredOn
 }
 
+// ゲーム開始ボタンが押されたイベント（お題生成に時間がかかるため、ボタンを押したらローディング画面を表示させるために使用
+type GameStartButtonPressedEvent struct {
+	RoomID     uuid.UUID
+	OccurredOn time.Time
+}
+
+func (e GameStartButtonPressedEvent) EventType() string {
+	return "start_button_pressed"
+}
+
+func (e GameStartButtonPressedEvent) OccurredAt() time.Time {
+	return e.OccurredOn
+}
+
 // ゲームが開始されたイベント
 type GameStartedEvent struct {
 	RoomID     uuid.UUID

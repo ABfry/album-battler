@@ -17,6 +17,13 @@ type Battle struct {
 	Theme                  string
 	UserIDs                []uuid.UUID
 	BattleTimeLimitSeconds int // 30~300秒
+
+	// ゲーム状態管理(WebSocket再接続時の状態復元用)
+	CurrentPhase         string     // "selecting" | "clap_time" | "result" | "finished"
+	SelectingStartedAt   *time.Time // 画像選択開始時刻
+	ClapPhaseStartedAt   *time.Time // 現在の拍手フェーズ開始時刻
+	ClapCurrentUserIndex *int       // 現在何人目の拍手か (0-4)
+	ResultStartedAt      *time.Time // 結果フェーズ開始時刻
 }
 
 func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string, battleTimeLimitSeconds int) (*Battle, error) {
@@ -50,6 +57,7 @@ func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string, battleTimeLi
 		Theme:                  theme,
 		UserIDs:                userIDs,
 		BattleTimeLimitSeconds: battleTimeLimitSeconds,
+		CurrentPhase:           "selecting", // 初期状態は画像選択フェーズ
 	}, nil
 }
 

@@ -250,3 +250,45 @@ func (h *BattleHandler) GetResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+// GET /battle/{id}/state
+// WebSocket再接続時のゲーム状態復元用エンドポイント
+func (h *BattleHandler) GetBattleState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	battleIDStr := r.PathValue("id")
+	battleID, err := uuid.Parse(battleIDStr)
+	if err != nil {
+		http.Error(w, "Invalid battle_id format", http.StatusBadRequest)
+		return
+	}
+
+	// バトル情報を取得
+	battleOutput, err := h.getBattleUC.Execute(r.Context(), battle.GetBattleInput{
+		BattleID: battleID,
+	})
+	if err != nil {
+		fmt.Println("failed to get battle", err)
+		http.Error(w, "Failed to get battle", http.StatusInternalServerError)
+		return
+	}
+
+	// 状態情報を抽出してレスポンスを構築
+	response := map[string]interface{}{
+		"current_phase":           battleOutput.Battle.CurrentPhase,
+		"selecting_started_at":    battleOutput.Battle.SelectingStartedAt,
+		"clap_phase_started_at":   battleOutput.Battle.ClapPhaseStartedAt,
+		"clap_current_user_index": battleOutput.Battle.ClapCurrentUserIndex,
+		"result_started_at":       battleOutput.Battle.ResultStartedAt,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}

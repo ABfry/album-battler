@@ -20,6 +20,10 @@ export type PlayerLeaveRoomPayload = {
   room_id: string;
 };
 
+export type StartButtonPressedPayload = {
+  room_id: string;
+};
+
 export type StartGamePayload = {
   room_id: string;
 };
@@ -51,6 +55,7 @@ export type RoomSettingsUpdatedPayload = {
 export type EventMap = {
   player_join_room: PlayerJoinRoomPayload;
   player_leave_room: PlayerLeaveRoomPayload;
+  start_button_pressed: StartButtonPressedPayload;
   start_game: StartGamePayload;
   image_send: ImageSendPayload;
   start_clap_time: StartClapTimePayload;

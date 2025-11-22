@@ -3,6 +3,7 @@ import type {
   CreateBattleRequest,
   CreateBattleResponse,
   GetBattleResponse,
+  GetBattleStateResponse,
   GetImageResponse,
   SendImageRequest,
   SendImageResponse,
@@ -64,5 +65,15 @@ export const battleApi = {
    */
   getResult: async (battleId: string): Promise<GetBattleResultResponse> => {
     return fetchApi<GetBattleResultResponse>(`/battle/${battleId}/result`);
+  },
+
+  /**
+   * バトルの状態を取得（WebSocket再接続時）
+   * GET /battle/{id}/state
+   */
+  getBattleState: async (
+    battleId: string
+  ): Promise<GetBattleStateResponse> => {
+    return fetchApi<GetBattleStateResponse>(`/battle/${battleId}/state`);
   },
 };

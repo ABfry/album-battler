@@ -1,5 +1,5 @@
 // battle_repository.go は battles テーブルを扱う MySQL 実装を提供する。
-// 責務: バトルの保存と検索（ID・RoomID）を担い、行データと entity.Battle を相互変換する。
+// 責務: バトルの保存と検索(ID・RoomID)を担い、行データと entity.Battle を相互変換する。
 // 依存: database/sql、dao.go の共通クエリヘルパー。参加ユーザー一覧は battle_users テーブル側で管理する。
 package mysql
 
@@ -33,11 +33,15 @@ func NewBattleRepository(db *sql.DB) repository.BattleRepository {
 func (r *mysqlBattleRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Battle, error) {
 	query := `
 		SELECT b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
+		       b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
+		       b.clap_current_user_index, b.result_started_at,
 		       GROUP_CONCAT(bu.user_id ORDER BY bu.user_id SEPARATOR ',') as user_ids
 		FROM battles b
 		LEFT JOIN battle_users bu ON b.id = bu.battle_id
 		WHERE b.id = ?
-		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds
+		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
+		         b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
+		         b.clap_current_user_index, b.result_started_at
 	`
 
 	row := r.db.QueryRowContext(ctx, query, id.String())
@@ -49,11 +53,15 @@ func (r *mysqlBattleRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 func (r *mysqlBattleRepository) FindByRoomID(ctx context.Context, roomID uuid.UUID) (*entity.Battle, error) {
 	query := `
 		SELECT b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
+		       b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
+		       b.clap_current_user_index, b.result_started_at,
 		       GROUP_CONCAT(bu.user_id ORDER BY bu.user_id SEPARATOR ',') as user_ids
 		FROM battles b
 		LEFT JOIN battle_users bu ON b.id = bu.battle_id
 		WHERE b.room_id = ?
-		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds
+		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
+		         b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
+		         b.clap_current_user_index, b.result_started_at
 		ORDER BY b.started_at DESC
 		LIMIT 1
 	`
@@ -74,6 +82,11 @@ func (r *mysqlBattleRepository) Save(ctx context.Context, battle *entity.Battle)
 		battle.StartedAt,
 		battle.Theme,
 		battle.BattleTimeLimitSeconds,
+		battle.CurrentPhase,
+		battle.SelectingStartedAt,
+		battle.ClapPhaseStartedAt,
+		battle.ClapCurrentUserIndex,
+		battle.ResultStartedAt,
 	)
 }
 
@@ -88,10 +101,17 @@ func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle
 		startedAt              time.Time
 		theme                  string
 		battleTimeLimitSeconds int
+		currentPhase           sql.NullString
+		selectingStartedAt     sql.NullTime
+		clapPhaseStartedAt     sql.NullTime
+		clapCurrentUserIndex   sql.NullInt32
+		resultStartedAt        sql.NullTime
 		userIDsStr             sql.NullString // GROUP_CONCAT の結果は NULL の可能性がある
 	)
 
-	if err := scanner.Scan(&idStr, &roomIDStr, &startedAt, &theme, &battleTimeLimitSeconds, &userIDsStr); err != nil {
+	if err := scanner.Scan(&idStr, &roomIDStr, &startedAt, &theme, &battleTimeLimitSeconds,
+		&currentPhase, &selectingStartedAt, &clapPhaseStartedAt,
+		&clapCurrentUserIndex, &resultStartedAt, &userIDsStr); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -121,13 +141,45 @@ func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle
 		}
 	}
 
+	// NullTime/NullString/NullInt32 をポインタに変換
+	var selectingStartedAtPtr *time.Time
+	if selectingStartedAt.Valid {
+		selectingStartedAtPtr = &selectingStartedAt.Time
+	}
+
+	var clapPhaseStartedAtPtr *time.Time
+	if clapPhaseStartedAt.Valid {
+		clapPhaseStartedAtPtr = &clapPhaseStartedAt.Time
+	}
+
+	var clapCurrentUserIndexPtr *int
+	if clapCurrentUserIndex.Valid {
+		val := int(clapCurrentUserIndex.Int32)
+		clapCurrentUserIndexPtr = &val
+	}
+
+	var resultStartedAtPtr *time.Time
+	if resultStartedAt.Valid {
+		resultStartedAtPtr = &resultStartedAt.Time
+	}
+
+	currentPhaseStr := "selecting" // デフォルト値
+	if currentPhase.Valid {
+		currentPhaseStr = currentPhase.String
+	}
+
 	return &entity.Battle{
 		ID:                     battleID,
 		RoomID:                 roomID,
 		StartedAt:              startedAt,
 		Theme:                  theme,
-		UserIDs:                userIDs,
 		BattleTimeLimitSeconds: battleTimeLimitSeconds,
+		CurrentPhase:           currentPhaseStr,
+		SelectingStartedAt:     selectingStartedAtPtr,
+		ClapPhaseStartedAt:     clapPhaseStartedAtPtr,
+		ClapCurrentUserIndex:   clapCurrentUserIndexPtr,
+		ResultStartedAt:        resultStartedAtPtr,
+		UserIDs:                userIDs,
 	}, nil
 }
 
