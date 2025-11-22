@@ -35,7 +35,10 @@ export function ResultPage({ battleId }: ResultPageProps) {
       setIsLoading(true);
       const result = await getResult(battleId);
       if (result) {
-        setBattleResult(result);
+        const sorted = [...result.results].sort(
+          (a, b) => b.final_score - a.final_score
+        );
+        setBattleResult({ ...result, results: sorted });
       }
       setIsLoading(false);
     };

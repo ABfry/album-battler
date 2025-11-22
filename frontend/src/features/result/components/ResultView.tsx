@@ -1,5 +1,6 @@
 import type { GetBattleResultResponse, UserInfo } from "@/src/lib/api/types";
 import { Button } from "@/src/components/ui/button";
+import { motion } from "framer-motion";
 import Image from "next/image";
 
 type ResultViewProps = {
@@ -48,6 +49,19 @@ export function ResultView({
     (p) => p.id === battleResult.winner_user_id
   );
 
+  const getRankStyle = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return "bg-yellow-100 border-yellow-400 text-yellow-900";
+      case 2:
+        return "bg-gray-200 border-gray-400 text-gray-800";
+      case 3:
+        return "bg-amber-100 border-amber-400 text-amber-900";
+      default:
+        return "bg-white border-[#3551b8] text-slate-800";
+    }
+  };
+
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       {/* 戻るボタン */}
@@ -70,9 +84,15 @@ export function ResultView({
 
         {/* 勝者発表 */}
         <div className="space-y-4 text-center">
-          <h1 className="bg-linear-to-r from-yellow-400 to-orange-500 bg-clip-text text-6xl font-black text-transparent">
-            WINNER
-          </h1>
+          <div className="flex justify-center">
+            <Image
+              src="/winner-text.png"
+              alt="Winner"
+              width={260}
+              height={100}
+              priority
+            />
+          </div>
           <div className="text-5xl font-bold text-slate-800">
             {winnerPlayer?.name || "Unknown Player"}
           </div>
@@ -83,14 +103,13 @@ export function ResultView({
           {battleResult.results.map((result) => {
             const player = players.find((p) => p.id === result.user_id);
             const isWinner = result.user_id === battleResult.winner_user_id;
+            const rankStyle = getRankStyle(result.rank);
 
             return (
               <div
                 key={result.user_id}
-                className={`rounded-xl border bg-white p-6 shadow-lg transition-all ${
-                  isWinner
-                    ? "border-yellow-400 ring-4 ring-yellow-200"
-                    : "border-[#3551b8]"
+                className={`rounded-xl border p-6 shadow-lg transition-all ${rankStyle} ${
+                  isWinner ? "ring-4 ring-yellow-200" : ""
                 }`}
               >
                 {/* ヘッダー：順位・名前・スコア */}
@@ -98,11 +117,7 @@ export function ResultView({
                   {/* ユーザー情報 */}
                   <div className="flex items-center gap-3">
                     {/* 順位 */}
-                    <span
-                      className={`text-2xl font-bold sm:text-3xl ${
-                        isWinner ? "text-yellow-600" : "text-gray-500"
-                      }`}
-                    >
+                    <span className={`text-2xl font-bold sm:text-3xl`}>
                       {result.rank}位
                     </span>
                     {/* ユーザーアイコン */}
@@ -121,12 +136,40 @@ export function ResultView({
                       )}
                     </div>
                     {/* 名前と王冠 */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       <span className="text-lg font-black text-slate-800 sm:text-2xl">
                         {player?.name || "Unknown"}
                       </span>
                       {isWinner && (
-                        <span className="text-2xl sm:text-3xl">👑</span>
+                        <div className="relative h-8 w-8 sm:h-10 sm:w-10">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <motion.div
+                              className="h-[120%] w-[120%]"
+                              initial={{ rotate: 0 }}
+                              animate={{ rotate: 360 }}
+                              transition={{
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: "linear",
+                              }}
+                            >
+                              <Image
+                                src="/back-light.png"
+                                alt="back light"
+                                fill
+                                unoptimized
+                              />
+                            </motion.div>
+                          </div>
+                          <div className="relative flex h-full w-full items-center justify-center">
+                            <Image
+                              src="/crown-icon.png"
+                              alt="crown"
+                              fill
+                              unoptimized
+                            />
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
