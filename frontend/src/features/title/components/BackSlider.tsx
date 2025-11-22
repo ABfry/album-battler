@@ -1,99 +1,102 @@
 "use client";
-import React from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
-import { Autoplay, EffectCoverflow } from "swiper/modules";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import "swiper/css/pagination";
+const IMAGE_COUNT = 21;
+interface FallingImage {
+  id: number;
+  left: number;
+  duration: number;
+  delay: number;
+  size: number;
+  imageUrl: string;
+}
 
-const imageUrls = [
-  [
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-  ],
-  [
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-    "/title/sample.jpg",
-  ],
-];
-
-const slideSettings = {
-  0: {
-    slidesPerView: 1.4,
-    spaceBetween: 10,
-  },
-  768: {
-    slidesPerView: 2.2,
-    spaceBetween: 10,
-  },
-  1024: {
-    slidesPerView: 2.2,
-    spaceBetween: 10,
-  },
-};
-
-const reverseDirections = [false, true];
-
+/**
+ * タイトル画面の背景スライダー
+ */
 const TitleBackSlider = () => {
+  const [mounted, setMounted] = useState(false);
+  const [fallingImages, setFallingImages] = useState<FallingImage[]>([]);
+
+  // クライアント側でのみランダム値を生成
+  useEffect(() => {
+    const images = Array.from({ length: 10 }, (_, i) => {
+      const randomImageNum = Math.floor(Math.random() * IMAGE_COUNT) + 1;
+      return {
+        id: i,
+        left: Math.random() * 100,
+        duration: 10 + Math.random() * 10,
+        delay: Math.random() * -15,
+        size: 150 + Math.random() * 150,
+        imageUrl: `/title/img${randomImageNum}.jpg`,
+      };
+    });
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFallingImages(images);
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <section className="fixed inset-0 -z-10">
-      <div className="mx-auto flex h-full flex-col justify-center">
-        {reverseDirections.map((reverseDirection, parentIndex) => {
+    <>
+      <style jsx>{`
+        @keyframes fall {
+          from {
+            transform: translateY(-100%) var(--rotation);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          to {
+            transform: translateY(calc(100vh + 100%)) var(--rotation);
+            opacity: 0;
+          }
+        }
+      `}</style>
+      <section
+        className="fixed inset-0 -z-10 overflow-hidden"
+        style={{ perspective: "1000px" }}
+      >
+        {fallingImages.map((img) => {
+          // 画面中心（50%）からの距離に応じて回転角度を計算
+          const distanceFromCenter = img.left - 50;
+          const rotateY = distanceFromCenter * -0.5;
+          const rotateX = 15;
+
           return (
-            <Swiper
-              key={parentIndex}
-              modules={[Autoplay, EffectCoverflow]}
-              breakpoints={slideSettings} // slidesPerViewを指定
-              slidesPerView={"auto"} // ハイドレーションエラー対策
-              centeredSlides={reverseDirection} // スライドを中央に配置
-              loop={true} // スライドをループさせる
-              autoplay={{
-                delay: 0, // ディレイを0に設定
-                disableOnInteraction: false, // ユーザーが操作しても自動再生を停止しない
-                stopOnLastSlide: false, // 最後のスライドで停止しない
-                waitForTransition: true, // トランジション待ち
-                reverseDirection: reverseDirection,
+            <div
+              key={img.id}
+              className="absolute"
+              style={{
+                left: `${img.left}%`,
+                width: `${img.size}px`,
+                height: `${img.size * 0.75}px`, // 4:3のアスペクト比
+                animation: `fall ${img.duration}s linear ${img.delay}s infinite`,
+                transformStyle: "preserve-3d",
+                // @ts-expect-error - CSS変数のため
+                "--rotation": `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`,
               }}
-              allowTouchMove={false}
-              freeMode={{
-                enabled: true,
-                momentumRatio: 0.3,
-                momentumVelocityRatio: 0.35,
-              }}
-              speed={8000}
-              className="mx-auto my-4 block w-screen"
             >
-              {imageUrls[parentIndex].map((imageUrl, index) => (
-                <SwiperSlide key={index}>
-                  <div className="relative aspect-[16/9] w-full">
-                    <Image
-                      src={imageUrl}
-                      alt={`Gallery ${index + 1}`}
-                      fill
-                      className="rounded-2xl object-cover opacity-70"
-                    />
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
+              <Image
+                src={img.imageUrl}
+                alt=""
+                fill
+                className="border-2 border-white object-cover"
+              />
+            </div>
           );
         })}
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 
