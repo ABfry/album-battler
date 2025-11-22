@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	domainEvent "github.com/ABfry/album-battler/backend/internal/domain/event"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	battleusecase "github.com/ABfry/album-battler/backend/internal/usecase/battle"
@@ -53,6 +55,18 @@ func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) e
 		return errors.New("only host can start the game")
 	}
 
+	// お題生成前にゲーム開始ボタンが押されたイベントを配信
+	room.RecordEvent(domainEvent.GameStartButtonPressedEvent{
+		RoomID:     room.ID,
+		OccurredOn: time.Now(),
+	})
+
+	// イベントをすぐに配信（バトル生成前にローディング画面を表示させるため）
+	events := room.PopEvents()
+	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
+		return err
+	}
+
 	// ゲーム開始と同時にバトルを生成
 	if _, err := uc.battleUseCase.Execute(ctx, battleusecase.CreateBattleInput{
 		RoomID: room.ID,
@@ -70,8 +84,8 @@ func (uc *StartGameUseCase) Execute(ctx context.Context, input StartGameInput) e
 		return err
 	}
 
-	// ドメインイベントを配信
-	events := room.PopEvents()
+	// ドメインイベントを配信 (GameStartedEvent)
+	events = room.PopEvents()
 	if err := uc.dispatcher.Dispatch(ctx, events); err != nil {
 		return err
 	}
