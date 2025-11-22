@@ -22,10 +22,7 @@ export default function TitlePage() {
     if (userId) {
       const wsUrl = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080/ws"}?user_id=${userId}`;
       setUrl(wsUrl);
-      // URL 設定後に接続（少し遅延を入れて state 更新を待つ）
-      setTimeout(() => {
-        connect();
-      }, 0);
+      connect();
     }
   }, [setUrl, connect]);
 
