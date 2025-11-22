@@ -70,11 +70,15 @@ export default function RoomPage() {
       console.error("ユーザーIDがありません");
       return;
     }
-    await startGame(roomID, userId);
-
-    const battleId = await getBattleID(roomID);
-
-    router.push(`/battle/${battleId}`);
+    setIsLoading(true);
+    try {
+      await startGame(roomID, userId);
+      const battleId = await getBattleID(roomID);
+      router.push(`/battle/${battleId}`);
+    } catch {
+      console.error("ゲーム開始エラー");
+      setIsLoading(false);
+    }
   };
 
   return (
