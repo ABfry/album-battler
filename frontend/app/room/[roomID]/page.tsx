@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type {
   PlayerJoinRoomPayload,
+  PlayerLeaveRoomPayload,
   StartButtonPressedPayload,
   StartGamePayload,
 } from "@/src/lib/websocket/types";
@@ -20,7 +21,7 @@ import { Loading } from "@/src/components/ui/loading";
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
-  const { startGame, getBattleID } = useRoom();
+  const { leaveRoom, startGame, getBattleID } = useRoom();
 
   const router = useRouter();
 
@@ -35,6 +36,14 @@ export default function RoomPage() {
       "player_join_room",
       (payload: PlayerJoinRoomPayload) => {
         console.log("Player joined room:", payload.room_id);
+        refetch();
+      }
+    );
+
+    const unsubscribeLeave = subscribe(
+      "player_leave_room",
+      (payload: PlayerLeaveRoomPayload) => {
+        console.log("Player left room:", payload.room_id);
         refetch();
       }
     );
@@ -60,6 +69,7 @@ export default function RoomPage() {
     );
     return () => {
       unsubscribeJoin();
+      unsubscribeLeave();
       unsubscribePressed();
       unsubscribeStart();
     };
@@ -80,11 +90,25 @@ export default function RoomPage() {
     }
   };
 
+  const handleLeave = async () => {
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return;
+    }
+    try {
+      await leaveRoom(roomID, userId);
+    } catch {
+      console.error("退室エラー");
+    }
+  };
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
       {/* 戻るボタン */}
       <Link
         href="/"
+        onClick={handleLeave}
         className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
       >
         ◀
