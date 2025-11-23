@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -196,7 +196,7 @@ export function Battle({
           sizes="300px"
         />
         <div
-          className="absolute left-0 right-0 flex items-center justify-center px-3 text-center leading-tight font-black text-slate-900"
+          className="absolute right-0 left-0 flex items-center justify-center px-3 text-center leading-tight font-black text-slate-900"
           style={textStyle}
         >
           {theme || "テーマ未設定"}

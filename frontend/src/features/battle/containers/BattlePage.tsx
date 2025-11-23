@@ -150,7 +150,6 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const playersRef = useRef(players);
   const imagesRef = useRef(images);
-  const battleRef = useRef(battle);
 
   useEffect(() => {
     playersRef.current = players;
