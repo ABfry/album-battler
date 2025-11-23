@@ -343,7 +343,7 @@ export function Battle({
               {/* 拍手ボタン */}
               <button
                 onClick={handleClapClick}
-                className="mx-auto flex h-16 w-full max-w-md items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
+                className="mx-auto flex h-16 w-full max-w-md items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform select-none hover:scale-[1.02] active:scale-95"
               >
                 👏
               </button>
