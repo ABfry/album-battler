@@ -161,8 +161,8 @@ export function Battle({
   const renderQuestionHeader = (variant: "large" | "small") => {
     const isLarge = variant === "large";
     const maxWidthClass = isLarge
-      ? "w-[95vw] max-w-[1200px]"
-      : "w-[99vw] max-w-[1500px]";
+      ? "w-full px-4 sm:px-6 md:px-0 max-w-[1200px]"
+      : "w-full px-4 sm:px-6 max-w-[1500px]";
     const frameStyle: CSSProperties = {
       aspectRatio: "260 / 72",
       minHeight: isLarge ? 140 : 160,
@@ -172,7 +172,7 @@ export function Battle({
       bottom: 0,
       padding: isLarge ? "0 10%" : "0 10%",
       maxHeight: "67%",
-      fontSize: isLarge ? "clamp(20px, 3vw, 26px)" : "clamp(22px, 3vw, 30px)",
+      fontSize: isLarge ? "clamp(16px, 3vw, 24px)" : "clamp(18px, 3vw, 28px)",
       lineHeight: 1.2,
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
@@ -236,7 +236,7 @@ export function Battle({
         {/* タイマー表示（右上固定） */}
         <div className="absolute top-4 right-4 z-30 md:top-6 md:right-6">
           <div
-            className={`inline-block rounded-lg px-6 py-3 text-3xl font-bold shadow-lg ${
+            className={`inline-block rounded-lg px-6 py-1.5 text-3xl font-bold shadow-lg ${
               isWarning ? "bg-red-500 text-white" : "bg-white text-slate-800"
             }`}
           >
