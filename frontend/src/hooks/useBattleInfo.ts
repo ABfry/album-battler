@@ -28,6 +28,7 @@ function mapToBattle(data: GetBattleResponse): Battle {
     startedAt: data.Battle.StartedAt,
     theme: data.Battle.Theme,
     userIds: data.Battle.UserIDs,
+    battleTimeLimitSeconds: data.Battle.BattleTimeLimitSeconds,
   };
 }
 

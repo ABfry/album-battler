@@ -17,6 +17,7 @@ func (s *APIServer) registerRoutes() {
 		s.deps.LeaveRoomUseCase,
 		s.deps.StartGameUseCase,
 		s.deps.GetRoomUseCase,
+		s.deps.UpdateRoomSettingsUseCase,
 		s.deps.RoomManager,
 		s.deps.EventPublisher,
 	)
@@ -26,6 +27,7 @@ func (s *APIServer) registerRoutes() {
 	s.mux.HandleFunc("POST /api/room/{id}/leave", roomHandler.LeaveRoom)
 	s.mux.HandleFunc("POST /api/room/{id}/start", roomHandler.StartGame)
 	s.mux.HandleFunc("GET /api/room/{id}", roomHandler.GetRoom)
+	s.mux.HandleFunc("PATCH /api/room/{id}/settings", roomHandler.UpdateRoomSettings)
 
 	// Battleハンドラ
 	battleHandler := NewBattleHandler(

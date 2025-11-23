@@ -9,6 +9,7 @@ import type {
   PlayerLeaveRoomPayload,
   StartButtonPressedPayload,
   StartGamePayload,
+  RoomSettingsUpdatedPayload,
 } from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
 import Link from "next/link";
@@ -21,7 +22,7 @@ import { Loading } from "@/src/components/ui/loading";
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
-  const { leaveRoom, startGame, getBattleID } = useRoom();
+  const { leaveRoom, startGame, getBattleID, updateRoomSettings } = useRoom();
 
   const router = useRouter();
 
@@ -31,6 +32,10 @@ export default function RoomPage() {
   // 部屋情報の取得（作成後に自動取得）
   const { room, refetch } = useRoomInfo(roomID);
   const { subscribe } = useWebSocketEvents();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const userId = getUserIdClient() || "";
+  const isHost = room?.hostUserId === userId;
   useEffect(() => {
     const unsubscribeJoin = subscribe(
       "player_join_room",
@@ -67,11 +72,24 @@ export default function RoomPage() {
         router.push(`/battle/${id}`);
       }
     );
+
+    const unsubscribeSettings = subscribe(
+      "room_settings_updated",
+      (payload: RoomSettingsUpdatedPayload) => {
+        console.log(
+          "Room settings updated:",
+          payload.battle_time_limit_seconds
+        );
+        refetch();
+      }
+    );
+
     return () => {
       unsubscribeJoin();
       unsubscribeLeave();
       unsubscribePressed();
       unsubscribeStart();
+      unsubscribeSettings();
     };
   }, [subscribe, refetch, getBattleID, roomID, router]);
 
@@ -103,6 +121,29 @@ export default function RoomPage() {
     }
   };
 
+  const handleTimeLimitChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const newTimeLimit = parseInt(e.target.value, 10);
+    if (!userId || !isHost) return;
+
+    setIsUpdating(true);
+    try {
+      const success = await updateRoomSettings(roomID, userId, {
+        battle_time_limit_seconds: newTimeLimit,
+      });
+      if (success) {
+        await refetch();
+      } else {
+        console.error("Failed to update time limit");
+      }
+    } catch (error) {
+      console.error("Failed to update time limit:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
       {/* 戻るボタン */}
@@ -125,6 +166,37 @@ export default function RoomPage() {
         <p className="mb-4 text-xs text-gray-700">
           部屋番号: {room?.roomNumber}
         </p>
+
+        {/* バトル時間設定・表示 */}
+        <div className="mb-4 w-full max-w-xs rounded-lg border border-[#3551b8] bg-white px-4 py-3">
+          <label className="mb-2 block text-sm font-bold text-gray-700">
+            バトル時間
+          </label>
+          {isHost ? (
+            <select
+              value={room?.battleTimeLimitSeconds ?? 60}
+              onChange={handleTimeLimitChange}
+              disabled={isUpdating}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-base font-medium disabled:opacity-50"
+            >
+              <option value={30}>30秒</option>
+              <option value={60}>1分</option>
+              <option value={120}>2分</option>
+              <option value={180}>3分</option>
+              <option value={240}>4分</option>
+              <option value={300}>5分</option>
+            </select>
+          ) : (
+            <div className="w-full rounded border border-gray-300 bg-gray-50 px-3 py-2 text-base font-medium text-gray-700">
+              {room?.battleTimeLimitSeconds === 30 && "30秒"}
+              {room?.battleTimeLimitSeconds === 60 && "1分"}
+              {room?.battleTimeLimitSeconds === 120 && "2分"}
+              {room?.battleTimeLimitSeconds === 180 && "3分"}
+              {room?.battleTimeLimitSeconds === 240 && "4分"}
+              {room?.battleTimeLimitSeconds === 300 && "5分"}
+            </div>
+          )}
+        </div>
 
         {/* プレイヤー一覧カード */}
         <div className="w-full max-w-xs rounded-xl border border-[#3551b8] bg-white px-6 py-6 shadow-[0_8px_0_rgba(0,0,0,0.15)]">

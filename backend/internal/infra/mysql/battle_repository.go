@@ -1,5 +1,5 @@
 // battle_repository.go は battles テーブルを扱う MySQL 実装を提供する。
-// 責務: バトルの保存と検索（ID・RoomID）を担い、行データと entity.Battle を相互変換する。
+// 責務: バトルの保存と検索(ID・RoomID)を担い、行データと entity.Battle を相互変換する。
 // 依存: database/sql、dao.go の共通クエリヘルパー。参加ユーザー一覧は battle_users テーブル側で管理する。
 package mysql
 
@@ -32,15 +32,15 @@ func NewBattleRepository(db *sql.DB) repository.BattleRepository {
 // why: バトル詳細表示や集計で ID を直接指定するケースがあるため。
 func (r *mysqlBattleRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.Battle, error) {
 	query := `
-		SELECT b.id, b.room_id, b.started_at, b.theme,
+		SELECT b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
 		       b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
 		       b.clap_current_user_index, b.result_started_at,
 		       GROUP_CONCAT(bu.user_id ORDER BY bu.user_id SEPARATOR ',') as user_ids
 		FROM battles b
 		LEFT JOIN battle_users bu ON b.id = bu.battle_id
 		WHERE b.id = ?
-		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.current_phase,
-		         b.selecting_started_at, b.clap_phase_started_at,
+		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
+		         b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
 		         b.clap_current_user_index, b.result_started_at
 	`
 
@@ -52,15 +52,15 @@ func (r *mysqlBattleRepository) FindByID(ctx context.Context, id uuid.UUID) (*en
 // why: ルームごとの進行状況確認で RoomID からバトルを逆引きするため。
 func (r *mysqlBattleRepository) FindByRoomID(ctx context.Context, roomID uuid.UUID) (*entity.Battle, error) {
 	query := `
-		SELECT b.id, b.room_id, b.started_at, b.theme,
+		SELECT b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
 		       b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
 		       b.clap_current_user_index, b.result_started_at,
 		       GROUP_CONCAT(bu.user_id ORDER BY bu.user_id SEPARATOR ',') as user_ids
 		FROM battles b
 		LEFT JOIN battle_users bu ON b.id = bu.battle_id
 		WHERE b.room_id = ?
-		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.current_phase,
-		         b.selecting_started_at, b.clap_phase_started_at,
+		GROUP BY b.id, b.room_id, b.started_at, b.theme, b.battle_time_limit_seconds,
+		         b.current_phase, b.selecting_started_at, b.clap_phase_started_at,
 		         b.clap_current_user_index, b.result_started_at
 		ORDER BY b.started_at DESC
 		LIMIT 1
@@ -81,6 +81,7 @@ func (r *mysqlBattleRepository) Save(ctx context.Context, battle *entity.Battle)
 		battle.RoomID.String(),
 		battle.StartedAt,
 		battle.Theme,
+		battle.BattleTimeLimitSeconds,
 		battle.CurrentPhase,
 		battle.SelectingStartedAt,
 		battle.ClapPhaseStartedAt,
@@ -99,6 +100,7 @@ func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle
 		roomIDStr              string
 		startedAt              time.Time
 		theme                  string
+		battleTimeLimitSeconds int
 		currentPhase           sql.NullString
 		selectingStartedAt     sql.NullTime
 		clapPhaseStartedAt     sql.NullTime
@@ -107,7 +109,7 @@ func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle
 		userIDsStr             sql.NullString // GROUP_CONCAT の結果は NULL の可能性がある
 	)
 
-	if err := scanner.Scan(&idStr, &roomIDStr, &startedAt, &theme,
+	if err := scanner.Scan(&idStr, &roomIDStr, &startedAt, &theme, &battleTimeLimitSeconds,
 		&currentPhase, &selectingStartedAt, &clapPhaseStartedAt,
 		&clapCurrentUserIndex, &resultStartedAt, &userIDsStr); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -167,16 +169,17 @@ func (r *mysqlBattleRepository) createBattle(scanner rowScanner) (*entity.Battle
 	}
 
 	return &entity.Battle{
-		ID:                   battleID,
-		RoomID:               roomID,
-		StartedAt:            startedAt,
-		Theme:                theme,
-		CurrentPhase:         currentPhaseStr,
-		SelectingStartedAt:   selectingStartedAtPtr,
-		ClapPhaseStartedAt:   clapPhaseStartedAtPtr,
-		ClapCurrentUserIndex: clapCurrentUserIndexPtr,
-		ResultStartedAt:      resultStartedAtPtr,
-		UserIDs:              userIDs,
+		ID:                     battleID,
+		RoomID:                 roomID,
+		StartedAt:              startedAt,
+		Theme:                  theme,
+		BattleTimeLimitSeconds: battleTimeLimitSeconds,
+		CurrentPhase:           currentPhaseStr,
+		SelectingStartedAt:     selectingStartedAtPtr,
+		ClapPhaseStartedAt:     clapPhaseStartedAtPtr,
+		ClapCurrentUserIndex:   clapCurrentUserIndexPtr,
+		ResultStartedAt:        resultStartedAtPtr,
+		UserIDs:                userIDs,
 	}, nil
 }
 

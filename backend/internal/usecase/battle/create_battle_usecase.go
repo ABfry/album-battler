@@ -69,7 +69,7 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 	}
 
 	// バトルを作成
-	battle, err := entity.NewBattle(input.RoomID, userIDs, theme)
+	battle, err := entity.NewBattle(input.RoomID, userIDs, theme, room.BattleTimeLimitSeconds)
 	if err != nil {
 		return nil, errors.New("failed to create battle")
 	}
@@ -89,10 +89,10 @@ func (uc *CreateBattleUseCase) Execute(ctx context.Context, input CreateBattleIn
 		return nil, errors.New("failed to save battle users")
 	}
 
-	// 画像投稿期限をスケジュール (デフォルト1分)
-	const defaultSubmissionDeadline = time.Minute
+	// 画像投稿期限をスケジュール (Roomの設定から取得)
+	submissionDeadline := time.Duration(room.BattleTimeLimitSeconds) * time.Second
 	if uc.imageSubmissionScheduler != nil {
-		uc.imageSubmissionScheduler.Schedule(battle.ID, defaultSubmissionDeadline)
+		uc.imageSubmissionScheduler.Schedule(battle.ID, submissionDeadline)
 	}
 
 	return &CreateBattleOutput{BattleID: battle.ID}, nil

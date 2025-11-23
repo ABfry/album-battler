@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { roomApi } from "@/src/lib/api/roomApi";
-import type { CreateRoomResponse } from "@/src/lib/api/types";
+import type {
+  CreateRoomResponse,
+  UpdateRoomSettingsRequest,
+} from "@/src/lib/api/types";
 
 type UseRoomResult = {
   createRoom: (userId: string) => Promise<CreateRoomResponse | null>;
@@ -10,6 +13,11 @@ type UseRoomResult = {
   leaveRoom: (roomId: string, userId: string) => Promise<boolean>;
   startGame: (roomId: string, userId: string) => Promise<boolean>;
   getBattleID: (roomId: string) => Promise<string | null>;
+  updateRoomSettings: (
+    roomId: string,
+    userId: string,
+    settings: Partial<Omit<UpdateRoomSettingsRequest, "user_id">>
+  ) => Promise<boolean>;
   loading: boolean;
   error: string | null;
 };
@@ -102,12 +110,33 @@ export function useRoom(): UseRoomResult {
     }
   };
 
+  const updateRoomSettings = async (
+    roomId: string,
+    userId: string,
+    settings: Partial<Omit<UpdateRoomSettingsRequest, "user_id">>
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await roomApi.updateRoomSettings(roomId, userId, settings);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update room settings";
+      setError(message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     createRoom,
     joinRoom,
     leaveRoom,
     startGame,
     getBattleID,
+    updateRoomSettings,
     loading,
     error,
   };

@@ -95,14 +95,15 @@ func GetValidTransitions(status RoomStatus) []RoomStatus {
 type Room struct {
 	event.AggregateRoot // ドメインイベント記録機能を埋め込み
 
-	ID         uuid.UUID
-	RoomNumber int // 1~9999
-	HostUserID *uuid.UUID
-	CreatedAt  time.Time
-	ExpiredAt  time.Time
-	Status     RoomStatus
-	UserIDs    []uuid.UUID
-	MaxUsers   int
+	ID                      uuid.UUID
+	RoomNumber              int // 1~9999
+	HostUserID              *uuid.UUID
+	CreatedAt               time.Time
+	ExpiredAt               time.Time
+	Status                  RoomStatus
+	UserIDs                 []uuid.UUID
+	MaxUsers                int
+	BattleTimeLimitSeconds  int // 30~300秒
 }
 
 func NewRoom(roomNumber int, expiredAt time.Time, maxUsers int) (*Room, error) {
@@ -116,14 +117,15 @@ func NewRoom(roomNumber int, expiredAt time.Time, maxUsers int) (*Room, error) {
 	}
 
 	return &Room{
-		ID:         uuid.New(),
-		RoomNumber: roomNumber,
-		HostUserID: nil,
-		CreatedAt:  time.Now(),
-		ExpiredAt:  expiredAt,
-		Status:     WaitJoin,
-		UserIDs:    []uuid.UUID{},
-		MaxUsers:   maxUsers,
+		ID:                     uuid.New(),
+		RoomNumber:             roomNumber,
+		HostUserID:             nil,
+		CreatedAt:              time.Now(),
+		ExpiredAt:              expiredAt,
+		Status:                 WaitJoin,
+		UserIDs:                []uuid.UUID{},
+		MaxUsers:               maxUsers,
+		BattleTimeLimitSeconds: 60, // デフォルト1分
 	}, nil
 }
 
@@ -248,6 +250,23 @@ func (r *Room) Dissolve() error {
 	r.UserIDs = []uuid.UUID{}
 	r.HostUserID = nil
 	r.Status = Closed
+	return nil
+}
+
+func (r *Room) UpdateBattleTimeLimit(seconds int) error {
+	if seconds < 30 || seconds > 300 {
+		return errors.New("battle time limit must be between 30 and 300 seconds")
+	}
+	r.BattleTimeLimitSeconds = seconds
+
+	// ドメインイベント記録
+	r.RecordEvent(event.RoomSettingsUpdatedEvent{
+		RoomID:                 r.ID,
+		RoomNumber:             r.RoomNumber,
+		BattleTimeLimitSeconds: r.BattleTimeLimitSeconds,
+		OccurredOn:             time.Now(),
+	})
+
 	return nil
 }
 
