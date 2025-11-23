@@ -83,7 +83,7 @@ func (r *mysqlRoomRepository) FindByRoomNumber(ctx context.Context, roomNumber i
 // why: WebSocket再接続時に、ユーザーが参加中の部屋を復元するため。
 func (r *mysqlRoomRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Room, error) {
 	query := `
-		SELECT r.id, r.room_number, r.host_user_id, r.created_at, r.expired_at, r.status, r.max_users
+		SELECT r.id, r.room_number, r.host_user_id, r.created_at, r.expired_at, r.status, r.max_users, r.battle_time_limit_seconds
 		FROM rooms r
 		INNER JOIN room_users ru ON r.id = ru.room_id
 		WHERE ru.user_id = ?
