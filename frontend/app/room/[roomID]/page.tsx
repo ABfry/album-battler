@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type {
   PlayerJoinRoomPayload,
+  PlayerLeaveRoomPayload,
   StartButtonPressedPayload,
   StartGamePayload,
   RoomSettingsUpdatedPayload,
@@ -21,7 +22,7 @@ import { Loading } from "@/src/components/ui/loading";
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
-  const { startGame, getBattleID, updateRoomSettings } = useRoom();
+  const { leaveRoom, startGame, getBattleID, updateRoomSettings } = useRoom();
 
   const router = useRouter();
 
@@ -40,6 +41,14 @@ export default function RoomPage() {
       "player_join_room",
       (payload: PlayerJoinRoomPayload) => {
         console.log("Player joined room:", payload.room_id);
+        refetch();
+      }
+    );
+
+    const unsubscribeLeave = subscribe(
+      "player_leave_room",
+      (payload: PlayerLeaveRoomPayload) => {
+        console.log("Player left room:", payload.room_id);
         refetch();
       }
     );
@@ -77,6 +86,7 @@ export default function RoomPage() {
 
     return () => {
       unsubscribeJoin();
+      unsubscribeLeave();
       unsubscribePressed();
       unsubscribeStart();
       unsubscribeSettings();
@@ -95,6 +105,19 @@ export default function RoomPage() {
     } catch {
       console.error("ゲーム開始エラー");
       setIsLoading(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return;
+    }
+    try {
+      await leaveRoom(roomID, userId);
+    } catch {
+      console.error("退室エラー");
     }
   };
 
@@ -126,6 +149,7 @@ export default function RoomPage() {
       {/* 戻るボタン */}
       <Link
         href="/"
+        onClick={handleLeave}
         className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
       >
         ◀
