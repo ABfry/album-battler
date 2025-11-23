@@ -2,6 +2,7 @@ import type { GetBattleResultResponse, UserInfo } from "@/src/lib/api/types";
 import { Button } from "@/src/components/ui/button";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import type { CSSProperties } from "react";
 
 type ResultViewProps = {
   battleResult: GetBattleResultResponse | null;
@@ -24,6 +25,50 @@ export function ResultView({
   onBackToTitle,
   onShare,
 }: ResultViewProps) {
+  const renderThemeHeader = (label: string) => {
+    const maxWidthClass = "w-[99vw] max-w-[1500px]";
+    const frameStyle: CSSProperties = {
+      aspectRatio: "260 / 72",
+      minHeight: 160,
+    };
+    const textStyle: CSSProperties = {
+      top: "33%",
+      bottom: 0,
+      padding: "0 10%",
+      maxHeight: "67%",
+      fontSize: "clamp(22px, 3vw, 30px)",
+      lineHeight: 1.2,
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+      textAlign: "center",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    };
+
+    return (
+      <div
+        className={`relative mx-auto w-full overflow-hidden ${maxWidthClass}`}
+        style={frameStyle}
+      >
+        <Image
+          src="/question-header.png"
+          alt="Question Header"
+          fill
+          className="object-contain"
+          priority
+          sizes="300px"
+        />
+        <div
+          className="absolute left-0 right-0 flex items-center justify-center px-3 text-center leading-tight font-black text-slate-900"
+          style={textStyle}
+        >
+          {label || "テーマ未設定"}
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -76,9 +121,8 @@ export function ResultView({
       <div className="w-full max-w-4xl space-y-8">
         {/* お題表示 */}
         {theme && (
-          <div className="text-center">
-            <h2 className="mb-2 text-2xl font-bold text-slate-700">お題</h2>
-            <p className="text-3xl font-black text-[#b57c39]">{theme}</p>
+          <div className="flex justify-center">
+            {renderThemeHeader(theme)}
           </div>
         )}
 

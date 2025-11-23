@@ -2,15 +2,19 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRoomInfo } from "@/src/hooks/useRoomInfo";
 import type {
   PlayerJoinRoomPayload,
+  PlayerLeaveRoomPayload,
   StartButtonPressedPayload,
   StartGamePayload,
   RoomSettingsUpdatedPayload,
 } from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
+import { useGameStateRestore } from "@/src/hooks/useGameStateRestore";
+import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import Link from "next/link";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRouter } from "next/navigation";
@@ -21,7 +25,8 @@ import { Loading } from "@/src/components/ui/loading";
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
-  const { startGame, getBattleID, updateRoomSettings } = useRoom();
+  const { setCurrentRoomId } = useWebSocket();
+  const { leaveRoom, startGame, getBattleID, updateRoomSettings } = useRoom();
 
   const router = useRouter();
 
@@ -31,6 +36,16 @@ export default function RoomPage() {
   // 部屋情報の取得（作成後に自動取得）
   const { room, refetch } = useRoomInfo(roomID);
   const { subscribe } = useWebSocketEvents();
+
+  // WebSocket再接続時の状態復元
+  useGameStateRestore();
+
+  // 現在のルームIDを保存（再接続時に使用）
+  useEffect(() => {
+    if (roomID) {
+      setCurrentRoomId(roomID);
+    }
+  }, [roomID, setCurrentRoomId]);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const userId = getUserIdClient() || "";
@@ -40,6 +55,14 @@ export default function RoomPage() {
       "player_join_room",
       (payload: PlayerJoinRoomPayload) => {
         console.log("Player joined room:", payload.room_id);
+        refetch();
+      }
+    );
+
+    const unsubscribeLeave = subscribe(
+      "player_leave_room",
+      (payload: PlayerLeaveRoomPayload) => {
+        console.log("Player left room:", payload.room_id);
         refetch();
       }
     );
@@ -57,7 +80,6 @@ export default function RoomPage() {
       "start_game",
       async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
-        setIsLoading(false);
         refetch();
         const id = await getBattleID(roomID);
         router.push(`/battle/${id}`);
@@ -77,6 +99,7 @@ export default function RoomPage() {
 
     return () => {
       unsubscribeJoin();
+      unsubscribeLeave();
       unsubscribePressed();
       unsubscribeStart();
       unsubscribeSettings();
@@ -95,6 +118,19 @@ export default function RoomPage() {
     } catch {
       console.error("ゲーム開始エラー");
       setIsLoading(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    const userId = getUserIdClient() || "";
+    if (userId === "") {
+      console.error("ユーザーIDがありません");
+      return;
+    }
+    try {
+      await leaveRoom(roomID, userId);
+    } catch {
+      console.error("退室エラー");
     }
   };
 
@@ -122,30 +158,22 @@ export default function RoomPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#d6c2a4]">
-      {/* 戻るボタン */}
-      <Link
-        href="/"
-        className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
-      >
-        ◀
-      </Link>
-
-      {/* ルーム全体コンテナ（縦長スマホ想定） */}
-      <div className="flex h-[640px] w-[360px] flex-col items-center">
+    <main className="flex min-h-screen items-center justify-center">
+      {/* ルーム全体コンテナ */}
+      <div className="flex w-full max-w-sm flex-col items-center gap-6 px-6 py-10">
         {/* タイトル */}
-        <h1 className="mt-12 mb-4 text-3xl font-black tracking-widest text-[#b57c39]">
-          ルーム
-        </h1>
+        <h1 className="text-2xl font-black text-[#4a3b2a]">ルーム</h1>
 
-        {/* 部屋番号（必要なら表示） */}
-        <p className="mb-4 text-xs text-gray-700">
-          部屋番号: {room?.roomNumber}
-        </p>
+        {/* 部屋番号 */}
+        <div className="rounded-xl bg-white px-6 py-3 shadow-[0_3px_0_#b3ac9f]">
+          <p className="text-center text-lg font-bold tracking-widest text-[#4a3b2a]">
+            部屋番号: {room?.roomNumber}
+          </p>
+        </div>
 
         {/* バトル時間設定・表示 */}
-        <div className="mb-4 w-full max-w-xs rounded-lg border border-[#3551b8] bg-white px-4 py-3">
-          <label className="mb-2 block text-sm font-bold text-gray-700">
+        <div className="w-full rounded-xl bg-white px-6 py-4 shadow-[0_3px_0_#b3ac9f]">
+          <label className="mb-3 block text-center text-sm font-bold text-[#4a3b2a]">
             バトル時間
           </label>
           {isHost ? (
@@ -153,7 +181,7 @@ export default function RoomPage() {
               value={room?.battleTimeLimitSeconds ?? 60}
               onChange={handleTimeLimitChange}
               disabled={isUpdating}
-              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-base font-medium disabled:opacity-50"
+              className="w-full rounded-xl border-2 border-[#c6c0b5] bg-white px-4 py-2 text-center text-base font-semibold focus:border-[#a39c8e] focus:outline-none disabled:opacity-50"
             >
               <option value={30}>30秒</option>
               <option value={60}>1分</option>
@@ -163,7 +191,7 @@ export default function RoomPage() {
               <option value={300}>5分</option>
             </select>
           ) : (
-            <div className="w-full rounded border border-gray-300 bg-gray-50 px-3 py-2 text-base font-medium text-gray-700">
+            <div className="w-full rounded-xl border-2 border-[#c6c0b5] bg-gray-50 px-4 py-2 text-center text-base font-semibold text-[#4a3b2a]">
               {room?.battleTimeLimitSeconds === 30 && "30秒"}
               {room?.battleTimeLimitSeconds === 60 && "1分"}
               {room?.battleTimeLimitSeconds === 120 && "2分"}
@@ -175,18 +203,28 @@ export default function RoomPage() {
         </div>
 
         {/* プレイヤー一覧カード */}
-        <div className="w-full max-w-xs rounded-xl border border-[#3551b8] bg-white px-6 py-6 shadow-[0_8px_0_rgba(0,0,0,0.15)]">
+        <div className="w-full rounded-xl bg-white px-6 py-6 shadow-[0_3px_0_#b3ac9f]">
+          <h2 className="mb-4 text-center text-sm font-bold text-[#4a3b2a]">
+            参加プレイヤー
+          </h2>
           <ul className="space-y-3">
             {room?.users.map((p) => (
               <li key={p.id} className="flex items-center gap-3">
                 {/* アイコンの丸 */}
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-black">
-                  {/* 中の顔アイコンはシンプルに線だけ */}
-                  <div className="h-5 w-5 rounded-full border border-gray-400" />
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-[#c6c0b5]">
+                  <Image
+                    width={36}
+                    height={36}
+                    src={p.icon_url}
+                    alt={p.name}
+                    className="h-full w-full rounded-full object-cover"
+                  />
                 </div>
 
                 {/* 名前 */}
-                <span className={"text-lg font-black"}>{p.name}</span>
+                <span className="text-lg font-bold text-[#4a3b2a]">
+                  {p.name}
+                </span>
               </li>
             ))}
           </ul>
@@ -194,21 +232,30 @@ export default function RoomPage() {
 
         {/* バトルボタン */}
         <Button
-          variant="primary"
-          size="lg"
-          disabled={(room?.users?.length ?? 0) < 2 || isLoading}
+          disabled={!isHost || (room?.users?.length ?? 0) < 2 || isLoading}
           onClick={handleBattle}
-          className="mt-8 w-full"
+          className="w-64 rounded-xl bg-[#6b5337] py-3 text-lg font-black text-white shadow-[0_6px_0_rgba(0,0,0,0.35)] transition hover:bg-[#6b5337] hover:brightness-110 active:translate-y-1 active:shadow-[0_2px_0_rgba(0,0,0,0.35)]"
         >
           {isLoading ? (
             <div className="flex items-center justify-center gap-3">
               <Loading />
-              <span className="text-lg font-black">待機中...</span>
+              <span>待機中...</span>
             </div>
+          ) : isHost ? (
+            "バトル！"
           ) : (
-            <span className="text-lg font-black">バトル！</span>
+            "ホストの開始を待っています"
           )}
         </Button>
+
+        {/* 戻るボタン */}
+        <Link
+          href="/"
+          className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-md bg-white text-xl shadow"
+          onClick={handleLeave}
+        >
+          ◀
+        </Link>
       </div>
     </main>
   );

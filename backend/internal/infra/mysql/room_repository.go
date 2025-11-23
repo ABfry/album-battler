@@ -79,6 +79,44 @@ func (r *mysqlRoomRepository) FindByRoomNumber(ctx context.Context, roomNumber i
 	return room, nil
 }
 
+// FindByUserID はユーザーIDから所属している部屋一覧を取得する。
+// why: WebSocket再接続時に、ユーザーが参加中の部屋を復元するため。
+func (r *mysqlRoomRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.Room, error) {
+	query := `
+		SELECT r.id, r.room_number, r.host_user_id, r.created_at, r.expired_at, r.status, r.max_users, r.battle_time_limit_seconds
+		FROM rooms r
+		INNER JOIN room_users ru ON r.id = ru.room_id
+		WHERE ru.user_id = ?
+		AND r.status NOT IN ('closed')
+	`
+	rows, err := r.db.QueryContext(ctx, query, userID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to find rooms by user ID: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			fmt.Printf("failed to close rows: %v\n", err)
+		}
+	}()
+
+	var rooms []*entity.Room
+	for rows.Next() {
+		room, err := r.createRoom(rows)
+		if err != nil {
+			return nil, err
+		}
+		// room_users から UserIDs を読み込む
+		if err := r.loadUserIDs(ctx, room); err != nil {
+			return nil, err
+		}
+		rooms = append(rooms, room)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return rooms, nil
+}
+
 // FindAll は rooms テーブル全件を読み出す。
 // why: 管理画面やバッチでの一括処理向け。件数増大時は呼び出し側でページネーションを検討する。
 func (r *mysqlRoomRepository) FindAll(ctx context.Context) ([]*entity.Room, error) {

@@ -6,6 +6,7 @@ func (s *APIServer) registerRoutes() {
 	// WebSocketハンドラ（/api プレフィックスなし）
 	wsHandler := NewWebSocketHandler(
 		s.deps.WebSocketHub,
+		s.deps.RoomRepository,
 		s.deps.ClapSendUseCase,
 	)
 	s.mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
