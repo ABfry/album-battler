@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
@@ -122,6 +122,29 @@ export function Battle({
 }: BattleProps) {
   // 拍手エフェクトの管理
   const [clapEffects, setClapEffects] = useState<ClapEffect[]>([]);
+  const clapPlayersRef = useRef<HTMLAudioElement[]>([]);
+  const clapPlayerIndexRef = useRef(0);
+
+  // 拍手サウンドのプールを用意（同時最大5個）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pool = Array.from({ length: 2 }, () => {
+      const audio = new Audio("/sounds/clap_sound.mp3");
+      audio.preload = "auto";
+      audio.volume = 0.7;
+      return audio;
+    });
+
+    clapPlayersRef.current = pool;
+
+    return () => {
+      clapPlayersRef.current.forEach((audio) => {
+        audio.pause();
+      });
+      clapPlayersRef.current = [];
+    };
+  }, []);
 
   // 全てのエフェクトに対するタイマーをセットアップ＆クリーンアップ
   useEffect(() => {
@@ -137,10 +160,27 @@ export function Battle({
     };
   }, [clapEffects]);
 
+  // サウンド再生（プールを順番に使う）
+  const playClapSound = useCallback(() => {
+    const players = clapPlayersRef.current;
+    if (!players.length) return;
+
+    const idx = clapPlayerIndexRef.current % players.length;
+    const audio = players[idx];
+    try {
+      audio.currentTime = 0;
+      void audio.play();
+    } catch {
+      // 自動再生制限などで失敗するケースは無視
+    }
+    clapPlayerIndexRef.current = idx + 1;
+  }, []);
+
   // 拍手ボタンクリック時のハンドラー
   const handleClapClick = useCallback(() => {
     // 元の拍手処理を実行
     onClap();
+    playClapSound();
 
     // 拍手エフェクトを追加（ランダム値はここで計算）
     const newEffect: ClapEffect = {
@@ -150,7 +190,7 @@ export function Battle({
       originXPercent: 10 + Math.random() * 80, // ボタン幅ほぼ全体をカバーする発生位置
     };
     setClapEffects((prev) => [...prev, newEffect]);
-  }, [onClap]);
+  }, [onClap, playClapSound]);
 
   const router = useRouter();
 
