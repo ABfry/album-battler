@@ -122,7 +122,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
         const startTime = new Date(selecting_started_at).getTime();
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
-        const timeLimitSeconds = battleRef.current?.battleTimeLimitSeconds ?? 60;
+        const timeLimitSeconds =
+          battleRef.current?.battleTimeLimitSeconds ?? 60;
         const remainingTime = Math.max(timeLimitSeconds - elapsed, 0);
 
         timer.resetTimer(remainingTime);
@@ -283,7 +284,6 @@ export function BattlePage({ battleID }: BattlePageProps) {
     });
 
     battlePhaseRef.current.setHandlers(handlers);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const phaseMessage = useMemo(() => {
