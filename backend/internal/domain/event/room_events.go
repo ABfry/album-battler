@@ -70,3 +70,19 @@ func (e GameStartedEvent) EventType() string {
 func (e GameStartedEvent) OccurredAt() time.Time {
 	return e.OccurredOn
 }
+
+// 部屋の設定が更新されたイベント
+type RoomSettingsUpdatedEvent struct {
+	RoomID                 uuid.UUID
+	RoomNumber             int
+	BattleTimeLimitSeconds int
+	OccurredOn             time.Time
+}
+
+func (e RoomSettingsUpdatedEvent) EventType() string {
+	return "room_settings_updated"
+}
+
+func (e RoomSettingsUpdatedEvent) OccurredAt() time.Time {
+	return e.OccurredOn
+}

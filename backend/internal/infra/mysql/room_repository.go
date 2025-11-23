@@ -137,6 +137,7 @@ func (r *mysqlRoomRepository) Save(ctx context.Context, room *entity.Room) error
 		room.ExpiredAt,
 		statusStr,
 		room.MaxUsers,
+		room.BattleTimeLimitSeconds,
 	); err != nil {
 		return err
 	}
@@ -223,16 +224,17 @@ func (r *mysqlRoomRepository) saveUserIDs(ctx context.Context, room *entity.Room
 // why: カラム順序と変換ロジックを集中管理し、スキーマ変更時の漏れを防ぐ。
 func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, error) {
 	var (
-		idStr        string
-		roomNumber   int
-		hostUserID   string
-		createdAt    time.Time
-		expiredAt    sql.NullTime
-		statusString string
-		maxUsers     int
+		idStr                   string
+		roomNumber              int
+		hostUserID              sql.NullString
+		createdAt               time.Time
+		expiredAt               sql.NullTime
+		statusString            string
+		maxUsers                int
+		battleTimeLimitSeconds  int
 	)
 
-	if err := scanner.Scan(&idStr, &roomNumber, &hostUserID, &createdAt, &expiredAt, &statusString, &maxUsers); err != nil {
+	if err := scanner.Scan(&idStr, &roomNumber, &hostUserID, &createdAt, &expiredAt, &statusString, &maxUsers, &battleTimeLimitSeconds); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -243,24 +245,32 @@ func (r *mysqlRoomRepository) createRoom(scanner rowScanner) (*entity.Room, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse room id: %w", err)
 	}
-	hostID, err := uuid.Parse(hostUserID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse host user id: %w", err)
+
+	// host_user_id のNULLチェック
+	var hostPtr *uuid.UUID
+	if hostUserID.Valid && hostUserID.String != "" {
+		hostID, err := uuid.Parse(hostUserID.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse host user id: %w", err)
+		}
+		hostPtr = &hostID
 	}
+
 	status, err := toEntityRoomStatus(statusString)
 	if err != nil {
 		return nil, err
 	}
 
 	room := &entity.Room{
-		ID:         roomID,
-		RoomNumber: roomNumber,
-		CreatedAt:  createdAt,
-		ExpiredAt:  expiredAt.Time,
-		Status:     status,
-		MaxUsers:   maxUsers,
+		ID:                     roomID,
+		RoomNumber:             roomNumber,
+		HostUserID:             hostPtr,
+		CreatedAt:              createdAt,
+		ExpiredAt:              expiredAt.Time,
+		Status:                 status,
+		MaxUsers:               maxUsers,
+		BattleTimeLimitSeconds: battleTimeLimitSeconds,
 	}
-	room.HostUserID = &hostID
 	return room, nil
 }
 

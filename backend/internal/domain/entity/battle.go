@@ -11,13 +11,14 @@ import (
 type Battle struct {
 	event.AggregateRoot
 
-	ID        uuid.UUID
-	RoomID    uuid.UUID
-	StartedAt time.Time
-	Theme     string
-	UserIDs   []uuid.UUID
+	ID                     uuid.UUID
+	RoomID                 uuid.UUID
+	StartedAt              time.Time
+	Theme                  string
+	UserIDs                []uuid.UUID
+	BattleTimeLimitSeconds int // 30~300秒
 
-	// ゲーム状態管理（WebSocket再接続時の状態復元用）
+	// ゲーム状態管理(WebSocket再接続時の状態復元用)
 	CurrentPhase         string     // "selecting" | "clap_time" | "result" | "finished"
 	SelectingStartedAt   *time.Time // 画像選択開始時刻
 	ClapPhaseStartedAt   *time.Time // 現在の拍手フェーズ開始時刻
@@ -25,13 +26,17 @@ type Battle struct {
 	ResultStartedAt      *time.Time // 結果フェーズ開始時刻
 }
 
-func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string) (*Battle, error) {
+func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string, battleTimeLimitSeconds int) (*Battle, error) {
 	if roomID == uuid.Nil {
 		return nil, errors.New("roomID is required")
 	}
 
 	if theme == "" {
 		return nil, errors.New("theme is required")
+	}
+
+	if battleTimeLimitSeconds < 30 || battleTimeLimitSeconds > 300 {
+		return nil, errors.New("battle time limit must be between 30 and 300 seconds")
 	}
 
 	// 人数チェック
@@ -46,12 +51,13 @@ func NewBattle(roomID uuid.UUID, userIDs []uuid.UUID, theme string) (*Battle, er
 	}
 
 	return &Battle{
-		ID:           uuid.New(),
-		RoomID:       roomID,
-		StartedAt:    time.Now(),
-		Theme:        theme,
-		UserIDs:      userIDs,
-		CurrentPhase: "selecting", // 初期状態は画像選択フェーズ
+		ID:                     uuid.New(),
+		RoomID:                 roomID,
+		StartedAt:              time.Now(),
+		Theme:                  theme,
+		UserIDs:                userIDs,
+		BattleTimeLimitSeconds: battleTimeLimitSeconds,
+		CurrentPhase:           "selecting", // 初期状態は画像選択フェーズ
 	}, nil
 }
 
