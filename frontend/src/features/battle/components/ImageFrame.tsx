@@ -180,7 +180,7 @@ export function ImageFrame({
 
       {/* ボタン or 時間切れ表示 */}
       {selectedImage && !isImageSent && (
-        <div className="flex w-full shrink-0 flex-wrap justify-center gap-3 px-2">
+        <div className="flex w-full shrink-0 flex-wrap justify-center gap-1 px-2 sm:gap-3">
           {canSelect ? (
             <>
               <Button
@@ -191,6 +191,7 @@ export function ImageFrame({
                   console.log("Cancel button clicked");
                   onCancel();
                 }}
+                className="mt-2 w-36 sm:mt-8 sm:w-56"
               >
                 取り消す
               </Button>
@@ -202,6 +203,7 @@ export function ImageFrame({
                   console.log("Confirm button clicked");
                   onConfirmImage();
                 }}
+                className="mt-2 w-36 sm:mt-8 sm:w-56"
               >
                 {isSending ? "送信中..." : "これで決定"}
               </Button>
