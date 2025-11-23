@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ABfry/album-battler/backend/internal/domain/event"
+	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/infra/websocket"
 	"github.com/ABfry/album-battler/backend/internal/usecase/clap"
 	"github.com/google/uuid"
@@ -26,16 +27,19 @@ type WebSocketHandler struct {
 	hub      *websocket.Hub
 	incoming chan *websocket.ClientInboundMessage
 
+	roomRepo        repository.RoomRepository
 	clapSendUseCase *clap.ClapSendUseCase
 }
 
 func NewWebSocketHandler(
 	hub *websocket.Hub,
+	roomRepo repository.RoomRepository,
 	clapSendUseCase *clap.ClapSendUseCase,
 ) *WebSocketHandler {
 	handler := &WebSocketHandler{
 		hub:             hub,
 		incoming:        make(chan *websocket.ClientInboundMessage, 256),
+		roomRepo:        roomRepo,
 		clapSendUseCase: clapSendUseCase,
 	}
 	go handler.consumeIncoming(context.Background())
@@ -90,6 +94,19 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 	go client.ReadPump()
 
 	log.Printf("New WebSocket connection: userID=%s", userID)
+
+	// ユーザーが参加中の部屋をDBから取得し、WebSocket Hub上のルームに再登録
+	if h.roomRepo != nil {
+		rooms, err := h.roomRepo.FindByUserID(r.Context(), userID)
+		if err != nil {
+			log.Printf("Failed to find rooms for user=%s: %v", userID, err)
+		} else {
+			for _, room := range rooms {
+				h.hub.JoinRoom(userID, room.ID)
+				log.Printf("Restored room membership: userID=%s, roomID=%s", userID, room.ID)
+			}
+		}
+	}
 }
 
 func (h *WebSocketHandler) consumeIncoming(ctx context.Context) {
