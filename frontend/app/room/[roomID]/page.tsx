@@ -67,7 +67,6 @@ export default function RoomPage() {
       "start_game",
       async (payload: StartGamePayload) => {
         console.log("Game started:", payload.room_id);
-        setIsLoading(false);
         refetch();
         const id = await getBattleID(roomID);
         router.push(`/battle/${id}`);

@@ -49,6 +49,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
   const [battleResult, setBattleResult] =
     useState<GetBattleResultResponse | null>(null);
   const [remoteClapEffects, setRemoteClapEffects] = useState<ClapEffect[]>([]);
+  const [showThemeIntro, setShowThemeIntro] = useState(false);
+  const [skipThemeIntroOnce, setSkipThemeIntroOnce] = useState(false);
+  const themeIntroTimeoutRef = useRef<number | null>(null);
 
   // 1. バトル情報取得
   const {
@@ -125,6 +128,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
         if (remainingTime > 0) {
           timer.startTimer();
         }
+        if (remainingTime < 60) {
+          setSkipThemeIntroOnce(true);
+        }
       }
     } else if (current_phase === "clap_time") {
       // 拍手フェーズ復元: clap_current_user_indexに基づいてフェーズを決定
@@ -155,8 +161,12 @@ export function BattlePage({ battleID }: BattlePageProps) {
   }, [images]);
 
   useEffect(() => {
-    battleRef.current = battle;
-  }, [battle]);
+    return () => {
+      if (themeIntroTimeoutRef.current) {
+        window.clearTimeout(themeIntroTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
@@ -168,15 +178,34 @@ export function BattlePage({ battleID }: BattlePageProps) {
       selecting: {
         onPhaseStart: () => {
           console.log("画像選択開始");
-          const timeLimit = battleRef.current?.battleTimeLimitSeconds ?? 60;
-          timer.resetTimer(timeLimit);
-          timer.startTimer();
+          if (skipThemeIntroOnce) {
+            setSkipThemeIntroOnce(false);
+            return;
+          }
+
+          timer.resetTimer(60);
+          setShowThemeIntro(true);
+
+          if (themeIntroTimeoutRef.current) {
+            window.clearTimeout(themeIntroTimeoutRef.current);
+          }
+
+          themeIntroTimeoutRef.current = window.setTimeout(() => {
+            setShowThemeIntro(false);
+            timer.startTimer();
+            themeIntroTimeoutRef.current = null;
+          }, 2000);
         },
         onTimeUp: () => {
           console.log("選択時間終了");
         },
         onPhaseEnd: () => {
           console.log("選択終了");
+          if (themeIntroTimeoutRef.current) {
+            window.clearTimeout(themeIntroTimeoutRef.current);
+            themeIntroTimeoutRef.current = null;
+          }
+          setShowThemeIntro(false);
         },
       },
       result: {
@@ -243,7 +272,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const phaseMessage = useMemo(() => {
     if (battlePhase.phase === "selecting") {
-      return timer.timeLeft === 0 ? "タイムアップ！" : "画像を探せ！";
+      return timer.timeLeft === 0 ? "タイムアップ！" : "";
     }
 
     const clapIndex = CLAP_PHASES.indexOf(battlePhase.phase);
@@ -490,6 +519,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       theme={battle?.theme || null}
       isLoading={battleInfoLoading}
       error={battleInfoError}
+      showThemeIntro={showThemeIntro}
       players={players}
       images={images}
       remoteClapEffects={remoteClapEffects}
