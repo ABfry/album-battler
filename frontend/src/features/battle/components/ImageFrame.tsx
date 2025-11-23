@@ -50,7 +50,10 @@ export function ImageFrame({
 
   // 額縁コンテンツを共通化
   const frameContent = (
-    <div className="h-full w-full rounded-lg bg-linear-to-br from-amber-800 via-amber-700 to-amber-900 p-4 shadow-2xl">
+    <div
+      className="h-full w-full rounded-lg bg-linear-to-br from-amber-800 via-amber-700 to-amber-900 p-4 shadow-2xl"
+      style={{ fontSize: "75%" }}
+    >
       {/* 額縁の内側（金色の装飾） */}
       <div className="h-full w-full rounded-md border-4 border-amber-600 bg-linear-to-br from-amber-200 to-amber-300 p-3 shadow-inner">
         {/* 白いマット（正方形を維持） */}

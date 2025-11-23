@@ -161,11 +161,11 @@ export function Battle({
   const renderQuestionHeader = (variant: "large" | "small") => {
     const isLarge = variant === "large";
     const maxWidthClass = isLarge
-      ? "w-full px-4 sm:px-6 md:px-0 max-w-[1200px]"
-      : "w-full px-4 sm:px-6 max-w-[1500px]";
+      ? "w-[75vw] px-4 sm:px-6 md:px-0 max-w-[900px]"
+      : "w-[75vw] px-4 sm:px-6 max-w-[1125px]";
     const frameStyle: CSSProperties = {
       aspectRatio: "260 / 72",
-      minHeight: isLarge ? 140 : 160,
+      minHeight: isLarge ? 105 : 120,
     };
     const textStyle: CSSProperties = {
       top: "33%",
