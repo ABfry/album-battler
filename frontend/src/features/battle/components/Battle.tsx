@@ -254,7 +254,7 @@ export function Battle({
             <span className="text-2xl font-black text-red-500 md:text-3xl">
               Error: {error}
             </span>
-          ) : (
+          ) : showThemeIntro ? null : (
             <motion.div
               key={
                 showThemeIntro ? "question-header-hidden" : "question-header"
