@@ -161,8 +161,8 @@ export function Battle({
   const renderQuestionHeader = (variant: "large" | "small") => {
     const isLarge = variant === "large";
     const maxWidthClass = isLarge
-      ? "w-[95vw] max-w-[1200px]"
-      : "w-[99vw] max-w-[1500px]";
+      ? "w-full px-4 sm:px-6 md:px-0 max-w-[1200px]"
+      : "w-full px-4 sm:px-6 max-w-[1500px]";
     const frameStyle: CSSProperties = {
       aspectRatio: "260 / 72",
       minHeight: isLarge ? 140 : 160,
@@ -172,7 +172,7 @@ export function Battle({
       bottom: 0,
       padding: isLarge ? "0 10%" : "0 10%",
       maxHeight: "67%",
-      fontSize: isLarge ? "clamp(20px, 3vw, 26px)" : "clamp(22px, 3vw, 30px)",
+      fontSize: isLarge ? "clamp(16px, 3vw, 24px)" : "clamp(18px, 3vw, 28px)",
       lineHeight: 1.2,
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
@@ -236,7 +236,7 @@ export function Battle({
         {/* タイマー表示（右上固定） */}
         <div className="absolute top-4 right-4 z-30 md:top-6 md:right-6">
           <div
-            className={`inline-block rounded-lg px-6 py-3 text-3xl font-bold shadow-lg ${
+            className={`inline-block rounded-lg px-6 py-1.5 text-3xl font-bold shadow-lg ${
               isWarning ? "bg-red-500 text-white" : "bg-white text-slate-800"
             }`}
           >
@@ -269,14 +269,6 @@ export function Battle({
           )}
         </div>
 
-        {phaseMessage && showPhaseMessage && (
-          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-            <div className="animate-in fade-in zoom-in rounded-3xl bg-black/70 px-8 py-6 text-4xl font-black text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-4 ring-white/30 duration-300">
-              {phaseMessage}
-            </div>
-          </div>
-        )}
-
         {/* バトル画像（中央） - min-h-0でflexboxの縮小を有効化 */}
         <div className="min-h-0 w-full flex-1">
           <ImageFrame
@@ -298,6 +290,15 @@ export function Battle({
             onDrop={onDrop}
           />
         </div>
+
+        {/* フェーズメッセージ（PlayerListに重なる位置） */}
+        {phaseMessage && showPhaseMessage && (
+          <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-50 flex justify-center pb-16">
+            <div className="animate-in fade-in zoom-in rounded-3xl bg-black/70 px-8 py-2 text-3xl font-black text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-4 ring-white/30 duration-300">
+              {phaseMessage}
+            </div>
+          </div>
+        )}
 
         {/* プレイヤー情報（最下部） */}
         <div className="w-full shrink-0">
@@ -342,7 +343,7 @@ export function Battle({
               {/* 拍手ボタン */}
               <button
                 onClick={handleClapClick}
-                className="mx-auto flex h-16 w-full max-w-md items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
+                className="mx-auto flex h-16 w-full max-w-md items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform select-none hover:scale-[1.02] active:scale-95"
               >
                 👏
               </button>
