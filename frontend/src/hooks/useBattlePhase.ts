@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 
 /**
  * バトルのフェーズ定義
@@ -24,19 +24,33 @@ export type PhaseConfig = {
 };
 
 /**
- * フェーズごとの設定値
+ * フェーズごとの設定値を生成する関数
+ * @param battleTimeLimitSeconds バトルの選択時間制限（秒）
  */
-export const PHASE_CONFIGS: Record<BattlePhase, PhaseConfig> = {
-  waiting: { duration: 0, canSelectImage: false, canClap: false },
-  selecting: { duration: 60, canSelectImage: true, canClap: false },
-  clap_time_1: { duration: 5, canSelectImage: false, canClap: true },
-  clap_time_2: { duration: 5, canSelectImage: false, canClap: true },
-  clap_time_3: { duration: 5, canSelectImage: false, canClap: true },
-  clap_time_4: { duration: 5, canSelectImage: false, canClap: true },
-  clap_time_5: { duration: 5, canSelectImage: false, canClap: true },
-  result: { duration: 10, canSelectImage: false, canClap: false },
-  finished: { duration: 0, canSelectImage: false, canClap: false },
-};
+export function createPhaseConfigs(
+  battleTimeLimitSeconds: number = 60
+): Record<BattlePhase, PhaseConfig> {
+  return {
+    waiting: { duration: 0, canSelectImage: false, canClap: false },
+    selecting: {
+      duration: battleTimeLimitSeconds,
+      canSelectImage: true,
+      canClap: false,
+    },
+    clap_time_1: { duration: 5, canSelectImage: false, canClap: true },
+    clap_time_2: { duration: 5, canSelectImage: false, canClap: true },
+    clap_time_3: { duration: 5, canSelectImage: false, canClap: true },
+    clap_time_4: { duration: 5, canSelectImage: false, canClap: true },
+    clap_time_5: { duration: 5, canSelectImage: false, canClap: true },
+    result: { duration: 10, canSelectImage: false, canClap: false },
+    finished: { duration: 0, canSelectImage: false, canClap: false },
+  };
+}
+
+/**
+ * デフォルトのフェーズ設定（後方互換性のため）
+ */
+export const PHASE_CONFIGS = createPhaseConfigs(60);
 
 // 拍手フェーズの配列
 export const CLAP_PHASES: BattlePhase[] = [
@@ -58,6 +72,7 @@ export type PhaseHandlersMap = Partial<Record<BattlePhase, PhaseEventHandlers>>;
 type UseBattlePhaseOptions = {
   initialPhase?: BattlePhase;
   handlers?: PhaseHandlersMap;
+  battleTimeLimitSeconds?: number;
 };
 
 /**
@@ -65,10 +80,20 @@ type UseBattlePhaseOptions = {
  * WebSocketイベントに基づくフェーズ遷移を管理
  */
 export function useBattlePhase(options: UseBattlePhaseOptions = {}) {
-  const { initialPhase = "waiting", handlers } = options;
+  const {
+    initialPhase = "waiting",
+    handlers,
+    battleTimeLimitSeconds = 60,
+  } = options;
 
   const [phase, setPhase] = useState<BattlePhase>(initialPhase);
-  const config = PHASE_CONFIGS[phase];
+
+  // battleTimeLimitSecondsが変更されたら再計算
+  const phaseConfigs = useMemo(
+    () => createPhaseConfigs(battleTimeLimitSeconds),
+    [battleTimeLimitSeconds]
+  );
+  const config = phaseConfigs[phase];
 
   // handlersをRefで保持（常に最新のハンドラーを使用）
   const handlersRef = useRef<PhaseHandlersMap>(handlers ?? {});

@@ -20,11 +20,12 @@ type UserInfo struct {
 }
 
 type GetRoomOutput struct {
-	RoomNumber int                 `json:"room_number"`
-	Users      []UserInfo          `json:"users"`
-	IsExpired  bool                `json:"is_expired"`
-	RoomStatus entity.RoomStatus   `json:"room_status"`
-	HostUserID *uuid.UUID          `json:"host_user_id"`
+	RoomNumber             int               `json:"room_number"`
+	Users                  []UserInfo        `json:"users"`
+	IsExpired              bool              `json:"is_expired"`
+	RoomStatus             entity.RoomStatus `json:"room_status"`
+	HostUserID             *uuid.UUID        `json:"host_user_id"`
+	BattleTimeLimitSeconds int               `json:"battle_time_limit_seconds"`
 }
 
 type GetRoomUseCase struct {
@@ -68,10 +69,11 @@ func (uc *GetRoomUseCase) Execute(ctx context.Context, input GetRoomInput) (*Get
 	}
 
 	return &GetRoomOutput{
-		RoomNumber: room.RoomNumber,
-		Users:      userInfos,
-		IsExpired:  room.IsExpired(),
-		RoomStatus: room.Status,
-		HostUserID: room.HostUserID,
+		RoomNumber:             room.RoomNumber,
+		Users:                  userInfos,
+		IsExpired:              room.IsExpired(),
+		RoomStatus:             room.Status,
+		HostUserID:             room.HostUserID,
+		BattleTimeLimitSeconds: room.BattleTimeLimitSeconds,
 	}, nil
 }

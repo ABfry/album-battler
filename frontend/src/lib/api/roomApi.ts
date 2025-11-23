@@ -12,6 +12,8 @@ import type {
   RoomInfoResponse,
   StartGameRequest,
   StartGameResponse,
+  UpdateRoomSettingsRequest,
+  UpdateRoomSettingsResponse,
 } from "./types";
 
 /**
@@ -91,7 +93,25 @@ export const roomApi = {
   },
 
   /**
-   * 部屋に再参加（WebSocket再接続時）
+   * 部屋の設定を更新
+   * PATCH /room/{id}/settings
+   */
+  updateRoomSettings: async (
+    roomId: string,
+    userId: string,
+    settings: Partial<Omit<UpdateRoomSettingsRequest, "user_id">>
+  ): Promise<UpdateRoomSettingsResponse> => {
+    return fetchApi<UpdateRoomSettingsResponse>(`/room/${roomId}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        user_id: userId,
+        ...settings,
+      } satisfies UpdateRoomSettingsRequest),
+    });
+  },
+
+  /**
+   * 部屋に再参加(WebSocket再接続時)
    * POST /room/rejoin
    */
   rejoinRoom: async (
