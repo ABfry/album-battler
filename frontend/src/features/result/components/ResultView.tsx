@@ -26,7 +26,7 @@ export function ResultView({
   onShare,
 }: ResultViewProps) {
   const renderThemeHeader = (label: string) => {
-    const maxWidthClass = "w-[99vw] max-w-[1500px]";
+    const maxWidthClass = "w-full px-4 sm:px-6 max-w-[1500px]";
     const frameStyle: CSSProperties = {
       aspectRatio: "260 / 72",
       minHeight: 160,
