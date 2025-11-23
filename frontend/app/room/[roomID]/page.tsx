@@ -13,6 +13,8 @@ import type {
   RoomSettingsUpdatedPayload,
 } from "@/src/lib/websocket/types";
 import { useWebSocketEvents } from "@/src/lib/websocket/hooks/useWebSocketEvents";
+import { useGameStateRestore } from "@/src/hooks/useGameStateRestore";
+import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import Link from "next/link";
 import { useRoom } from "@/src/hooks/useRoom";
 import { useRouter } from "next/navigation";
@@ -23,6 +25,7 @@ import { Loading } from "@/src/components/ui/loading";
 export default function RoomPage() {
   const { roomID } = useParams() as { roomID: string };
 
+  const { setCurrentRoomId } = useWebSocket();
   const { leaveRoom, startGame, getBattleID, updateRoomSettings } = useRoom();
 
   const router = useRouter();
@@ -33,6 +36,16 @@ export default function RoomPage() {
   // 部屋情報の取得（作成後に自動取得）
   const { room, refetch } = useRoomInfo(roomID);
   const { subscribe } = useWebSocketEvents();
+
+  // WebSocket再接続時の状態復元
+  useGameStateRestore();
+
+  // 現在のルームIDを保存（再接続時に使用）
+  useEffect(() => {
+    if (roomID) {
+      setCurrentRoomId(roomID);
+    }
+  }, [roomID, setCurrentRoomId]);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const userId = getUserIdClient() || "";
