@@ -26,17 +26,17 @@ export function ResultView({
   onShare,
 }: ResultViewProps) {
   const renderThemeHeader = (label: string) => {
-    const maxWidthClass = "w-[98vw] max-w-[1300px]";
+    const maxWidthClass = "w-[99vw] max-w-[1500px]";
     const frameStyle: CSSProperties = {
       aspectRatio: "260 / 72",
-      minHeight: 120,
+      minHeight: 160,
     };
     const textStyle: CSSProperties = {
       top: "33%",
       bottom: 0,
-      padding: "0 12%",
+      padding: "0 10%",
       maxHeight: "67%",
-      fontSize: "clamp(18px, 2.8vw, 22px)",
+      fontSize: "clamp(22px, 3vw, 30px)",
       lineHeight: 1.2,
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",

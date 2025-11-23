@@ -161,18 +161,18 @@ export function Battle({
   const renderQuestionHeader = (variant: "large" | "small") => {
     const isLarge = variant === "large";
     const maxWidthClass = isLarge
-      ? "w-[98vw] max-w-[1400px]"
-      : "w-[98vw] max-w-[1300px]";
+      ? "w-[95vw] max-w-[1200px]"
+      : "w-[99vw] max-w-[1500px]";
     const frameStyle: CSSProperties = {
       aspectRatio: "260 / 72",
-      minHeight: isLarge ? 140 : 120,
+      minHeight: isLarge ? 140 : 160,
     };
     const textStyle: CSSProperties = {
       top: "33%",
       bottom: 0,
-      padding: isLarge ? "0 10%" : "0 12%",
+      padding: isLarge ? "0 10%" : "0 10%",
       maxHeight: "67%",
-      fontSize: isLarge ? "clamp(20px, 3vw, 26px)" : "clamp(18px, 2.8vw, 22px)",
+      fontSize: isLarge ? "clamp(20px, 3vw, 26px)" : "clamp(22px, 3vw, 30px)",
       lineHeight: 1.2,
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
@@ -227,7 +227,7 @@ export function Battle({
     <div className="flex h-dvh flex-col items-center justify-center overflow-hidden p-4">
       <div className="relative flex h-full w-full max-w-4xl flex-col items-center gap-2 pt-16 pb-2">
         {showThemeIntro && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
             <div className="flex flex-col items-center gap-6 px-8 py-6">
               {renderQuestionHeader("large")}
             </div>
