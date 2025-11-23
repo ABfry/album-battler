@@ -50,12 +50,12 @@ export function ImageFrame({
 
   // 額縁コンテンツを共通化
   const frameContent = (
-    <div className="h-full w-full rounded-lg bg-linear-to-br from-amber-800 via-amber-700 to-amber-900 p-[clamp(8px,2vw,16px)] shadow-2xl">
+    <div className="h-full w-full rounded-lg bg-linear-to-br from-amber-800 via-amber-700 to-amber-900 p-4 shadow-2xl">
       {/* 額縁の内側（金色の装飾） */}
-      <div className="h-full w-full rounded-md border-[clamp(6px,1.2vw,12px)] border-amber-600 bg-linear-to-br from-amber-200 to-amber-300 p-[clamp(6px,1.4vw,12px)] shadow-inner">
+      <div className="h-full w-full rounded-md border-4 border-amber-600 bg-linear-to-br from-amber-200 to-amber-300 p-3 shadow-inner">
         {/* 白いマット（正方形を維持） */}
         <div
-          className={`relative h-full w-full overflow-hidden rounded-sm border-[clamp(2px,0.6vw,6px)] bg-white p-[clamp(12px,2.5vw,24px)] shadow-md transition-colors ${
+          className={`relative h-full w-full overflow-hidden rounded-sm border-2 bg-white p-6 shadow-md transition-colors ${
             isDragging && !isImageSent
               ? "border-blue-400 bg-blue-50"
               : "border-amber-100"
