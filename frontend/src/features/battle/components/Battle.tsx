@@ -20,10 +20,11 @@ import {
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
 
-type ClapEffect = {
+export type ClapEffect = {
   id: string;
   timestamp: number;
-  offsetX: number; // ランダムな横移動量
+  offsetX: number; // 演出用の横移動量(px)
+  originXPercent?: number; // 発生位置（親幅に対する%）
 };
 
 type BattleProps = {
@@ -37,10 +38,12 @@ type BattleProps = {
 
   // 画像選択関連
   selectedImage: string | null;
-  displayedImage: string | null; // 拍手フェーズで表示する画像
+  displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
+  isSending: boolean;
   isCompressing: boolean;
+  canSelect: boolean; // 画像選択可能か
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -57,6 +60,7 @@ type BattleProps = {
   error: string | null;
   players: UserInfo[] | undefined;
   images: BattleImage[];
+  remoteClapEffects: ClapEffect[];
 
   // 拍手機能
   canClap: boolean;
@@ -85,7 +89,9 @@ export function Battle({
   displayedImage,
   isDragging,
   isImageSent,
+  isSending,
   isCompressing,
+  canSelect,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -103,6 +109,7 @@ export function Battle({
   showPhaseMessage,
   players,
   images,
+  remoteClapEffects,
   // 拍手機能
   canClap,
   onClap,
@@ -140,6 +147,7 @@ export function Battle({
       id: `clap-${Date.now()}-${Math.random()}`,
       timestamp: Date.now(),
       offsetX: Math.random() * 60 - 30, // -30px ~ +30px のランダムな横移動
+      originXPercent: 10 + Math.random() * 80, // ボタン幅ほぼ全体をカバーする発生位置
     };
     setClapEffects((prev) => [...prev, newEffect]);
   }, [onClap]);
@@ -208,7 +216,9 @@ export function Battle({
             displayedImage={displayedImage}
             isDragging={isDragging}
             isImageSent={isImageSent}
+            isSending={isSending}
             isCompressing={isCompressing}
+            canSelect={canSelect}
             fileInputRef={fileInputRef}
             onImageSelect={onImageSelect}
             onOpenAlbum={onOpenAlbum}
@@ -222,48 +232,53 @@ export function Battle({
         </div>
 
         {/* プレイヤー情報（最下部） */}
-        <div className="shrink-0">
-          <PlayerList players={players} images={images} />
+        <div className="w-full shrink-0">
+          <PlayerList
+            players={players}
+            images={images}
+            remoteClapEffects={remoteClapEffects}
+          />
         </div>
 
-        {/* 拍手ボタン（右下） */}
+        {/* 拍手ボタン（プレイヤーリスト下） */}
         {canClap && (
-          <div className="absolute right-8 bottom-8">
+          <div className="relative mt-4 w-full">
             {/* 拍手エフェクト */}
-            <AnimatePresence>
-              {clapEffects.map((effect) => (
-                <motion.div
-                  key={effect.id}
-                  initial={{ y: 0, opacity: 1, scale: 1 }}
-                  animate={{
-                    y: -300, // 150 → 300: 距離を2倍に
-                    opacity: 0,
-                    x: effect.offsetX, // 事前に計算されたランダムな横移動量
-                  }}
-                  exit={{ opacity: 0 }}
-                  transition={{
-                    duration: 2.0, // 1.5 → 2.0: より長く、よりダイナミックに
-                    ease: "easeOut",
-                  }}
-                  className="pointer-events-none absolute text-6xl"
-                  style={{
-                    left: "15%",
-                    bottom: "100%",
-                    transform: "translateX(-50%)",
-                  }}
-                >
-                  👏
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            <div className="relative mx-auto w-full max-w-4xl">
+              <AnimatePresence>
+                {clapEffects.map((effect) => (
+                  <motion.div
+                    key={effect.id}
+                    initial={{ y: 0, opacity: 1, scale: 1 }}
+                    animate={{
+                      y: -300,
+                      opacity: 0,
+                      x: effect.offsetX,
+                    }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      duration: 2.0,
+                      ease: "easeOut",
+                    }}
+                    className="pointer-events-none absolute bottom-full text-6xl"
+                    style={{
+                      left: `${effect.originXPercent ?? 50}%`,
+                      transform: "translateX(-50%)",
+                    }}
+                  >
+                    👏
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
-            {/* 拍手ボタン */}
-            <button
-              onClick={handleClapClick}
-              className="relative flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br from-yellow-400 to-orange-500 text-5xl shadow-2xl transition-transform hover:scale-110 active:scale-95"
-            >
-              👏
-            </button>
+              {/* 拍手ボタン */}
+              <button
+                onClick={handleClapClick}
+                className="mx-auto flex h-16 w-full max-w-md items-center justify-center rounded-2xl bg-linear-to-r from-yellow-400 to-orange-500 text-3xl font-bold shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
+              >
+                👏
+              </button>
+            </div>
           </div>
         )}
       </div>

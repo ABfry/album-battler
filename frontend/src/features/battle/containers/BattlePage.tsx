@@ -19,6 +19,7 @@ import { useWebSocketClap } from "@/src/lib/websocket/hooks/useWebSocketClap";
 import { useWebSocket } from "@/src/lib/websocket/contexts/WebSocketContext";
 import { useGameStateRestore } from "@/src/hooks/useGameStateRestore";
 import { Battle } from "../components/Battle";
+import type { ClapEffect } from "../components/Battle";
 import type { GetBattleResultResponse } from "@/src/lib/api/types";
 
 type BattlePageProps = {
@@ -41,9 +42,13 @@ export function BattlePage({ battleID }: BattlePageProps) {
   });
 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [displayedImage, setDisplayedImage] = useState<string | null>(null);
+  // 拍手フェーズで表示する画像（undefined: 通常モード, null: 未提出, string: 画像URL）
+  const [displayedImage, setDisplayedImage] = useState<
+    string | null | undefined
+  >(undefined);
   const [battleResult, setBattleResult] =
     useState<GetBattleResultResponse | null>(null);
+  const [remoteClapEffects, setRemoteClapEffects] = useState<ClapEffect[]>([]);
 
   // 1. バトル情報取得
   const {
@@ -134,13 +139,12 @@ export function BattlePage({ battleID }: BattlePageProps) {
       battlePhase.transitionTo("result");
     }
 
-    console.log(
-      `[BattlePage] Game state restored to phase: ${current_phase}`
-    );
+    console.log(`[BattlePage] Game state restored to phase: ${current_phase}`);
   }, [restoredState, battlePhase, timer]);
 
   const playersRef = useRef(players);
   const imagesRef = useRef(images);
+  const battleRef = useRef(battle);
 
   useEffect(() => {
     playersRef.current = players;
@@ -149,6 +153,10 @@ export function BattlePage({ battleID }: BattlePageProps) {
   useEffect(() => {
     imagesRef.current = images;
   }, [images]);
+
+  useEffect(() => {
+    battleRef.current = battle;
+  }, [battle]);
 
   useEffect(() => {
     // timerとbatttlePhaseがハンドラ作成時点で存在していないため，
@@ -160,7 +168,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       selecting: {
         onPhaseStart: () => {
           console.log("画像選択開始");
-          timer.resetTimer(60);
+          const timeLimit = battleRef.current?.battleTimeLimitSeconds ?? 60;
+          timer.resetTimer(timeLimit);
           timer.startTimer();
         },
         onTimeUp: () => {
@@ -173,6 +182,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
       result: {
         onPhaseStart: () => {
           console.log("結果発表");
+          // 拍手フェーズ終了、displayedImageをクリア
+          setDisplayedImage(undefined);
           // WebSocketイベント駆動で結果取得するため、ここでは何もしない
         },
       },
@@ -308,8 +319,15 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const handleClapUpdate = useCallback(() => {
     console.log("[BattlePage] Clap update detected");
-    // TODO: 拍手を受け取ったら演出や音を鳴らす？
-    // スコアのフェッチは最後で良さげ
+    const id = `remote-clap-${Date.now()}-${Math.random()}`;
+    const offsetX = Math.random() * 60 - 30; // -30px ~ +30px
+    setRemoteClapEffects((prev) => [
+      ...prev,
+      { id, timestamp: Date.now(), offsetX },
+    ]);
+    setTimeout(() => {
+      setRemoteClapEffects((prev) => prev.filter((e) => e.id !== id));
+    }, 1500);
   }, []);
 
   const handleResultStart = useCallback(async () => {
@@ -318,6 +336,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     // AI採点が完了していない可能性があるため、リトライロジックを実装
     const maxRetries = 7;
     const retryDelay = 3000; // 3秒
+    let lastResult: GetBattleResultResponse | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(
@@ -326,6 +345,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
       const result = await getResult(battleID);
       if (result) {
+        lastResult = result;
+
         // AI採点が完了しているかチェック（ai_explanationが空でないこと）
         const isAIJudgingComplete = result.results.every(
           (r) => r.ai_explanation && r.ai_explanation.trim() !== ""
@@ -353,9 +374,18 @@ export function BattlePage({ battleID }: BattlePageProps) {
       }
     }
 
-    console.error(
-      "[BattlePage] Failed to fetch battle result after all retries"
-    );
+    // 最後のリトライでも完了しなかった場合、取得できた結果があればそれを使用
+    if (lastResult) {
+      setBattleResult(lastResult);
+      console.warn(
+        "[BattlePage] AI judging not fully complete, but proceeding with available result:",
+        lastResult
+      );
+    } else {
+      console.error(
+        "[BattlePage] Failed to fetch battle result after all retries"
+      );
+    }
   }, [battleID, getResult]);
 
   // 6. WebSocketイベント処理（フェーズ遷移をトリガー）
@@ -444,7 +474,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
       displayedImage={displayedImage}
       isDragging={imageSelection.isDragging}
       isImageSent={imageSelection.isImageSent}
+      isSending={imageSelection.isSending}
       isCompressing={imageSelection.isCompressing}
+      canSelect={battlePhase.canSelectImage}
       fileInputRef={imageSelection.fileInputRef}
       onImageSelect={imageSelection.handleImageSelect}
       onOpenAlbum={imageSelection.handleOpenAlbum}
@@ -460,6 +492,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       error={battleInfoError}
       players={players}
       images={images}
+      remoteClapEffects={remoteClapEffects}
       // 拍手機能
       canClap={battlePhase.canClap}
       onClap={handleClap}

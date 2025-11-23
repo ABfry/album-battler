@@ -7,7 +7,9 @@ type ImageFrameProps = {
   displayedImage?: string | null; // 拍手フェーズで表示する画像
   isDragging: boolean;
   isImageSent: boolean;
+  isSending?: boolean;
   isCompressing?: boolean;
+  canSelect: boolean; // 画像選択可能か（タイムアップ判定用）
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenAlbum: () => void;
@@ -27,7 +29,9 @@ export function ImageFrame({
   displayedImage,
   isDragging,
   isImageSent,
+  isSending = false,
   isCompressing = false,
+  canSelect,
   fileInputRef,
   onImageSelect,
   onOpenAlbum,
@@ -39,6 +43,9 @@ export function ImageFrame({
   onDrop,
 }: ImageFrameProps) {
   // 表示する画像を決定: displayedImage > selectedImage
+  // displayedImage が null の場合は画像未提出として扱う
+  const isDisplayingOtherPlayer = displayedImage !== undefined;
+  const isNoImageSubmitted = displayedImage === null;
   const imageToShow = displayedImage || selectedImage;
 
   // 額縁コンテンツを共通化
@@ -79,6 +86,13 @@ export function ImageFrame({
                 </p>
                 <p className="mt-2 text-sm text-gray-500">
                   しばらくお待ちください
+                </p>
+              </div>
+            ) : isNoImageSubmitted ? (
+              <div className="text-center">
+                <div className="mb-2 text-6xl">🚫</div>
+                <p className="text-lg font-semibold text-gray-500">
+                  画像未提出
                 </p>
               </div>
             ) : imageToShow ? (
@@ -127,10 +141,10 @@ export function ImageFrame({
         style={{ containerType: "size" }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          {displayedImage ? (
+          {isDisplayingOtherPlayer ? (
             <AnimatePresence mode="wait">
               <motion.div
-                key={displayedImage}
+                key={displayedImage ?? "no-image"}
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "-100%", opacity: 0 }}
@@ -164,29 +178,37 @@ export function ImageFrame({
         </div>
       </div>
 
-      {/* ボタン */}
+      {/* ボタン or 時間切れ表示 */}
       {selectedImage && !isImageSent && (
         <div className="flex w-full shrink-0 flex-wrap justify-center gap-3 px-2">
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => {
-              console.log("Cancel button clicked");
-              onCancel();
-            }}
-          >
-            取り消す
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              console.log("Confirm button clicked");
-              onConfirmImage();
-            }}
-          >
-            これで決定
-          </Button>
+          {canSelect ? (
+            <>
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={isSending}
+                onClick={() => {
+                  console.log("Cancel button clicked");
+                  onCancel();
+                }}
+              >
+                取り消す
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                disabled={isSending}
+                onClick={() => {
+                  console.log("Confirm button clicked");
+                  onConfirmImage();
+                }}
+              >
+                {isSending ? "送信中..." : "これで決定"}
+              </Button>
+            </>
+          ) : (
+            <p className="text-lg font-bold text-red-500">時間切れ！</p>
+          )}
         </div>
       )}
     </div>

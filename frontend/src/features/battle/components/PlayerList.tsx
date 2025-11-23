@@ -1,15 +1,22 @@
 import Image from "next/image";
 import type { BattleImage, UserInfo } from "@/src/lib/api/types";
+import { AnimatePresence, motion } from "framer-motion";
+import type { ClapEffect } from "./Battle";
 
 type PlayerListProps = {
   players: UserInfo[] | undefined;
   images: BattleImage[];
+  remoteClapEffects?: ClapEffect[];
 };
 
 /**
  * プレイヤー一覧表示コンポーネント (Presentational)
  */
-export function PlayerList({ players, images }: PlayerListProps) {
+export function PlayerList({
+  players,
+  images,
+  remoteClapEffects = [],
+}: PlayerListProps) {
   if (!players || players.length === 0) {
     return null;
   }
@@ -20,7 +27,33 @@ export function PlayerList({ players, images }: PlayerListProps) {
   };
 
   return (
-    <div className="w-full">
+    <div className="relative w-full">
+      {/* 拍手エフェクト（他ユーザー） */}
+      <div className="pointer-events-none absolute inset-0 z-10">
+        <AnimatePresence>
+          {remoteClapEffects.map((effect) => {
+            const leftPercent = Math.max(5, Math.min(95, 50 + effect.offsetX));
+            return (
+              <motion.div
+                key={effect.id}
+                initial={{ y: 0, opacity: 1, scale: 1 }}
+                animate={{ y: -300, opacity: 0, x: effect.offsetX }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 2, ease: "easeOut" }}
+                className="absolute text-2xl"
+                style={{
+                  left: `${leftPercent}%`,
+                  bottom: 0,
+                  transform: "translateX(-50%)",
+                }}
+              >
+                👏
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
       {/* アイコン */}
       <div className="mb-4 flex items-center justify-center gap-4 md:gap-6">
         {players.map((player) => (
