@@ -1,4 +1,27 @@
-# Album Battler
+# アルバムバトラー
+
+アルバムの写真で戦う！AI× リアルタイム即興フォトバトル
+
+![image](https://ptera-publish.topaz.dev/project/01KAQEKFJ9FD2HRYWHR54CD75T.png)
+
+# 遊び方
+
+1. ルームを作る
+   ![image](https://ptera-publish.topaz.dev/project/01KAQEJVZ117A0F3E5FSNVQ0Z0.png)
+2. ルームナンバーを共有して、対戦相手を募集
+   ![image](https://ptera-publish.topaz.dev/project/01KAQEMGQ0SZGHT5KA2JV7SBDY.png)
+3. メンバーが揃ったら、ゲームを開始
+   ![image](https://ptera-publish.topaz.dev/project/01KAQEPBBN64T8KZVPB1BQTW5Q.png)
+4. お題が出題されるので、自身のアルバムから探索
+   ![image](https://ptera-publish.topaz.dev/project/01KAQEQ0T3N9RR3QEMRDC5BWVQ.png)
+5. いい写真が見つかったら、確定
+   ![image](https://ptera-publish.topaz.dev/project/01KAQEQKVNXG8XJGFNFNS5BCD4.png)
+6. 他のユーザの写真を拍手で評価
+   ![image](https://ptera-publish.topaz.dev/project/01KAQES7XRKQJ9H621PKFPBG47.png)
+7. 結果発表
+   ![image](https://ptera-publish.topaz.dev/project/01KAQESJTWBN4QKW31NC7EQP1W.png)
+8. 点数の詳細や AI の評価が見れる
+   ![image](https://ptera-publish.topaz.dev/project/01KAQESWWYH949YDCW3TW189JE.png)
 
 ## 技術スタック
 
@@ -45,7 +68,12 @@
 - **スタイリング**: Tailwind CSS 4
 - **コンポーネント**: Radix UI
 - **デザインシステム**: Storybook 8.6.14
-- **フォント**: Google Fonts (Geist, Noto Sans JP)
+- **フォント**: Google Fonts (Geist, Noto Sans JP), Adobe Fonts (Typekit)
+- **アニメーション**: Framer Motion
+- **トースト通知**: Sonner
+- **テーマ管理**: next-themes
+- **画像処理**: browser-image-compression, heic2any
+- **Cookie 管理**: js-cookie
 
 #### リアルタイム通信
 
@@ -65,6 +93,109 @@
 - **IaC**: Terraform
 - **クラウド**: AWS (VPC, S3)
 - **開発 DB 管理**: phpMyAdmin
+
+![image](https://ptera-publish.topaz.dev/project/01KAP35AE82JW42Y443Q7NY4AJ.jpeg)
+
+## 技術的工夫点
+
+### フロントエンド
+
+#### WebSocket 接続の共有
+
+リアルタイムでの通信に使用する 1 つの WebSocket 接続を、アプリ全体で共有できるようにしました。Context API を用いて WebSocket コンテキストとプロバイダーを設計し、ページ遷移における接続の維持を実現しています。
+
+```tsx
+// WebSocketContext - 接続状態と操作を提供
+type WebSocketContextType = {
+  status: "idle" | "connecting" | "connected" | "disconnected" | "error";
+  sendMessage: (data: string) => void;
+  connect: () => void;
+  disconnect: () => void;
+  isReconnecting: boolean;
+  // ...
+};
+```
+
+WebSocketProvider がルートレイアウトでラップするので、ルーム画面からバトル画面へ遷移しても接続が維持されます。
+
+#### 用途別のカスタムフック
+
+1 つの WebSocket 接続を複数の用途で容易に使えるよう、専用のフックを用意しました。
+
+- useWebSocketEvents: ゲーム進行のイベント購読
+- useWebSocketClap: 拍手メッセージの送信
+
+#### バトル画面のフェーズ管理
+
+バトルの進行状態を「フェーズ」として管理し、各フェーズの開始・終了・タイムアップ時にコールバックを発火させる設計にしました。
+
+```tsx
+type BattlePhase =
+  | "waiting" | "selecting"
+  | "clap_time_1" | "clap_time_2" | "clap_time_3" | "clap_time_4" | "clap_time_5"
+  | "result" | "finished";
+
+// フェーズごとのイベントハンドラ
+onPhaseStart?: (phase) => void;  // フェーズ開始時（演出開始など）
+onPhaseEnd?: (phase) => void;    // フェーズ終了時
+onTimeUp?: (phase) => void;      // 制限時間終了時
+```
+
+これにより、フェーズ遷移に伴う演出（タイマーリセット、画像切り替えなど）のトリガーが容易になりました。
+
+#### API テストページによるデバッグ支援
+
+開発効率を上げるため、WebSocket イベントと REST API を個別にテストできるページを用意しました。ルーム作成からゲーム開始，拍手送信まで一通りの操作をテストでき、WebSocket メッセージや API レスポンスをリアルタイムで確認できます。
+これにより、バトル途中の状態からのデバッグや、特定のイベントの動作確認が容易になりました。
+![image](https://ptera-publish.topaz.dev/project/01KAQAM8MFH9181423MY3HQTJD.png)
+
+### バックエンド
+
+通信は用途に応じて WebSocket と REST API を使い分けました。
+イベント通知などリアルタイム性が必要なデータ送受信は WebSocket を使用し、
+その通知を受けてクライアントは REST API を呼び出してデータを取得することで、リアルタイム性とシンプルさの両立を目指しました。
+もう少し具体的に言うと、WebSocket はイベントタイプのみの「何かあったよ」という通知のみを送信し、実際のデータはこのイベントを受けてクライアントが REST によってデータの取得を行うといった感じです。
+
+また、イベント通知などで少し複雑になりそうだったため、シーケンス図やクラス図を作成・設計によって認識の共有を行ってから実装にとりかかりました。
+
+#### ルーム作成
+
+![image](https://ptera-publish.topaz.dev/project/01KAN3KPCMJSBDYY3198XYJXNR.png)
+
+#### バトル
+
+![image](https://ptera-publish.topaz.dev/project/01KAN3M6VN2FW93K29XJJD2ZPE.png)
+
+#### リザルト
+
+![image](https://ptera-publish.topaz.dev/project/01KAN3MARQGQYRNTT4P5J291QB.png)
+
+### イベント駆動 + DDD
+
+クリーンアーキテクチャに沿って、ドメイン層を中心に据えた設計にしました。
+ビジネスルールをドメインに閉じ込めることで、他の層に振り回されない構造を目指しました。
+
+WebSocket のイベント通知周りはイベント駆動で設計しました。
+EventDispatcher であるイベントタイプに関連したハンドラーを登録しておき、イベントの発火を検知してハンドラーを呼び出すようにしています。
+
+#### クラス図(一部抜粋)
+
+![image](https://ptera-publish.topaz.dev/project/01KAN3JVGC12TQGSX0920Y9411.jpeg)
+
+## インフラ
+
+0 ベースで書くのは初めてでしたが、Terraform にチャレンジしてみました。
+AWS のリソースを定義して、コンテナのビルドとデプロイのみは Github Actions での自動化を行いました。
+
+### 自動レビュー
+
+プルリクエストを出すと AI が自動でレビューしてくれるシステムを構築しました。
+見落としがちなエラーにも気づけてとても助かりました。(↓ 寝ぼけてた中助かりました
+![image](https://ptera-publish.topaz.dev/project/01KAP4T5PRZ9K1W173G4RKSDVD.jpeg)
+
+### 自動デプロイ
+
+main ブランチに変更がマージされると、AWS へ自動でビルド・デプロイされます。![image](https://ptera-publish.topaz.dev/project/01KAQET1G8TPKR3AKNE13ZT34J.png)
 
 ## プロジェクト構造
 
@@ -131,8 +262,6 @@ album-battler/
 ```
 
 ## ゲームフロー
-
-Album Battler は、写真対戦ゲームのリアルタイムマルチプレイヤーシステムです。
 
 ### 基本的な流れ
 
@@ -228,106 +357,6 @@ Album Battler は、写真対戦ゲームのリアルタイムマルチプレイ
         ← WebSocket: 結果配信
 ```
 
-## 前提条件
-
-### 必須ツール
-
-- [Docker](https://www.docker.com/products/docker-desktop) & Docker Compose
-- [Make](https://www.gnu.org/software/make/) (オプション)
-- [Terraform](https://www.terraform.io/downloads) >= 1.0 (インフラ管理用)
-- [AWS CLI](https://aws.amazon.com/cli/) (インフラ管理用)
-
-### 推奨ツール
-
-- [Go](https://golang.org/dl/) 1.25.1+ (ローカル開発用)
-- [Node.js](https://nodejs.org/) 20+ (ローカル開発用)
-
-## セットアップ
-
-### 1. リポジトリのクローン
-
-```bash
-git clone https://github.com/ABfry/album-battler.git
-cd album-battler
-```
-
-### 2. 環境変数の設定
-
-Backend 環境変数ファイルを作成：
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-`backend/.env` を編集して、必要な値を設定：
-
-```env
-PORT=8080
-
-DB_DRIVER=mysql
-DB_ENV=local
-DB_HOST=db
-DB_PORT=3306
-DB_NAME=album_battler
-DB_USER=album_user
-DB_PASSWORD=album_pass
-DB_PARAMS=charset=utf8mb4&parseTime=true&loc=Local
-DB_MAX_OPEN_CONNS=32
-DB_MAX_IDLE_CONNS=16
-DB_CONN_MAX_LIFETIME=5400
-DB_CONN_MAX_IDLE_TIME=900
-
-AWS_REGION=ap-northeast-1
-S3_BUCKET_NAME=album-battler-images
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-```
-
-Frontend 環境変数ファイルを作成：
-
-```bash
-cp frontend/.env.example frontend/.env.local
-```
-
-`frontend/.env.local` を編集して、必要な値を設定：
-
-```env
-# WebSocket Server URL
-NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080/ws
-```
-
-### 3. Docker Compose で起動
-
-```bash
-# すべてのサービスを起動（ビルド含む）
-make up
-
-# すべてのサービスをバックグラウンドで起動
-make upd
-
-# または Docker Compose を直接実行
-docker compose up --build
-```
-
-停止する場合は `make down`（ボリュームも削除する場合は `make downv`）を使用します。
-
-起動するサービス：
-
-- **Frontend**: http://localhost:3000
-- **Backend**: http://localhost:8080
-- **phpMyAdmin**: http://localhost:8081 (DB 管理)
-- **MySQL**: localhost:3306
-
-### 4. 動作確認
-
-```bash
-# Backendヘルスチェック
-curl http://localhost:8080/health
-
-# Frontendアクセス
-open http://localhost:3000
-```
-
 ## 開発ワークフロー
 
 ### Make コマンド
@@ -420,7 +449,7 @@ WebSocket は 5 種類のメッセージチャネルをサポート:
 | `systemRoomBroadcast` | システム | ルーム内メンバー   | システムイベント通知 |
 | `userMessage`         | システム | 特定ユーザー       | 個別通知             |
 
-### イベント一覧
+### イベントタイプ例
 
 #### 1. player_join_room
 
@@ -501,42 +530,7 @@ WebSocket は 5 種類のメッセージチャネルをサポート:
 }
 ```
 
-### Frontend 統合例
-
-```typescript
-// WebSocket接続
-const ws = new WebSocket(`ws://localhost:8080/ws?user_id=${userId}`);
-
-// イベント購読
-ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-
-  switch (message.type) {
-    case "start_game":
-      console.log("Game started:", message.data);
-      break;
-    case "image_send":
-      console.log("Image submitted:", message.data);
-      break;
-    // ...
-  }
-};
-
-// メッセージ送信
-ws.send(
-  JSON.stringify({
-    type: "roomBroadcast",
-    roomId: "uuid",
-    message: "Hello!",
-  })
-);
-```
-
 ## AI 機能の詳細
-
-### Gemini 2.5 Flash 統合
-
-Album Battler は Google Gemini 2.5 Flash を使用して、ゲーム体験を向上させています。
 
 #### 1. テーマ自動生成
 
@@ -566,7 +560,7 @@ Album Battler は Google Gemini 2.5 Flash を使用して、ゲーム体験を�
 }
 ```
 
-**コード位置:** `backend/internal/infra/ai/gemini.go:GenerateTheme()`
+**コード位置:** `backend/internal/infra/ai/gemini.go`
 
 #### 2. 画像評価（実装予定）
 
@@ -914,9 +908,9 @@ Album Battler は Google Gemini 2.5 Flash を使用して、ゲーム体験を�
 
 ## インフラ管理
 
-### Terraform でのインフラ構築
+### Terraform でのインフラ構築（AWS VPC/S3）
 
-詳細は [terraform/README.md](./terraform/README.md) を参照。
+基本的な VPC・S3 バケットの構築手順。
 
 ```bash
 cd terraform
