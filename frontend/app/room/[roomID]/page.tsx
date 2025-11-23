@@ -196,7 +196,7 @@ export default function RoomPage() {
         <Button
           variant="primary"
           size="lg"
-          disabled={(room?.users?.length ?? 0) < 2 || isLoading}
+          disabled={!isHost || (room?.users?.length ?? 0) < 2 || isLoading}
           onClick={handleBattle}
           className="mt-8 w-full"
         >
@@ -206,7 +206,9 @@ export default function RoomPage() {
               <span className="text-lg font-black">待機中...</span>
             </div>
           ) : (
-            <span className="text-lg font-black">バトル！</span>
+            <span className="text-lg font-black">
+              {isHost ? "バトル！" : "ホストの開始を待っています"}
+            </span>
           )}
         </Button>
       </div>
