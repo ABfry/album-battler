@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ABfry/album-battler/backend/internal/domain/entity"
 	"github.com/ABfry/album-battler/backend/internal/domain/repository"
 	"github.com/ABfry/album-battler/backend/internal/domain/service"
 	"github.com/google/uuid"
@@ -48,6 +49,11 @@ func (uc *JoinRoomUseCase) Execute(ctx context.Context, input JoinRoomInput) (*u
 	// 満員チェック
 	if room.IsFull() {
 		return nil, errors.New("room is full")
+	}
+
+	// ルーム状態チェック
+	if room.Status != entity.WaitJoin {
+		return nil, errors.New("room is not waiting for join")
 	}
 
 	// ユーザーを追加 (ドメインロジック + イベント記録)
