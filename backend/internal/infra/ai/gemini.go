@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"sync"
 
@@ -165,6 +166,14 @@ func (c *GeminiClient) Generate(ctx context.Context, req *llm.GenerateRequest) (
 
 const themeGenerationMaxAttempts = 5
 
+var PromptList = []string{
+	GenerateHumorThemePrompt,
+	GenerateArtisticThemePrompt,
+	GenerateSuperlativeThemePrompt,
+	GenerateAbstractThemePrompt,
+	GenerateOgiriThemePrompt,
+}
+
 // 写真撮影バトル用のテーマを生成
 func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
 	// Function Declarationを定義
@@ -185,7 +194,7 @@ func (c *GeminiClient) GenerateTheme(ctx context.Context) (string, error) {
 
 	// プロンプトを構築
 	parts := []*genai.Part{
-		genai.NewPartFromText(GenerateThemePrompt),
+		genai.NewPartFromText(PromptList[rand.Intn(len(PromptList))]),
 	}
 
 	// Contentsを構築
