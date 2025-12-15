@@ -1,0 +1,18 @@
+{
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "installCommand": "cd frontend && npm ci",
+  "devCommand": "cd frontend && npm run dev",
+  "env": {
+    "NEXT_PUBLIC_API_URL": {
+      "description": "Backend API URL",
+      "value": "https://album-battler-backend.onrender.com/api"
+    },
+    "NEXT_PUBLIC_WEBSOCKET_URL": {
+      "description": "WebSocket URL",
+      "value": "wss://album-battler-backend.onrender.com/ws"
+    }
+  },
+  "regions": ["hnd1"]
+}
