@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: album-battler-backend
+    runtime: go
+    repo: https://github.com/ABfry/album-battler
+    rootDir: backend
+    buildCommand: go build -o app ./cmd
+    startCommand: ./app
+    envVars:
+      - key: GO_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: DB_DRIVER
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false # PlanetScale接続情報
+      - key: DB_PASSWORD
+        sync: false # PlanetScale接続情報
+      - key: DB_PARAMS
+        value: "charset=utf8mb4&parseTime=true&loc=Local&tls=true"
+      - key: DB_MAX_OPEN_CONNS
+        value: "10"
+      - key: DB_MAX_IDLE_CONNS
+        value: "5"
+      - key: DB_CONN_MAX_LIFETIME
+        value: "3600"
+      - key: DB_CONN_MAX_IDLE_TIME
+        value: "600"
+      # AWS S3 - Dashboardで手動設定
+      - key: AWS_REGION
+        value: ap-northeast-1
+      - key: S3_BUCKET
+        value: album-battler-images
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      # Gemini API - Dashboardで手動設定
+      - key: GEMINI_API_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
+    plan: free
+# PlanetScaleを使用するためdatabasesセクションは削除
+# PlanetScale接続情報はRender Dashboardから手動で設定
