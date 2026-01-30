@@ -50,7 +50,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
     useState<GetBattleResultResponse | null>(null);
   const [remoteClapEffects, setRemoteClapEffects] = useState<ClapEffect[]>([]);
   const [showThemeIntro, setShowThemeIntro] = useState(false);
-  const [skipThemeIntroOnce, setSkipThemeIntroOnce] = useState(false);
+  const skipThemeIntroOnceRef = useRef(false);
   const themeIntroTimeoutRef = useRef<number | null>(null);
 
   // 1. バトル情報取得
@@ -122,14 +122,16 @@ export function BattlePage({ battleID }: BattlePageProps) {
         const startTime = new Date(selecting_started_at).getTime();
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
-        const remainingTime = Math.max(60 - elapsed, 0);
+        const timeLimitSeconds =
+          battleRef.current?.battleTimeLimitSeconds ?? 60;
+        const remainingTime = Math.max(timeLimitSeconds - elapsed, 0);
 
         timer.resetTimer(remainingTime);
         if (remainingTime > 0) {
           timer.startTimer();
         }
-        if (remainingTime < 60) {
-          setSkipThemeIntroOnce(true);
+        if (remainingTime < timeLimitSeconds) {
+          skipThemeIntroOnceRef.current = true;
         }
       }
     } else if (current_phase === "clap_time") {
@@ -150,6 +152,9 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
   const playersRef = useRef(players);
   const imagesRef = useRef(images);
+  const battleRef = useRef(battle);
+  const battlePhaseRef = useRef(battlePhase);
+  const timerRef = useRef(timer);
 
   useEffect(() => {
     playersRef.current = players;
@@ -158,6 +163,18 @@ export function BattlePage({ battleID }: BattlePageProps) {
   useEffect(() => {
     imagesRef.current = images;
   }, [images]);
+
+  useEffect(() => {
+    battleRef.current = battle;
+  }, [battle]);
+
+  useEffect(() => {
+    battlePhaseRef.current = battlePhase;
+  }, [battlePhase]);
+
+  useEffect(() => {
+    timerRef.current = timer;
+  }, [timer]);
 
   useEffect(() => {
     return () => {
@@ -177,12 +194,13 @@ export function BattlePage({ battleID }: BattlePageProps) {
       selecting: {
         onPhaseStart: () => {
           console.log("画像選択開始");
-          if (skipThemeIntroOnce) {
-            setSkipThemeIntroOnce(false);
+          if (skipThemeIntroOnceRef.current) {
+            skipThemeIntroOnceRef.current = false;
             return;
           }
 
-          timer.resetTimer(60);
+          const timeLimit = battleRef.current?.battleTimeLimitSeconds ?? 60;
+          timerRef.current.resetTimer(timeLimit);
           setShowThemeIntro(true);
 
           if (themeIntroTimeoutRef.current) {
@@ -191,7 +209,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
           themeIntroTimeoutRef.current = window.setTimeout(() => {
             setShowThemeIntro(false);
-            timer.startTimer();
+            timerRef.current.startTimer();
             themeIntroTimeoutRef.current = null;
           }, 2000);
         },
@@ -228,7 +246,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
 
           if (!player) {
             console.log(`${clapPhase}: プレイヤーがいないのでスキップ`);
-            battlePhase.transitionTo(nextPhase as BattlePhase);
+            battlePhaseRef.current.transitionTo(nextPhase as BattlePhase);
             return;
           }
 
@@ -248,14 +266,14 @@ export function BattlePage({ battleID }: BattlePageProps) {
             `${player.name}の拍手開始 (${index + 1}/${currentPlayers.length})`
           );
           const duration = PHASE_CONFIGS[clapPhase].duration;
-          timer.resetTimer(duration);
-          timer.startTimer();
+          timerRef.current.resetTimer(duration);
+          timerRef.current.startTimer();
         },
         onTimeUp: () => {
           const currentPlayers = playersRef.current;
           const player = currentPlayers[index];
           console.log(`${player?.name || "Player"}の拍手終了`);
-          battlePhase.transitionTo(nextPhase as BattlePhase);
+          battlePhaseRef.current.transitionTo(nextPhase as BattlePhase);
         },
         onPhaseEnd: () => {
           const currentPlayers = playersRef.current;
@@ -265,8 +283,7 @@ export function BattlePage({ battleID }: BattlePageProps) {
       };
     });
 
-    battlePhase.setHandlers(handlers);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    battlePhaseRef.current.setHandlers(handlers);
   }, []);
 
   const phaseMessage = useMemo(() => {
@@ -436,7 +453,8 @@ export function BattlePage({ battleID }: BattlePageProps) {
         "[BattlePage] Battle loaded (途中参加), transitioning to selecting phase"
       );
       battlePhase.transitionTo("selecting");
-      timer.resetTimer(PHASE_CONFIGS.selecting.duration);
+      const timeLimit = battle.battleTimeLimitSeconds ?? 60;
+      timer.resetTimer(timeLimit);
       timer.startTimer();
     }
   }, [battle, timer, battlePhase]);
